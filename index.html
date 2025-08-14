@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>老鼠吃芝士學西語</title>
+    <meta name="description" content="互動式西班牙語學習：卡片與猜詞遊戲（老鼠吃芝士）" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="mouse" aria-hidden="true">🐭</span>
+        <h1>西語學習卡</h1>
+        <span class="cheese" aria-hidden="true">🧀</span>
+      </div>
+      <div class="header-right">
+        <nav class="tabs" role="tablist" aria-label="學習模式切換">
+          <button id="tab-flashcards" class="tab active" role="tab" aria-selected="true" aria-controls="panel-flashcards">卡片</button>
+          <button id="tab-game" class="tab" role="tab" aria-selected="false" aria-controls="panel-game">猜詞遊戲</button>
+          <button id="tab-progress" class="tab" role="tab" aria-selected="false" aria-controls="panel-progress">進度</button>
+        </nav>
+        <button id="theme-toggle" class="ghost" type="button" aria-pressed="false" title="切換佈景主題">🌗 主題</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- 卡片模式 -->
+      <section id="panel-flashcards" class="panel active" role="tabpanel" aria-labelledby="tab-flashcards">
+        <div class="controls">
+          <label>
+            類別
+            <select id="category-select"></select>
+          </label>
+          <div class="toggles">
+            <label class="switch">
+              <input id="flip-direction" type="checkbox" />
+              <span>西→英</span>
+            </label>
+            <button id="speak-card" class="ghost" title="播放西語發音">🔊 發音</button>
+          </div>
+        </div>
+
+        <div id="flashcard" class="flashcard" tabindex="0" aria-live="polite" aria-label="點擊或按空白鍵翻面">
+          <div class="flashcard-inner">
+            <div class="flashcard-face flashcard-front" id="card-front">—</div>
+            <div class="flashcard-face flashcard-back" id="card-back">—</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="btn-dont-know" class="danger">還不熟</button>
+          <button id="btn-know" class="primary">我會了</button>
+          <button id="btn-next" class="secondary">下一張</button>
+        </div>
+      </section>
+
+      <!-- 猜詞遊戲：老鼠吃芝士 -->
+      <section id="panel-game" class="panel" role="tabpanel" aria-labelledby="tab-game">
+        <div class="game-top">
+          <div class="game-stats">
+            <span>關卡：<strong id="level">1</strong></span>
+            <span>連續答對：<strong id="streak">0</strong></span>
+          </div>
+          <div class="game-controls">
+            <label>
+              類別
+              <select id="game-category"></select>
+            </label>
+            <button id="btn-speak" class="ghost" title="播放單字西語發音">🔊</button>
+          </div>
+        </div>
+
+        <div class="game-grid" aria-label="老鼠走向芝士的路徑">
+          <div class="cell" data-pos="0"><span class="mouse" id="mouse">🐭</span></div>
+          <div class="cell" data-pos="1"></div>
+          <div class="cell" data-pos="2"></div>
+          <div class="cell" data-pos="3"></div>
+          <div class="cell" data-pos="4"><span class="cheese" id="cheese">🧀</span></div>
+        </div>
+
+        <div class="question" aria-live="polite">
+          <div id="prompt">—</div>
+          <div class="hint-row">
+            <button id="btn-hint" class="secondary">提示</button>
+            <span id="hint" class="hint"></span>
+          </div>
+          <form id="answer-form" autocomplete="off">
+            <input id="answer" name="answer" type="text" placeholder="輸入西語…" aria-label="答案輸入框" />
+            <button id="btn-submit" class="primary" type="submit">送出</button>
+            <button id="btn-skip" class="ghost" type="button">略過</button>
+          </form>
+          <div id="feedback" class="feedback" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- 進度面板 -->
+      <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
+        <div class="progress-cards">
+          <div class="progress-item">
+            <h3>總字彙</h3>
+            <div id="stat-total" class="stat">0</div>
+          </div>
+          <div class="progress-item">
+            <h3>已掌握</h3>
+            <div id="stat-mastered" class="stat ok">0</div>
+          </div>
+          <div class="progress-item">
+            <h3>待加強</h3>
+            <div id="stat-learning" class="stat warn">0</div>
+          </div>
+        </div>
+
+        <div class="progress-list">
+          <h3>字彙清單</h3>
+          <div class="filters">
+            <label>
+              類別
+              <select id="progress-category"></select>
+            </label>
+            <label class="switch">
+              <input id="only-learning" type="checkbox" />
+              <span>僅顯示待加強</span>
+            </label>
+          </div>
+          <table class="vocab-table">
+            <thead>
+              <tr><th>西語</th><th>英語</th><th>狀態</th></tr>
+            </thead>
+            <tbody id="vocab-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <small>本 App 使用瀏覽器語音合成（若支援）播放西語發音。進度資料儲存於此裝置的瀏覽器 LocalStorage。</small>
+    </footer>
+
+    <script src="app.js" defer></script>
+  </body>
+  </html>
+
+
