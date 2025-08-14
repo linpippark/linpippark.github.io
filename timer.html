@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>優雅倒數計時器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      transition: all 0.5s ease;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 500px;
+      transition: all 0.5s ease;
+    }
+
+    .time-display {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0;
+    }
+
+    .time-block {
+      display: flex;
+      flex-direction: column;
+      margin: 0 10px;
+    }
+
+    .time-label {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .time-value {
+      font-size: 80px;
+      color: white;
+      font-weight: 300;
+      line-height: 1;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      background: rgba(0, 0, 0, 0.1);
+      padding: 10px 15px;
+      border-radius: 10px;
+      min-width: 120px;
+      transition: all 0.3s ease;
+    }
+
+    .colon {
+      font-size: 60px;
+      color: white;
+      align-self: center;
+      margin-top: -10px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin: 30px 0 10px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 50px;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+    
+    .preset-btns {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 50px;
+      margin: 5px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .input-group {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .time-input {
+      width: 80px;
+      text-align: center;
+      font-size: 18px;
+      padding: 10px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .time-input:focus {
+      background: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+    }
+
+    h1 {
+      color: white;
+      font-weight: 300;
+      font-size: 32px;
+      margin-bottom: 20px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .input-label {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    /* 時間到的動畫效果 */
+    .alarm-active {
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        box-shadow: 0 15px 35px rgba(255, 100, 100, 0.2);
+      }
+      100% {
+        transform: scale(1.05);
+        box-shadow: 0 15px 50px rgba(255, 100, 100, 0.6);
+      }
+    }
+
+    .flash {
+      animation: flash 0.5s infinite alternate;
+    }
+
+    @keyframes flash {
+      0% { background: rgba(255, 255, 255, 0.2); }
+      100% { background: rgba(255, 100, 100, 0.5); }
+    }
+
+    .time-complete {
+      background: linear-gradient(135deg, #ff7e5f, #feb47b, #ffcaa6);
+      background-size: 400% 400%;
+      animation: gradientBG 5s ease infinite;
+    }
+    
+    .time-up-text {
+      position: absolute;
+      font-size: 36px;
+      color: white;
+      text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    
+    .time-up-text.show {
+      opacity: 1;
+      transform: translateY(0);
+      animation: bounce 1s infinite alternate;
+    }
+    
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.1); }
+    }
+    
+    .sound-options {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .sound-options label {
+      color: rgba(255, 255, 255, 0.8);
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    
+    .sound-options select {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 8px;
+      border-radius: 5px;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="timer-container">
+    <h1>優雅倒數計時器</h1>
+    
+    <div class="preset-btns">
+      <button class="preset-btn" id="preset-1min">1 分鐘</button>
+      <button class="preset-btn" id="preset-5min">5 分鐘</button>
+      <button class="preset-btn" id="preset-10min">10 分鐘</button>
+    </div>
+    
+    <div class="input-group">
+      <div>
+        <div class="input-label">自訂時間</div>
+        <input type="number" id="minutes" class="time-input" placeholder="分" min="0" max="99">
+        <input type="number" id="seconds" class="time-input" placeholder="秒" min="0" max="59">
+      </div>
+    </div>
+    
+    <div class="time-display">
+      <div class="time-block">
+        <div class="time-value" id="min-display">00</div>
+        <div class="time-label">分鐘</div>
+      </div>
+      <div class="colon">:</div>
+      <div class="time-block">
+        <div class="time-value" id="sec-display">00</div>
+        <div class="time-label">秒鐘</div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button class="btn" id="start-btn">開始</button>
+      <button class="btn" id="pause-btn">暫停</button>
+      <button class="btn" id="reset-btn">歸零</button>
+    </div>
+    
+    <div class="sound-options">
+      <label for="sound-select">提示音效：</label>
+      <select id="sound-select">
+        <option value="beep">嗶嗶聲</option>
+        <option value="bell">鈴聲</option>
+        <option value="timesup" selected>Time's Up</option>
+      </select>
+    </div>
+    
+    <div class="time-up-text" id="time-up-text">TIME'S UP!</div>
+  </div>
+
+  <script>
+    // 獲取HTML元素
+    const minutesInput = document.getElementById('minutes');
+    const secondsInput = document.getElementById('seconds');
+    const minDisplay = document.getElementById('min-display');
+    const secDisplay = document.getElementById('sec-display');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const timerContainer = document.getElementById('timer-container');
+    const body = document.body;
+    const timeUpText = document.getElementById('time-up-text');
+    const soundSelect = document.getElementById('sound-select');
+    
+    // 預設時間按鈕
+    const preset1Min = document.getElementById('preset-1min');
+    const preset5Min = document.getElementById('preset-5min');
+    const preset10Min = document.getElementById('preset-10min');
+
+    // 不同的音效
+    const sounds = {
+      beep: 'data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2ORaIQwEMAJiDg95G4nQL7mQVWI6GwRcfsZAcsKkJvxgxEjzFUgfHoSQ9Qq7KNwqHwuB13MA4a1q/DmBrHgPcmjiGoh//EwC5nGPEmS4RcfkVKOhJf+WOgoxJclFz3kgn//dBA+ya1GhurNn8zb//9NNutNuhz31f////9vt///z+IdAEAAAK4LQIAKobHItEIYCGAExBwe8jcToF9zIKrEdDYIuP2MgOWFSE34wYiR5iqQPj0JIeoVdlG4VD4XA67mAcNa1fhzA1jwHuTRxDUQ//iYBczjHiTJcIuPyKlHQkv/LHQUYkuSi57yQT//uggfZNajQ3Vmz+Zt//+mm3Wm3Q576v////+32///5/EOgAAADVghQAAAAA==',
+      
+      bell: 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAEUADw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJj09PT09PT09PT09PT09PT09PT09PT09PT1UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MoxAAAAAAPAAJIABYwAkbEeAAJO3Ij0CRtsn3Oyfd7vd7vd773ve9uPfve+9zve8AAAkkgysdh2GIYPIdg+D4f8oCAMAwfP//1AgGAwGTl///IEP//ygIBj/4PgQDH//KAgGP//1AQDA5P///yBD//8oCAY//B8CAY//5AEP//9QEAwGDw//8gQDAYDB/AQDAccBAMBg8BAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxFIQQebSAlGGNMjE0M7Q1djcxPDi0PTw/OEE8SDxQNlQ2WD5gLGQsaDZUNlg+YCx8LGAubi5wNHQ0eDZ8NHw2fDh8OHw8fDx0PHgAA==',
+      
+      timesup: 'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAEAAABEsAKysrKysrKysrVVVVVVVVVVVVf39/f39/f39/qampqampqampqdPT09PT09PT0/39/f39/f39/SsrKysrKysrK1VVVVVVVVVVVVVVf39/f39/f39/f6mpqampqampqdPT09PT09PT0/39/f39/f39/QAAAAAAAAAAAAAA//MUxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//MUxBMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//MUxCgAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//MUxDcAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MoxC8XeeK8VkGG3KW1qHlMOIqWS8Xqt0CgUCRUMhbigSMIHBfiBRJiSsmUKBwNXP9e0CQZDQaDAX//1T/+oGgwHmgw/8I//8INCCLf/vTiAQNe/rSiFjMzM////9MzMvQMMPmn//+n6f//pn+ZgZg//qoZmZmZ//5j/KGZ3f/TMwMpmZn//mZmSIXuxA4EJf///9U///M////+qfwGZmZn//5fygQlnf//qZmB8zMz//zMzMzMzHZmdmdmR3ZkZmZmZmZ/+MoxA4XQb7ELDjGvO4Z9PgZmfUzBqf89R4NAEAh3DoEhVW5EgDvTACQxnwWAgORAAA5WAAwHAKRTkQADP1UACDwDoMABgAwQIDAo//5jHSAxIwBQmARAEgyAwc//+SWMAGCBUD+m//8TEAAdMAAEGgxHgMEAx///4mIOBQHnNf//8wMC6mFCJoWw///8TMD4EAw///9x3YhcFbv///wiYg8IA////uO7ELgWA///+oH///w////6gcIDBdv///8wM/+MYxBETIbpsVgmGvBYCAx8sMPwiYg8FnN///9xiYgyLHBPVQ///9ximPBMeCmmv//+3HxB4LOa///7jExBx3CJiDgs5r///uMTEHAuFPVlW7///UCAx8sMPugQGC7f///mBn/4RMQeCwGP//+4xMQcd0TdZ///+mPBMeC4xP//9scEz+ETEHgoD///9xiYg4FwSGmv//+mPiDwGP///fHBKyqncOO//5oEAoYf//8sMPugQGLjEwvGRAUOFHVjQFMABLs+WT03S5vLmQ0QBgkQA/+MoxCcY6kq4UEDHLhqzqpL5UoeD3ZlMJp6lXB+Wz/y7jPBRGBdS57I0ixh4PJCmebfWj7/q5wR9mRhIKJmDFwKUHI7To81kbnVIKLzCLHRxKlGjYNMjAxkRVRyHxjqB44i3IuXHp2UOcMj3TlKqYMpdFLqoD2JVqFPdUZ9cRTJeKyBTIpRDklRkWCkZOQSvXkgAv8QyVRW1JpwxpJLzE9pTOz01NDNM000BAIBAplIhVDRKlUuZnIeHlpWWmJ9Z/+MYxD8ZWcbBlDDHFuWjJ1clUPDw9hJpVLDRMIf////////ygAA=='
+    };
+
+    // 初始化音效
+    const alarmSound = new Audio(sounds.timesup);
+
+    let timer;
+    let totalSeconds = 0;
+    let isRunning = false;
+    let alarmTriggered = false;
+
+    // 更新時間顯示
+    function updateDisplay() {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      
+      minDisplay.textContent = minutes.toString().padStart(2, '0');
+      secDisplay.textContent = seconds.toString().padStart(2, '0');
+    }
+
+    // 設置預設時間
+    function setPresetTime(minutes) {
+      resetTimer();
+      totalSeconds = minutes * 60;
+      updateDisplay();
+    }
+
+    // 啟動計時器
+    function startTimer() {
+      if (!isRunning) {
+        // 如果輸入框有值，則設定新的時間
+        if (!alarmTriggered && (minutesInput.value || secondsInput.value)) {
+          const mins = parseInt(minutesInput.value) || 0;
+          const secs = parseInt(secondsInput.value) || 0;
+          totalSeconds = mins * 60 + secs;
+          updateDisplay();
+        }
+
+        // 移除警報效果
+        timerContainer.classList.remove('alarm-active');
+        body.classList.remove('time-complete');
+        minDisplay.classList.remove('flash');
+        secDisplay.classList.remove('flash');
+        timeUpText.classList.remove('show');
+        alarmTriggered = false;
+
+        // 啟動計時器
+        if (totalSeconds > 0) {
+          isRunning = true;
+          timer = setInterval(function() {
+            totalSeconds--;
+            updateDisplay();
+            
+            if (totalSeconds <= 0) {
+              clearInterval(timer);
+              isRunning = false;
+              timeComplete();
+            }
+          }, 1000);
+        }
+      }
+    }
+
+    // 暫停計時器
+    function pauseTimer() {
+      if (isRunning) {
+        clearInterval(timer);
+        isRunning = false;
+      }
+    }
+
+    // 重置計時器
+    function resetTimer() {
+      clearInterval(timer);
+      isRunning = false;
+      alarmTriggered = false;
+      totalSeconds = 0;
+      updateDisplay();
+      
+      // 移除警報效果
+      timerContainer.classList.remove('alarm-active');
+      body.classList.remove('time-complete');
+      minDisplay.classList.remove('flash');
+      secDisplay.classList.remove('flash');
+      timeUpText.classList.remove('show');
+      
+      // 清除輸入框
+      minutesInput.value = '';
+      secondsInput.value = '';
+    }
+
+    // 時間到的效果
+    function timeComplete() {
+      alarmTriggered = true;
+      
+      // 播放選擇的提示音
+      alarmSound.src = sounds[soundSelect.value];
+      alarmSound.play();
+      
+      // 添加視覺效果
+      timerContainer.classList.add('alarm-active');
+      body.classList.add('time-complete');
+      minDisplay.classList.add('flash');
+      secDisplay.classList.add('flash');
+      timeUpText.classList.add('show');
+      
+      // 重複播放聲音
+      let alarmCount = 0;
+      let alarmInterval = setInterval(() => {
+        if (alarmTriggered && alarmCount < 3) {
+          alarmSound.play();
+          alarmCount++;
+        } else {
+          clearInterval(alarmInterval);
+        }
+      }, 1500);
+    }
+
+    // 監聽提示音選擇變化
+    soundSelect.addEventListener('change', function() {
+      // 預先載入選擇的音效
+      alarmSound.src = sounds[this.value];
+    });
+
+    // 事件監聽器
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    
+    // 預設時間按鈕事件監聽器
+    preset1Min.addEventListener('click', function() {
+      setPresetTime(1);
+      startTimer();
+    });
+    
+    preset5Min.addEventListener('click', function() {
+      setPresetTime(5);
+      startTimer();
+    });
+    
+    preset10Min.addEventListener('click', function() {
+      setPresetTime(10);
+      startTimer();
+    });
+
+    // 限制輸入範圍
+    minutesInput.addEventListener('input', function() {
+      if (parseInt(this.value) > 99) {
+        this.value = 99;
+      }
+    });
+
+    secondsInput.addEventListener('input', function() {
+      if (parseInt(this.value) > 59) {
+        this.value = 59;
+      }
+    });
+
+    // 初始顯示
+    updateDisplay();
+  </script>
+</body>
+</html>
