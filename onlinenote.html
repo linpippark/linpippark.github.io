@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上文書處理工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+        
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .editor-section, .preview-section {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editor-section {
+            border-right: 1px solid #ccc;
+        }
+        
+        .preview-section {
+            background-color: #f9f9f9;
+        }
+        
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        #editor, #preview {
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+            flex-grow: 1;
+            font-size: 16px;
+            line-height: 1.5;
+            overflow-y: auto;
+            background-color: white;
+        }
+        
+        #preview {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .text-block {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .text-block:hover {
+            background-color: #e6f7ff;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .save-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .save-button:hover {
+            background-color: #3e8e41;
+        }
+        
+        .clear-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .clear-button:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor-section">
+            <h2>編輯區</h2>
+            <div id="editor" contenteditable="true"></div>
+            <div class="button-group">
+                <button class="save-button" id="saveEditor">儲存編輯區</button>
+            </div>
+        </div>
+        <div class="preview-section">
+            <h2>預覽區</h2>
+            <div id="preview" contenteditable="true"></div>
+            <div class="button-group">
+                <button class="save-button" id="savePreview">儲存預覽區</button>
+                <button class="clear-button" id="clearPreview">清空預覽區</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // 初始化編輯區
+            function initializeEditor() {
+                // 初始文字
+                const initialText = '歡迎使用線上文書處理工具！\n\n您可以在這裡輸入並編輯文字。\n\n點擊任何文字區塊，將在右側預覽區顯示選中的內容。\n\n在預覽區按下 Enter 鍵可以手動換行。';
+                
+                // 清空編輯區
+                $('#editor').empty();
+                
+                // 將初始文字按行分割並創建區塊
+                const lines = initialText.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].trim() === '') {
+                        $('#editor').append('<div class="text-block"><br></div>');
+                    } else {
+                        $('#editor').append('<div class="text-block">' + lines[i] + '</div>');
+                    }
+                }
+                
+                // 重新綁定文字區塊點擊事件
+                addBlockClickHandlers();
+            }
+            
+            // 添加文字區塊點擊事件
+            function addBlockClickHandlers() {
+                $('.text-block').off('click').on('click', function() {
+                    const blockText = $(this).text();
+                    if (blockText.trim() !== '') {
+                        // 獲取預覽區當前內容
+                        const currentPreviewContent = $('#preview').text();
+                        // 追加新的選中內容，中間加一個空格分隔
+                        const separator = currentPreviewContent.length > 0 ? " " : "";
+                        $('#preview').text(currentPreviewContent + separator + blockText);
+                    }
+                });
+            }
+            
+            // 初始化編輯區
+            initializeEditor();
+            
+            // 處理編輯區的內容變化，動態創建或更新區塊
+            $('#editor').on('input', function() {
+                // 確保編輯器中的內容都在 .text-block 元素內
+                const children = $(this).children();
+                for (let i = 0; i < children.length; i++) {
+                    if (!$(children[i]).hasClass('text-block')) {
+                        const content = $(children[i]).html() || '<br>';
+                        $(children[i]).replaceWith('<div class="text-block">' + content + '</div>');
+                    }
+                }
+                
+                // 如果編輯器為空，添加一個空區塊
+                if ($(this).children().length === 0) {
+                    $(this).append('<div class="text-block"><br></div>');
+                }
+                
+                // 重新綁定文字區塊點擊事件
+                addBlockClickHandlers();
+            });
+            
+            // 監聽預覽區的 Enter 鍵事件
+            $('#preview').on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // 防止 contenteditable 的預設換行行為
+                    
+                    // 手動插入換行符
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const newNode = document.createTextNode('\n');
+                    range.insertNode(newNode);
+                    
+                    // 將光標移動到換行符後面
+                    range.setStartAfter(newNode);
+                    range.setEndAfter(newNode);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            });
+            
+            // 儲存編輯區內容
+            $('#saveEditor').on('click', function() {
+                const editorContent = $('#editor').html();
+                localStorage.setItem('editorContent', editorContent);
+                alert('編輯區內容已儲存！');
+            });
+            
+            // 儲存預覽區內容
+            $('#savePreview').on('click', function() {
+                const previewContent = $('#preview').html();
+                localStorage.setItem('previewContent', previewContent);
+                alert('預覽區內容已儲存！');
+            });
+            
+            // 清空預覽區的按鈕
+            $('#clearPreview').on('click', function() {
+                if (confirm('確定要清空預覽區嗎？')) {
+                    $('#preview').empty();
+                }
+            });
+            
+            // 載入已儲存的內容（如果有）
+            const savedEditorContent = localStorage.getItem('editorContent');
+            if (savedEditorContent) {
+                $('#editor').html(savedEditorContent);
+                // 確保所有區塊都有事件處理器
+                addBlockClickHandlers();
+            }
+            
+            const savedPreviewContent = localStorage.getItem('previewContent');
+            if (savedPreviewContent) {
+                $('#preview').html(savedPreviewContent);
+            }
+        });
+    </script>
+</body>
+</html>
