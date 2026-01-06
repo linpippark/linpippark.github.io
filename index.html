@@ -1,144 +1,346 @@
-<!doctype html>
-<html lang="zh-Hant">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>老鼠吃芝士學西語</title>
-    <meta name="description" content="互動式西班牙語學習：卡片與猜詞遊戲（老鼠吃芝士）" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="app-header">
-      <div class="brand">
-        <span class="mouse" aria-hidden="true">🐭</span>
-        <h1>西語學習卡</h1>
-        <span class="cheese" aria-hidden="true">🧀</span>
-      </div>
-      <div class="header-right">
-        <nav class="tabs" role="tablist" aria-label="學習模式切換">
-          <button id="tab-flashcards" class="tab active" role="tab" aria-selected="true" aria-controls="panel-flashcards">卡片</button>
-          <button id="tab-game" class="tab" role="tab" aria-selected="false" aria-controls="panel-game">猜詞遊戲</button>
-          <button id="tab-progress" class="tab" role="tab" aria-selected="false" aria-controls="panel-progress">進度</button>
-        </nav>
-        <button id="theme-toggle" class="ghost" type="button" aria-pressed="false" title="切換佈景主題">🌗 主題</button>
-      </div>
-    </header>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>康軒(五上)自然線上期末測驗系統_單元3：空氣的組成與反應</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 15px; }
+        .timer-box { position: fixed; top: 10px; right: 10px; background: #2c3e50; color: #fff; padding: 10px 20px; border-radius: 5px; font-size: 1.2em; font-weight: bold; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer-warning { background-color: #e74c3c; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.7; } }
+        
+        .section-title { background-color: #ecf0f1; padding: 10px; border-left: 5px solid #3498db; margin-top: 30px; margin-bottom: 15px; font-weight: bold; font-size: 1.1em; }
+        .question-block { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; transition: background 0.3s; }
+        .question-block:hover { background-color: #f9f9f9; }
+        .question-text { font-weight: bold; margin-bottom: 10px; display: block; }
+        .options label { display: block; margin: 5px 0; cursor: pointer; }
+        .flag-review { margin-top: 10px; font-size: 0.9em; color: #e67e22; display: flex; align-items: center; }
+        .flag-review input { margin-right: 5px; }
+        .marked { border: 2px solid #e67e22; background-color: #fff8e1; }
 
-    <main>
-      <!-- 卡片模式 -->
-      <section id="panel-flashcards" class="panel active" role="tabpanel" aria-labelledby="tab-flashcards">
-        <div class="controls">
-          <label>
-            類別
-            <select id="category-select"></select>
-          </label>
-          <div class="toggles">
-            <label class="switch">
-              <input id="flip-direction" type="checkbox" />
-              <span>西→英</span>
-            </label>
-            <button id="speak-card" class="ghost" title="播放西語發音">🔊 發音</button>
-          </div>
+        .btn-group { text-align: center; margin-top: 40px; }
+        button { padding: 12px 25px; font-size: 1em; cursor: pointer; border: none; border-radius: 5px; margin: 0 10px; transition: 0.3s; }
+        .btn-submit { background-color: #27ae60; color: white; }
+        .btn-submit:hover { background-color: #219150; }
+        .btn-answer { background-color: #34495e; color: white; }
+        .btn-answer:hover { background-color: #2c3e50; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 5px; width: 300px; text-align: center; }
+        .modal input { padding: 10px; margin: 10px 0; width: 80%; }
+        
+        .result-score { text-align: center; font-size: 1.5em; color: #e74c3c; margin-bottom: 20px; display: none; font-weight: bold;}
+        .correct-answer { color: #e74c3c; font-weight: bold; margin-left: 10px; display: none; }
+        .explanation { font-size: 0.9em; color: #666; display: none; margin-top: 5px; background: #eee; padding: 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="timerDisplay" class="timer-box">05:00</div>
+
+    <div class="container">
+        <h1>康軒(五上)自然線上期末測驗系統<br><span style="font-size:0.6em">單元3：空氣的組成與反應</span></h1>
+        
+        <div id="resultArea" class="result-score"></div>
+
+        <form id="examForm">
+            <div class="section-title">一、是非題 (共10題，每題2分，共20分)</div>
+            
+            <script>
+                // 生成題目的輔助函數
+                function createQuestion(id, type, text, options, value) {
+                    let html = `<div class="question-block" id="q${id}">
+                        <span class="question-text">${id}. ${text}</span>
+                        <div class="options">`;
+                    
+                    if (type === 'tf') {
+                        html += `<label><input type="radio" name="q${id}" value="O"> O (正確)</label>
+                                 <label><input type="radio" name="q${id}" value="X"> X (錯誤)</label>`;
+                    } else if (type === 'mc' || type === 'match' || type === 'app') {
+                        options.forEach((opt, idx) => {
+                            html += `<label><input type="radio" name="q${id}" value="${idx+1}"> ${opt}</label>`;
+                        });
+                    } else if (type === 'check') {
+                         options.forEach((opt, idx) => {
+                            html += `<label><input type="checkbox" name="q${id}" value="${idx+1}"> ${opt}</label>`;
+                        });
+                    }
+
+                    html += `</div>
+                        <label class="flag-review"><input type="checkbox" onchange="toggleMark('q${id}')"> 稍後作答</label>
+                        <span class="correct-answer" id="ans${id}"></span>
+                        <div class="explanation" id="exp${id}"></div>
+                    </div>`;
+                    document.write(html);
+                }
+                
+                // 題目數據
+                const questions = [
+                    // 是非題
+                    {id: 1, type: 'tf', text: '燃燒的三要素是可燃物、助燃物和達到燃點，只要移除其中一項就能滅火。', ans: 'O', exp: '正確，這就是滅火的原理。'},
+                    {id: 2, type: 'tf', text: '氧氣具有可燃性，所以點燃線香放入充滿氧氣的瓶子中會爆炸。', ans: 'X', exp: '錯誤，氧氣是「助燃」而非「可燃」。'},
+                    {id: 3, type: 'tf', text: '將鋼棉球浸泡醋酸後，生鏽的速度會比浸泡清水的鋼棉球慢。', ans: 'X', exp: '錯誤，酸性溶液會加速生鏽反應。'},
+                    {id: 4, type: 'tf', text: '空氣中含量最多的氣體是氧氣，約佔空氣體積的五分之一。', ans: 'X', exp: '錯誤，最多的是氮氣；氧氣才是佔約五分之一。'},
+                    {id: 5, type: 'tf', text: '利用雙氧水製造氧氣時，加入紅蘿蔔丁是為了當作催化劑，加速反應。', ans: 'O', exp: '正確，紅蘿蔔或二氧化錳都可作為催化劑。'},
+                    {id: 6, type: 'tf', text: '鐵製品只要塗上油漆，隔絕了空氣與水，就絕對永遠不會生鏽。', ans: 'X', exp: '錯誤，油漆若剝落或老化，仍可能生鏽，沒有「絕對永遠」。'},
+                    {id: 7, type: 'tf', text: '澄清石灰水是用來檢驗氧氣的，遇到氧氣會變混濁。', ans: 'X', exp: '錯誤，澄清石灰水是用來檢驗「二氧化碳」，會產生白色沉澱。'},
+                    {id: 8, type: 'tf', text: '如果不小心發生油鍋起火，應該立刻用水澆熄。', ans: 'X', exp: '錯誤，油比水輕，用水會造成油爆擴大火勢，應蓋上鍋蓋隔絕空氣。'},
+                    {id: 9, type: 'tf', text: '食品包裝中常充入氮氣，主要是為了保持食品乾燥並避免壓碎。', ans: 'O', exp: '正確，氮氣活性小，可防腐防壓。'},
+                    {id: 10, type: 'tf', text: '廣口瓶蓋上玻璃片後，蠟燭熄滅是因為瓶內的氧氣完全被用光了，一點都不剩。', ans: 'X', exp: '錯誤，是氧氣濃度降低到無法支持燃燒，並非完全用光。'}
+                ];
+
+                questions.forEach(q => createQuestion(q.id, q.type, q.text, [], q.ans));
+            </script>
+
+            <div class="section-title">二、選擇題 (共10題，每題3分，共30分)</div>
+            <script>
+                const mcQuestions = [
+                    {id: 11, text: '下列哪一種方法「不能」防止鐵製品生鏽？', opts: ['1. 塗油', '2. 保持乾燥', '3. 浸泡在鹽水中', '4. 電鍍'], ans: '3', exp: '鹽水會加速氧化反應，加速生鏽。'},
+                    {id: 12, text: '進行「製造氧氣」實驗時，若線香燃燒得太旺盛，應該怎麼處理？', opts: ['1. 加入更多雙氧水', '2. 將導管移出水面', '3. 加入更多紅蘿蔔', '4. 用手壓住瓶口'], ans: '2', exp: '將導管移出可避免收集過多氧氣，或將集氣瓶移開。'},
+                    {id: 13, text: '將點燃的蠟燭放入裝有空氣的廣口瓶中，蓋上玻璃片，一段時間後燭火熄滅，此時瓶內氣體有何變化？', opts: ['1. 氧氣變多，二氧化碳變少', '2. 氧氣變少，二氧化碳變多', '3. 只有氧氣變少', '4. 只有二氧化碳變多'], ans: '2', exp: '燃燒消耗氧氣並產生二氧化碳。'},
+                    {id: 14, text: '想要檢驗汽水中冒出的氣泡是不是二氧化碳，最好的方法是？', opts: ['1. 通入水中看是否溶解', '2. 用鼻子聞味道', '3. 通入澄清石灰水看是否變混濁', '4. 點燃看是否會爆炸'], ans: '3', exp: '澄清石灰水變混濁是檢驗二氧化碳的標準方法。'},
+                    {id: 15, text: '小蘇打粉加入醋會產生氣泡，這和下列哪一個反應產生的氣體相同？', opts: ['1. 雙氧水加胡蘿蔔', '2. 蠟燭燃燒產生的氣體', '3. 空氣中含量最多的氣體', '4. 填充氣球讓氣球飄浮的氣體'], ans: '2', exp: '小蘇打加醋產生二氧化碳；蠟燭燃燒也產生二氧化碳。雙氧水產生氧氣。'},
+                    {id: 16, text: '酒精燈使用完畢後，應該用燈蓋蓋熄，這是利用哪一種滅火原理？', opts: ['1. 移除可燃物', '2. 隔絕助燃物(氧氣)', '3. 降低溫度', '4. 增加濕度'], ans: '2', exp: '蓋上燈蓋是為了隔絕空氣(氧氣)。'},
+                    {id: 17, text: '在「探討鐵生鏽的原因」實驗中，哪一組是「操作變因」（唯一不同的條件）？', opts: ['1. 鋼棉球的大小', '2. 放置的時間', '3. 是否接觸水/空氣', '4. 夾鏈袋的大小'], ans: '3', exp: '實驗目的是探討成因，所以要改變接觸環境(有無水/空氣)。'},
+                    {id: 18, text: '烤肉時，將木炭堆成中空塔狀比較容易生火，主要原因是什麼？', opts: ['1. 增加美觀', '2. 增加木炭的數量', '3. 增加空氣流通，提供足夠氧氣', '4. 提高木炭的燃點'], ans: '3', exp: '中空結構能讓空氣對流，助燃效果更好。'},
+                    {id: 19, text: '關於不鏽鋼的敘述，下列何者正確？', opts: ['1. 絕對不會生鏽', '2. 是鐵和其他金屬的合金，較不易生鏽', '3. 表面塗了一層厚厚的油漆', '4. 質地比純鐵軟'], ans: '2', exp: '不鏽鋼是合金，抗腐蝕性強，但非絕對不生鏽。'},
+                    {id: 20, text: '火災發生時，若是在室內且濃煙密布，下列逃生觀念何者正確？', opts: ['1. 採低姿勢爬行，尋找逃生出口', '2. 躲在浴室裡把門關上', '3. 搭乘電梯逃生', '4. 打開窗戶大聲尖叫'], ans: '1', exp: '濃煙會往上飄，下方空氣較新鮮，應採低姿勢。'}
+                ];
+                mcQuestions.forEach(q => createQuestion(q.id, 'mc', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">三、勾選題 (共2題，每題5分，共10分) <small>*全對才給分</small></div>
+            <script>
+                 const checkQuestions = [
+                    {id: 21, text: '下列哪些做法可以達到「防鏽」的效果？(複選)', opts: ['腳踏車鍊條上油', '將鐵釘洗淨後保持濕潤', '迴紋針外層包覆塑膠皮', '鐵門刷上油漆', '將鋼棉球放入醋酸中'], ans: ['1','3','4'], exp: '保持濕潤和放入酸中都會加速生鏽。上油、包塑膠、油漆皆為隔絕空氣與水。'},
+                    {id: 22, text: '關於「氧氣」的特性，下列敘述哪些是正確的？(複選)', opts: ['無色無味', '可以使澄清石灰水變混濁', '具有助燃性', '比空氣重，會沉在集氣瓶底部', '可以讓帶有餘燼的線香復燃'], ans: ['1','3','5'], exp: '使石灰水變混濁是二氧化碳；氧氣密度略大於空氣但通常不特別強調沉底(那是二氧化碳的顯著特性)，重點是助燃與復燃。'}
+                ];
+                checkQuestions.forEach(q => createQuestion(q.id, 'check', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">四、配合題 (共4題，每題2.5分，共10分)</div>
+            <p>請將下列滅火方式與其對應的滅火原理(A, B, C)配對：</p>
+            <div style="background:#fff; padding:10px; border:1px dashed #666; margin-bottom:10px;">
+                A. 隔絕助燃物 (氧氣)<br>
+                B. 移除可燃物<br>
+                C. 降低溫度 (降至燃點以下)
+            </div>
+            <script>
+                const matchQuestions = [
+                    {id: 23, text: '消防隊員在森林火災時，開闢防火巷(砍掉樹木)。', opts: ['A', 'B', 'C'], ans: '2', exp: '砍樹是移除可燃物。'},
+                    {id: 24, text: '用水澆熄營火。', opts: ['A', 'B', 'C'], ans: '3', exp: '水蒸發吸熱，降低溫度。'},
+                    {id: 25, text: '酒精燈使用完畢，用燈蓋蓋熄。', opts: ['A', 'B', 'C'], ans: '1', exp: '蓋子隔絕空氣。'},
+                    {id: 26, text: '發生火災時，用濕棉被覆蓋在起火物上。', opts: ['A', 'B', 'C'], ans: '1', exp: '覆蓋主要是隔絕空氣。'}
+                ];
+                matchQuestions.forEach(q => createQuestion(q.id, 'match', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">五、素養題 (共2題，每題5分，共10分)</div>
+            <script>
+                const litQuestions = [
+                    {id: 27, text: '【實驗情境】小明想研究「水是否為鐵生鏽的必要條件」。他準備了兩個夾鏈袋和兩個一模一樣的乾燥鋼棉球。A袋放入鋼棉球並擠出空氣密封；B袋放入沾水的鋼棉球並擠出空氣密封。請問他的實驗設計有什麼問題？', opts: ['1. 沒有問題，設計很完美', '2. B袋不應該擠出空氣', '3. A袋應該也要加水', '4. 兩個袋子都沒有空氣(氧氣)，缺少生鏽必要條件，無法比較'], ans: '4', exp: '生鏽需要水和空氣(氧氣)同時存在。如果把空氣都擠光密封，兩個都不會明顯生鏽，無法驗證水的影響。正確應保留空氣。'},
+                    {id: 28, text: '【生活應用】登山客在高山上煮飯時，發現飯很難煮熟，而且打火機的火比較小。這是因為高山的空氣組成有什麼特性？', opts: ['1. 高山沒有二氧化碳', '2. 高山空氣稀薄，氧氣含量相對較少', '3. 高山充滿了氮氣', '4. 高山氣溫太低，火被凍住了'], ans: '2', exp: '高山氣壓低，空氣稀薄，氧氣分壓降低，導致燃燒效率變差（助燃物減少）。'}
+                ];
+                litQuestions.forEach(q => createQuestion(q.id, 'mc', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">六、活用題 (共2題，每題10分，共20分)</div>
+            <script>
+                const appQuestions = [
+                    {id: 29, text: '【推理】甲、乙、丙三支蠟燭，甲用大廣口瓶罩住，乙用小廣口瓶罩住，丙不加蓋。請問蠟燭熄滅的順序應為？', opts: ['1. 甲 -> 乙 -> 丙', '2. 乙 -> 甲 -> 丙', '3. 丙 -> 甲 -> 乙', '4. 三支同時熄滅'], ans: '2', exp: '乙瓶空間最小，氧氣最快耗盡先熄；甲次之；丙空氣流通不會熄滅(直到蠟燭燒完)。'},
+                    {id: 30, text: '【實驗設計】如果要證明「酸雨會加速鐵窗生鏽」，實驗組與對照組應該如何設計？', opts: ['1. 一組塗油漆，一組不塗油漆', '2. 一組放室內，一組放室外', '3. 一組滴加醋酸溶液，一組滴加清水，其餘條件相同', '4. 一組用鐵，一組用鋁'], ans: '3', exp: '操作變因應為「液體的酸鹼性」，醋酸模擬酸雨，清水為對照組。'}
+                ];
+                appQuestions.forEach(q => createQuestion(q.id, 'app', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="btn-group">
+                <button type="button" class="btn-submit" onclick="submitExam()">交卷 (Submit)</button>
+                <button type="button" class="btn-answer" onclick="openModal()">看詳解 (Teacher Only)</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="pwdModal" class="modal">
+        <div class="modal-content">
+            <h3>請輸入密碼查看詳解</h3>
+            <input type="password" id="pwdInput" placeholder="Password">
+            <br>
+            <button onclick="checkPwd()">確定</button>
+            <button onclick="document.getElementById('pwdModal').style.display='none'">取消</button>
         </div>
+    </div>
 
-        <div id="flashcard" class="flashcard" tabindex="0" aria-live="polite" aria-label="點擊或按空白鍵翻面">
-          <div class="flashcard-inner">
-            <div class="flashcard-face flashcard-front" id="card-front">—</div>
-            <div class="flashcard-face flashcard-back" id="card-back">—</div>
-          </div>
-        </div>
+    <script>
+        // 倒數計時邏輯
+        let timeLeft = 300; // 5分鐘 = 300秒
+        const timerDisplay = document.getElementById('timerDisplay');
+        let timerId;
 
-        <div class="actions">
-          <button id="btn-dont-know" class="danger">還不熟</button>
-          <button id="btn-know" class="primary">我會了</button>
-          <button id="btn-next" class="secondary">下一張</button>
-        </div>
-      </section>
+        function startTimer() {
+            timerId = setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60);
+                let s = timeLeft % 60;
+                timerDisplay.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
-      <!-- 猜詞遊戲：老鼠吃芝士 -->
-      <section id="panel-game" class="panel" role="tabpanel" aria-labelledby="tab-game">
-        <div class="game-top">
-          <div class="game-stats">
-            <span>關卡：<strong id="level">1</strong></span>
-            <span>連續答對：<strong id="streak">0</strong></span>
-          </div>
-          <div class="game-controls">
-            <label>
-              類別
-              <select id="game-category"></select>
-            </label>
-            <button id="btn-speak" class="ghost" title="播放單字西語發音">🔊</button>
-          </div>
-        </div>
+                if (timeLeft <= 60) {
+                    timerDisplay.classList.add('timer-warning');
+                    if (timeLeft === 60) alert("注意：考試時間只剩 1 分鐘！");
+                }
 
-        <div class="game-grid" aria-label="老鼠走向芝士的路徑">
-          <div class="cell" data-pos="0"><span class="mouse" id="mouse">🐭</span></div>
-          <div class="cell" data-pos="1"></div>
-          <div class="cell" data-pos="2"></div>
-          <div class="cell" data-pos="3"></div>
-          <div class="cell" data-pos="4"><span class="cheese" id="cheese">🧀</span></div>
-        </div>
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    alert("時間到！系統將自動交卷。");
+                    submitExam(true);
+                }
+            }, 1000);
+        }
 
-        <div class="question" aria-live="polite">
-          <div id="prompt">—</div>
-          <div class="hint-row">
-            <button id="btn-hint" class="secondary">提示</button>
-            <span id="hint" class="hint"></span>
-          </div>
-          <form id="answer-form" autocomplete="off">
-            <input id="answer" name="answer" type="text" placeholder="輸入西語…" aria-label="答案輸入框" />
-            <button id="btn-submit" class="primary" type="submit">送出</button>
-            <button id="btn-skip" class="ghost" type="button">略過</button>
-          </form>
-          <div id="feedback" class="feedback" aria-live="polite"></div>
-        </div>
-      </section>
+        window.onload = startTimer;
 
-      <!-- 進度面板 -->
-      <section id="panel-progress" class="panel" role="tabpanel" aria-labelledby="tab-progress">
-        <div class="progress-cards">
-          <div class="progress-item">
-            <h3>總字彙</h3>
-            <div id="stat-total" class="stat">0</div>
-          </div>
-          <div class="progress-item">
-            <h3>已掌握</h3>
-            <div id="stat-mastered" class="stat ok">0</div>
-          </div>
-          <div class="progress-item">
-            <h3>待加強</h3>
-            <div id="stat-learning" class="stat warn">0</div>
-          </div>
-        </div>
+        // 標記稍後作答
+        function toggleMark(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('marked')) {
+                el.classList.remove('marked');
+            } else {
+                el.classList.add('marked');
+            }
+        }
 
-        <div class="progress-list">
-          <h3>字彙清單</h3>
-          <div class="filters">
-            <label>
-              類別
-              <select id="progress-category"></select>
-            </label>
-            <label class="switch">
-              <input id="only-learning" type="checkbox" />
-              <span>僅顯示待加強</span>
-            </label>
-          </div>
-          <table class="vocab-table">
-            <thead>
-              <tr><th>西語</th><th>英語</th><th>狀態</th></tr>
-            </thead>
-            <tbody id="vocab-tbody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+        // 交卷邏輯
+        function submitExam(force = false) {
+            // 檢查未作答
+            let totalQ = 30;
+            let answered = 0;
+            for(let i=1; i<=totalQ; i++) {
+                const radios = document.getElementsByName('q'+i);
+                let isChecked = false;
+                for (let r of radios) {
+                    if (r.checked) isChecked = true;
+                }
+                if (isChecked) answered++;
+            }
 
-    <footer class="app-footer">
-      <small>本 App 使用瀏覽器語音合成（若支援）播放西語發音。進度資料儲存於此裝置的瀏覽器 LocalStorage。</small>
-    </footer>
+            if (!force && answered < totalQ) {
+                if(!confirm(`您還有 ${totalQ - answered} 題未作答，確定要交卷嗎？`)) {
+                    return;
+                }
+            }
 
-    <script src="app.js" defer></script>
-  </body>
-  </html>
+            clearInterval(timerId); // 停止計時
+            calculateScore();
+            window.scrollTo(0, 0);
+        }
 
+        // 算分與顯示答案
+        const answers = {
+            // 是非
+            1:'O', 2:'X', 3:'X', 4:'X', 5:'O', 6:'X', 7:'X', 8:'X', 9:'O', 10:'X',
+            // 選擇
+            11:'3', 12:'2', 13:'2', 14:'3', 15:'2', 16:'2', 17:'3', 18:'3', 19:'2', 20:'1',
+            // 勾選 (複選，需特殊處理)
+            21: ['1','3','4'], 22: ['1','3','5'],
+            // 配合
+            23:'2', 24:'3', 25:'1', 26:'1',
+            // 素養
+            27:'4', 28:'2',
+            // 活用
+            29:'2', 30:'3'
+        };
 
+        const scores = {
+            tf: 2, mc: 3, check: 5, match: 2.5, lit: 5, app: 10
+        };
+
+        function calculateScore() {
+            let totalScore = 0;
+            // 遍歷所有題目
+            for(let i=1; i<=30; i++) {
+                let userAns = [];
+                const inputs = document.getElementsByName('q'+i);
+                
+                // 獲取使用者答案
+                for (let input of inputs) {
+                    if (input.checked) userAns.push(input.value);
+                }
+
+                // 判斷題型給分
+                let type = '';
+                if(i<=10) type='tf';
+                else if(i<=20) type='mc';
+                else if(i<=22) type='check';
+                else if(i<=26) type='match';
+                else if(i<=28) type='lit';
+                else type='app';
+
+                let correct = false;
+                let correctAnsStr = "";
+                
+                if (type === 'check') {
+                    // 複選題比對
+                    let ansArr = answers[i];
+                    correctAnsStr = ansArr.join(', ');
+                    // 簡單比對：長度一樣且內容一樣
+                    if (userAns.length === ansArr.length && userAns.every(v => ansArr.includes(v))) {
+                        totalScore += scores[type];
+                        correct = true;
+                    }
+                } else {
+                    // 單選/是非/配合
+                    let ansVal = answers[i];
+                    correctAnsStr = (type === 'match') ? String.fromCharCode(64 + parseInt(ansVal)) : ansVal; // 配合題轉ABC
+                    if (userAns[0] === ansVal) {
+                        totalScore += scores[type];
+                        correct = true;
+                    }
+                }
+                
+                // 標記對錯 (視覺效果)
+                const qBlock = document.getElementById('q'+i);
+                if (!correct) {
+                    qBlock.style.border = "2px solid #e74c3c"; // 錯題紅框
+                    const ansSpan = document.getElementById('ans'+i);
+                    ansSpan.innerText = ` (正確答案: ${type === 'match' ? ['A','B','C'][answers[i]-1] : (type==='check'?answers[i].join(','):answers[i])})`;
+                    ansSpan.style.display = 'none'; // 先隱藏，等密碼解鎖
+                    document.getElementById('exp'+i).style.display = 'none';
+                } else {
+                    qBlock.style.border = "2px solid #27ae60"; // 對題綠框
+                }
+                
+                // 禁用題目防止修改
+                inputs.forEach(inp => inp.disabled = true);
+            }
+
+            const resultArea = document.getElementById('resultArea');
+            resultArea.innerText = `測驗結束！您的得分是： ${totalScore} 分`;
+            resultArea.style.display = 'block';
+            document.querySelector('.btn-submit').style.display = 'none';
+        }
+
+        // 密碼檢查
+        function openModal() {
+            document.getElementById('pwdModal').style.display = 'block';
+        }
+
+        function checkPwd() {
+            const pwd = document.getElementById('pwdInput').value;
+            if (pwd === '0106') {
+                document.getElementById('pwdModal').style.display = 'none';
+                // 顯示詳解
+                const correctSpans = document.getElementsByClassName('correct-answer');
+                for(let span of correctSpans) span.style.display = 'inline';
+                const exps = document.getElementsByClassName('explanation');
+                for(let exp of exps) exp.style.display = 'block';
+                alert("詳解已開啟，請查看各題下方說明。");
+            } else {
+                alert("密碼錯誤！");
+            }
+        }
+    </script>
+</body>
+</html>
