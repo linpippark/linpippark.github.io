@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>康軒(五上)自然線上期末測驗系統_單元4：神秘的天空</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 20px; color: #2c3e50; }
+        .container { max-width: 850px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h1 { text-align: center; color: #2980b9; border-bottom: 4px solid #f1c40f; padding-bottom: 15px; letter-spacing: 1px; }
+        .timer-box { position: fixed; top: 15px; right: 15px; background: #2c3e50; color: #f1c40f; padding: 12px 25px; border-radius: 8px; font-size: 1.4em; font-weight: bold; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 2px solid #fff; }
+        .timer-warning { background-color: #c0392b; color: #fff; animation: blink 0.8s infinite; border-color: #f1c40f; }
+        @keyframes blink { 50% { opacity: 0.8; transform: scale(1.05); } }
+        
+        .section-title { background-color: #dcedc8; color: #276e36; padding: 12px 15px; border-left: 6px solid #27ae60; margin-top: 35px; margin-bottom: 20px; font-weight: bold; font-size: 1.2em; border-radius: 0 5px 5px 0; }
+        .question-block { margin-bottom: 25px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #fafafa; transition: transform 0.2s; }
+        .question-block:hover { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .question-text { font-weight: bold; font-size: 1.1em; margin-bottom: 15px; display: block; line-height: 1.5; }
+        .options label { display: block; margin: 8px 0; cursor: pointer; padding: 5px; border-radius: 4px; }
+        .options label:hover { background-color: #e8f6f3; }
+        
+        .flag-review { margin-top: 15px; font-size: 0.95em; color: #d35400; display: inline-flex; align-items: center; cursor: pointer; font-weight: bold; }
+        .flag-review input { margin-right: 8px; transform: scale(1.2); }
+        .marked { border: 2px solid #f39c12; background-color: #fffaf0; position: relative; }
+        .marked::after { content: "★ 待檢查"; position: absolute; top: 10px; right: 10px; color: #f39c12; font-weight: bold; font-size: 0.8em; }
+
+        .btn-group { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 2px dashed #bdc3c7; }
+        button { padding: 15px 35px; font-size: 1.1em; cursor: pointer; border: none; border-radius: 50px; margin: 0 15px; transition: 0.3s; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-submit { background-color: #27ae60; color: white; }
+        .btn-submit:hover { background-color: #219150; transform: translateY(-2px); }
+        .btn-answer { background-color: #34495e; color: white; }
+        .btn-answer:hover { background-color: #2c3e50; transform: translateY(-2px); }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 30px; border-radius: 15px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; color: #2c3e50; }
+        .modal input { padding: 12px; margin: 15px 0; width: 80%; border: 2px solid #bdc3c7; border-radius: 5px; font-size: 1em; text-align: center; }
+        .modal button { padding: 10px 20px; margin: 5px; border-radius: 5px; font-size: 1em; }
+        
+        .result-score { text-align: center; font-size: 2em; color: #e74c3c; margin-bottom: 30px; display: none; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); padding: 20px; background: #fadbd8; border-radius: 10px; border: 2px solid #e74c3c;}
+        .correct-answer { color: #c0392b; font-weight: bold; margin-left: 10px; display: none; background: #fce4ec; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
+        .explanation { font-size: 0.95em; color: #555; display: none; margin-top: 8px; background: #e8f4fd; padding: 10px; border-radius: 5px; border-left: 4px solid #3498db; line-height: 1.4; }
+    </style>
+</head>
+<body>
+
+    <div id="timerDisplay" class="timer-box">05:00</div>
+
+    <div class="container">
+        <h1>康軒(五上)自然線上期末測驗系統<br><span style="font-size:0.65em; color:#7f8c8d;">單元4：神秘的天空</span></h1>
+        
+        <div id="resultArea" class="result-score"></div>
+
+        <form id="examForm">
+            <div class="section-title">一、是非題 (共10題，每題2分，共20分)</div>
+            <script>
+                function createQuestion(id, type, text, options, value) {
+                    let html = `<div class="question-block" id="q${id}">
+                        <span class="question-text">Q${id}. ${text}</span>
+                        <div class="options">`;
+                    
+                    if (type === 'tf') {
+                        html += `<label><input type="radio" name="q${id}" value="O"> O (正確)</label>
+                                 <label><input type="radio" name="q${id}" value="X"> X (錯誤)</label>`;
+                    } else if (type === 'mc' || type === 'match' || type === 'app') {
+                        options.forEach((opt, idx) => {
+                            html += `<label><input type="radio" name="q${id}" value="${idx+1}"> ${opt}</label>`;
+                        });
+                    } else if (type === 'check') {
+                         options.forEach((opt, idx) => {
+                            html += `<label><input type="checkbox" name="q${id}" value="${idx+1}"> ${opt}</label>`;
+                        });
+                    }
+
+                    html += `</div>
+                        <label class="flag-review"><input type="checkbox" onchange="toggleMark('q${id}')"> 稍後作答 (Review Later)</label>
+                        <span class="correct-answer" id="ans${id}"></span>
+                        <div class="explanation" id="exp${id}"></div>
+                    </div>`;
+                    document.write(html);
+                }
+                
+                const tfQs = [
+                    {id: 1, text: '一年之中，每天太陽都是從正東方升起，正西方落下。', ans: 'X', exp: '錯誤。只有春分和秋分是正東升起；夏天偏東北，冬天偏東南。'},
+                    {id: 2, text: '北極星是一顆很亮的星星，且在天空中幾乎不會隨著時間移動位置。', ans: 'O', exp: '正確。北極星位於地軸北極延伸線上，因此視覺上幾乎不動。'},
+                    {id: 3, text: '在臺灣，中午時太陽的位置永遠在頭頂正上方（直射），所以影子會消失。', ans: 'X', exp: '錯誤。臺灣位於北回歸線以北地區，太陽中午時偏南方，影子朝向北方，不會直射頭頂。'},
+                    {id: 4, text: '星星和太陽一樣，每天都會東升西落，這是因為地球自轉的關係。', ans: 'O', exp: '正確。地球自西向東自轉，造成天體東升西落的現象。'},
+                    {id: 5, text: '太陽系中，地球是恆星，太陽是行星，月亮是衛星。', ans: 'X', exp: '錯誤。太陽是恆星，地球是行星，月亮是衛星。'},
+                    {id: 6, text: '利用仙后座尋找北極星時，要利用ㄅ、ㄆ兩顆星連線延長5倍距離來尋找。', ans: 'X', exp: '錯誤。利用「北斗七星」才是延長5倍；利用「仙后座」有不同的找法(兩邊延伸交叉點與第3顆星連線延長5倍)。'},
+                    {id: 7, text: '因為地球公轉的關係，所以我們在不同季節會看到不同的主要星座。', ans: 'O', exp: '正確。地球繞太陽公轉，面向夜空的方向不同，看到的星空也不同。'},
+                    {id: 8, text: '夏季時，中午的太陽高度角最大，影子最短；冬季時，太陽高度角最小，影子最長。', ans: 'O', exp: '正確。夏至太陽仰角最高，影子最短。'},
+                    {id: 9, text: '太陽系有八大行星，距離太陽由近到遠，地球排在第三位。', ans: 'O', exp: '正確。水、金、地、火...'},
+                    {id: 10, text: '星座盤上的橢圓形視窗是為了美觀設計的，與觀測範圍無關。', ans: 'X', exp: '錯誤。橢圓形視窗代表地平線以上的觀測範圍。'}
+                ];
+                tfQs.forEach(q => createQuestion(q.id, 'tf', q.text, [], q.ans));
+            </script>
+
+            <div class="section-title">二、選擇題 (共10題，每題3分，共30分)</div>
+            <script>
+                const mcQs = [
+                    {id: 11, text: '如果現在是晚上8點，想要尋找北極星，但在北方天空只看到像「M」字型（或W字型）的星座，請問這是什麼星座？', opts: ['1. 北斗七星', '2. 獵戶座', '3. 仙后座', '4. 天蠍座'], ans: '3', exp: '仙后座呈現W或M字型，常用於秋冬尋找北極星。'},
+                    {id: 12, text: '關於太陽系的敘述，下列何者正確？', opts: ['1. 土星有美麗的環', '2. 木星是體積最小的行星', '3. 水星距離太陽最遠', '4. 火星表面有豐富的液態水'], ans: '1', exp: '土星環最明顯。木星最大，水星最近。'},
+                    {id: 13, text: '在臺灣，夏至這一天中午12點，竿影的指向為何？', opts: ['1. 東方', '2. 西方', '3. 南方', '4. 北方'], ans: '4', exp: '臺灣嘉義以北地區，中午太陽在偏南方，所以影子指向北方。'},
+                    {id: 14, text: '為什麼星星會有明暗不同的亮度？', opts: ['1. 只跟星星的大小有關', '2. 只跟星星的距離有關', '3. 與星星的發光強度和距離遠近都有關', '4. 因為被雲遮住了'], ans: '3', exp: '亮度取決於恆星本身的發光強度(光度)以及與地球的距離。'},
+                    {id: 15, text: '使用星座盤觀測星星時，要如何拿著星座盤對照天空？', opts: ['1. 盤面朝下，放在地上看', '2. 盤面朝上，字體朝向自己，按方位盤面向上舉起', '3. 隨便拿都可以', '4. 盤面朝北，垂直拿著'], ans: '2', exp: '盤面向上舉起，並將盤上的方位對準實際的方位(例如盤上的北對準北方的天空)。'},
+                    {id: 16, text: '下列哪一個天體「不會」發光發熱，是反射恆星的光？', opts: ['1. 織女星', '2. 太陽', '3. 北極星', '4. 月球'], ans: '4', exp: '月球是衛星，本身不發光，反射太陽光。其他選項皆為恆星。'},
+                    {id: 17, text: '國曆6月22日左右是「夏至」，當天太陽升起的方位是？', opts: ['1. 正東方', '2. 東偏北', '3. 東偏南', '4. 正南方'], ans: '2', exp: '夏至太陽直射北回歸線，日出方位為東偏北。'},
+                    {id: 18, text: '下列哪一組星座是屬於「夏季」的代表星座？', opts: ['1. 獵戶座、大犬座', '2. 天蠍座、天鵝座', '3. 飛馬座、仙女座', '4. 獅子座、室女座'], ans: '2', exp: '夏季大三角(天鵝)與南方紅心(天蠍)。獵戶是冬季，飛馬是秋季，獅子是春季。'},
+                    {id: 19, text: '如果今天晚上8點星星在東方天空，那麼晚上10點時，這顆星星會移動到哪裡？', opts: ['1. 往上方移動', '2. 往下方移動', '3. 往左方移動', '4. 完全不動'], ans: '1', exp: '星星東升西落(向右上方移動)，兩小時會往天空更高處(或偏西)移動。'},
+                    {id: 20, text: '古代人利用竿影來計時（日晷），主要是利用太陽的什麼變化？', opts: ['1. 亮度的變化', '2. 顏色的變化', '3. 方位和高度角的變化', '4. 溫度的變化'], ans: '3', exp: '影子長度與方向隨太陽方位高度而變。'}
+                ];
+                mcQs.forEach(q => createQuestion(q.id, 'mc', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">三、勾選題 (共2題，每題5分，共10分) <small>*全對才給分</small></div>
+            <script>
+                const chkQs = [
+                    {id: 21, text: '關於「北極星」的敘述，哪些是正確的？(複選)', opts: ['位於小熊座的尾巴', '是全天空最亮的星星', '可以用來辨認方位(北方)', '所有星星都以此為中心旋轉', '高度角大約等於當地的緯度'], ans: ['1','3','4','5'], exp: '北極星是二等星，並非最亮(天狼星才是最亮恆星)。其他敘述皆正確。'},
+                    {id: 22, text: '下列哪些是屬於「太陽系」的行星？(複選)', opts: ['地球', '北極星', '火星', '月球', '木星'], ans: ['1','3','5'], exp: '北極星是恆星，月球是衛星。地球、火星、木星是行星。'}
+                ];
+                chkQs.forEach(q => createQuestion(q.id, 'check', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">四、配合題 (共4題，每題2.5分，共10分)</div>
+            <p style="background:#fff; padding:10px; border:1px dashed #666; margin-bottom:15px; border-radius:5px;">
+                請選出各季節代表的「星座」或「特徵」：<br>
+                A. 獵戶座 (腰帶有三顆亮星)<br>
+                B. 天蠍座 (有紅色心臟心宿二)<br>
+                C. 獅子座 (像一把鐮刀或問號)<br>
+                D. 飛馬座 (秋季四邊形)
+            </p>
+            <script>
+                const matchQs = [
+                    {id: 23, text: '春季星空的主要代表星座。', opts: ['A', 'B', 'C', 'D'], ans: '3', exp: '春季獅子座。'},
+                    {id: 24, text: '夏季星空的主要代表星座。', opts: ['A', 'B', 'C', 'D'], ans: '2', exp: '夏季天蠍座。'},
+                    {id: 25, text: '秋季星空的主要代表星座。', opts: ['A', 'B', 'C', 'D'], ans: '4', exp: '秋季飛馬座。'},
+                    {id: 26, text: '冬季星空的主要代表星座。', opts: ['A', 'B', 'C', 'D'], ans: '1', exp: '冬季獵戶座。'}
+                ];
+                matchQs.forEach(q => createQuestion(q.id, 'match', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">五、素養題 (共2題，每題5分，共10分)</div>
+            <script>
+                const litQs = [
+                    {id: 27, text: '【生活情境】小明家想裝設太陽能熱水器，為了讓集熱板在一年四季中平均能吸收到最多的太陽光，集熱板應該要朝向哪一個方位傾斜安裝最合適？(提示：臺灣在北半球)', opts: ['1. 正東方', '2. 正西方', '3. 正南方', '4. 正北方'], ans: '3', exp: '臺灣位於北半球，太陽整年軌跡皆偏南方，故朝南安裝效益最高。'},
+                    {id: 28, text: '【觀測推理】小華在操場利用竿影觀測太陽，他發現今天的竿影是一年中「最短」的，且太陽是從「東偏北」升起。請問今天大概是什麼節氣？', opts: ['1. 春分', '2. 夏至', '3. 秋分', '4. 冬至'], ans: '2', exp: '夏至太陽仰角最高(影子最短)，且日出方位為東偏北。'}
+                ];
+                litQs.forEach(q => createQuestion(q.id, 'mc', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="section-title">六、活用題 (共2題，每題10分，共20分)</div>
+            <script>
+                const appQs = [
+                    {id: 29, text: '【圖表應用】如果要利用「北斗七星」尋找北極星，應該將斗杓前端的兩顆星（天樞、天璇）連線，向杓口方向延長約幾倍距離？', opts: ['1. 3倍', '2. 4倍', '3. 5倍', '4. 10倍'], ans: '3', exp: '這是標準的尋星口訣：利用北斗七星斗杓二星連線延長5倍距離。'},
+                    {id: 30, text: '【綜合分析】關於四季與太陽運行的關係，下列哪一個敘述是「完全正確」的？', opts: ['1. 冬天比較冷是因為太陽離地球比較遠', '2. 夏天中午影子最短，白天時間最長', '3. 太陽每天都從同一個位置升起，只是高度不同', '4. 地球自轉軸沒有傾斜，所以才有四季變化'], ans: '2', exp: '1錯(距離影響極小，主因是直射/斜射)；3錯(升起方位不同)；4錯(是因為有傾斜才有四季)；2正確(夏至晝長夜短且仰角高)。'}
+                ];
+                appQs.forEach(q => createQuestion(q.id, 'app', q.text, q.opts, q.ans));
+            </script>
+
+            <div class="btn-group">
+                <button type="button" class="btn-submit" onclick="submitExam()">交卷 (Submit)</button>
+                <button type="button" class="btn-answer" onclick="openModal()">看詳解 (Teacher Only)</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="pwdModal" class="modal">
+        <div class="modal-content">
+            <h3>請輸入老師密碼</h3>
+            <p style="font-size:0.8em; color:#666;">(密碼提示：0106)</p>
+            <input type="password" id="pwdInput" placeholder="請輸入密碼">
+            <br>
+            <div style="display:flex; justify-content:center;">
+                <button onclick="checkPwd()" style="background:#27ae60; color:#fff;">確定</button>
+                <button onclick="document.getElementById('pwdModal').style.display='none'" style="background:#95a5a6; color:#fff;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 倒數計時邏輯
+        let timeLeft = 300; // 5分鐘
+        const timerDisplay = document.getElementById('timerDisplay');
+        let timerId;
+        let isSubmitted = false;
+
+        function startTimer() {
+            timerId = setInterval(() => {
+                if(isSubmitted) return;
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60);
+                let s = timeLeft % 60;
+                timerDisplay.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+                if (timeLeft <= 60) {
+                    timerDisplay.classList.add('timer-warning');
+                    if (timeLeft === 60) alert("注意：考試時間只剩 1 分鐘！請加快作答速度！");
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    alert("時間到！系統將自動強制交卷。");
+                    submitExam(true);
+                }
+            }, 1000);
+        }
+        window.onload = startTimer;
+
+        // 2. 稍後作答標記功能
+        function toggleMark(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('marked')) {
+                el.classList.remove('marked');
+            } else {
+                el.classList.add('marked');
+            }
+        }
+
+        // 3. 答案與計分邏輯
+        const answers = {
+            1:'X', 2:'O', 3:'X', 4:'O', 5:'X', 6:'X', 7:'O', 8:'O', 9:'O', 10:'X',
+            11:'3', 12:'1', 13:'4', 14:'3', 15:'2', 16:'4', 17:'2', 18:'2', 19:'1', 20:'3',
+            21:['1','3','4','5'], 22:['1','3','5'],
+            23:'3', 24:'2', 25:'4', 26:'1',
+            27:'3', 28:'2', 29:'3', 30:'2'
+        };
+        const scores = { tf:2, mc:3, check:5, match:2.5, lit:5, app:10 };
+
+        function submitExam(force = false) {
+            if(isSubmitted) return;
+
+            // 檢查未作答
+            let totalQ = 30;
+            let answered = 0;
+            for(let i=1; i<=totalQ; i++) {
+                const radios = document.getElementsByName('q'+i);
+                let isChecked = false;
+                for (let r of radios) { if (r.checked) isChecked = true; }
+                if (isChecked) answered++;
+            }
+
+            if (!force && answered < totalQ) {
+                if(!confirm(`您還有 ${totalQ - answered} 題未作答，確定要交卷嗎？`)) return;
+            }
+
+            isSubmitted = true;
+            clearInterval(timerId);
+            calculateScore();
+            window.scrollTo(0, 0);
+        }
+
+        function calculateScore() {
+            let totalScore = 0;
+            for(let i=1; i<=30; i++) {
+                let userAns = [];
+                const inputs = document.getElementsByName('q'+i);
+                for (let input of inputs) if (input.checked) userAns.push(input.value);
+
+                let type = '';
+                if(i<=10) type='tf';
+                else if(i<=20) type='mc';
+                else if(i<=22) type='check';
+                else if(i<=26) type='match';
+                else if(i<=28) type='lit';
+                else type='app';
+
+                let correct = false;
+                if (type === 'check') {
+                    let ansArr = answers[i];
+                    if (userAns.length === ansArr.length && userAns.every(v => ansArr.includes(v))) {
+                        totalScore += scores[type];
+                        correct = true;
+                    }
+                } else {
+                    let ansVal = answers[i];
+                    if (userAns[0] === ansVal) {
+                        totalScore += scores[type];
+                        correct = true;
+                    }
+                }
+
+                // UI Feedback
+                const qBlock = document.getElementById('q'+i);
+                if (!correct) {
+                    qBlock.style.border = "2px solid #e74c3c";
+                    qBlock.style.background = "#fff5f5";
+                    const ansSpan = document.getElementById('ans'+i);
+                    let displayAns = type === 'match' ? ['A','B','C','D'][answers[i]-1] : (type==='check'?answers[i].join(','):answers[i]);
+                    ansSpan.innerText = ` (正確答案: ${displayAns})`;
+                } else {
+                    qBlock.style.border = "2px solid #27ae60";
+                    qBlock.style.background = "#f0fff4";
+                }
+                inputs.forEach(inp => inp.disabled = true);
+            }
+
+            const resultArea = document.getElementById('resultArea');
+            resultArea.innerText = `測驗結束！您的得分是： ${totalScore} 分`;
+            resultArea.style.display = 'block';
+            document.querySelector('.btn-submit').style.display = 'none';
+        }
+
+        // 4. 密碼保護詳解
+        function openModal() {
+            if(!isSubmitted) { alert("請先交卷後再查看詳解！"); return; }
+            document.getElementById('pwdModal').style.display = 'block';
+        }
+
+        function checkPwd() {
+            const pwd = document.getElementById('pwdInput').value;
+            if (pwd === '0106') {
+                document.getElementById('pwdModal').style.display = 'none';
+                document.querySelectorAll('.correct-answer').forEach(el => el.style.display = 'inline');
+                document.querySelectorAll('.explanation').forEach(el => el.style.display = 'block');
+            } else {
+                alert("密碼錯誤！");
+            }
+        }
+    </script>
+</body>
+</html>
