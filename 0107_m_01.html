@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南一(五上)數學線上期末測驗系統</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        
+        /* Timer Bar */
+        .timer-bar { position: sticky; top: 0; background: #2c3e50; color: white; padding: 15px; text-align: center; font-size: 1.5em; font-weight: bold; border-radius: 0 0 10px 10px; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .timer-warning { background-color: #e74c3c; animation: pulse 1s infinite; }
+        
+        /* Questions */
+        .question-block { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; transition: background 0.3s; }
+        .question-block:hover { background-color: #f9f9f9; }
+        .question-title { font-weight: bold; margin-bottom: 10px; color: #34495e; }
+        .options label { display: block; margin: 5px 0; cursor: pointer; }
+        .marked { background-color: #fff3cd !important; border-color: #ffeeba; }
+        .mark-review { margin-left: 10px; font-size: 0.9em; color: #e67e22; cursor: pointer; }
+        
+        /* Section Headers */
+        .section-header { background: #ecf0f1; padding: 10px; margin: 20px 0; border-left: 5px solid #3498db; font-weight: bold; color: #2980b9; }
+
+        /* Buttons */
+        .btn-group { text-align: center; margin-top: 30px; }
+        button { padding: 12px 25px; font-size: 1em; cursor: pointer; border: none; border-radius: 5px; margin: 0 10px; transition: 0.2s; }
+        .submit-btn { background-color: #27ae60; color: white; }
+        .submit-btn:hover { background-color: #219150; }
+        .answer-btn { background-color: #3498db; color: white; }
+        .answer-btn:hover { background-color: #2980b9; }
+
+        /* Result & Answers */
+        #result-area { display: none; margin-top: 20px; padding: 20px; background: #e8f8f5; border: 2px solid #2ecc71; border-radius: 5px; }
+        .answer-key { display: none; margin-top: 20px; padding: 20px; background: #fdf2e9; border: 2px solid #e67e22; border-radius: 5px; }
+        .correct-ans { color: green; font-weight: bold; }
+        .wrong-ans { color: red; text-decoration: line-through; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="timer-bar" id="timer">剩餘時間：20:00</div>
+
+    <div class="container">
+        <h1>南一(五上)數學線上期末測驗系統</h1>
+        <p style="text-align: center;">範圍：單元7(整數四則)、單元8(面積)、單元9(時間) | 總分：100分 | 題數：50題</p>
+
+        <form id="examForm">
+            <div id="questions-container"></div>
+            
+            <div class="btn-group">
+                <button type="button" class="submit-btn" onclick="checkSubmission()">交卷</button>
+                <button type="button" class="answer-btn" onclick="showAnswers()">查看詳解 (需密碼)</button>
+            </div>
+        </form>
+
+        <div id="result-area"></div>
+        <div id="answer-key" class="answer-key"></div>
+    </div>
+
+<script>
+    // 題目資料庫 (模擬考古題)
+    const questions = [
+        // --- 是非題 (1-10) ---
+        { id: 1, type: 'tf', q: '【是非】平行四邊形的面積公式是「底 × 高 ÷ 2」。', options: ['O', 'X'], a: 'X' },
+        { id: 2, type: 'tf', q: '【是非】計算 25 × 13 × 4 時，可以先算 25 × 4 再乘以 13，會比較好算。', options: ['O', 'X'], a: 'O' },
+        { id: 3, type: 'tf', q: '【是非】三角形的面積是固定底和高，若底變為原來的 2 倍，高不變，則面積也會變為原來的 2 倍。', options: ['O', 'X'], a: 'O' },
+        { id: 4, type: 'tf', q: '【是非】時間的計算中，3小時20分乘以 3 等於 9小時60分，也就是 10小時。', options: ['O', 'X'], a: 'O' },
+        { id: 5, type: 'tf', q: '【是非】梯形的上底和下底如果長度都增加 1 公分，高不變，面積不會改變。', options: ['O', 'X'], a: 'X' },
+        { id: 6, type: 'tf', q: '【是非】計算 100 - 20 ÷ 5 時，應該先算 100 - 20。', options: ['O', 'X'], a: 'X' },
+        { id: 7, type: 'tf', q: '【是非】鈍角三角形的高一定在三角形的外部。', options: ['O', 'X'], a: 'X' }, // 不一定，只有對應鈍角邊的高在外部
+        { id: 8, type: 'tf', q: '【是非】1日12小時除以 6 的答案是 6小時。', options: ['O', 'X'], a: 'O' }, // 36hr/6 = 6hr
+        { id: 9, type: 'tf', q: '【是非】分配律公式：(A + B) × C = A × C + B × C。', options: ['O', 'X'], a: 'O' },
+        { id: 10, type: 'tf', q: '【是非】兩個完全一樣的梯形，一定可以拼成一個平行四邊形。', options: ['O', 'X'], a: 'O' },
+
+        // --- 選擇題 (11-30) ---
+        { id: 11, type: 'mc', q: '198 × 36 + 2 × 36 = ?', options: ['3600', '7200', '720', '36000'], a: '7200' },
+        { id: 12, type: 'mc', q: '一個平行四邊形底是 15 公分，高是 8 公分，面積是多少平方公分？', options: ['60', '120', '23', '90'], a: '120' },
+        { id: 13, type: 'mc', q: '計算 800 ÷ (40 ÷ 2) = ?', options: ['10', '40', '20', '80'], a: '40' },
+        { id: 14, type: 'mc', q: '梯形上底 6cm，下底 14cm，高 5cm，面積是多少？', options: ['50', '100', '60', '70'], a: '50' },
+        { id: 15, type: 'mc', q: '小明讀書花了 1小時45分，打球花了 50分鐘，共花了多少時間？', options: ['2小時25分', '2小時35分', '1小時95分', '2小時15分'], a: '2小時35分' },
+        { id: 16, type: 'mc', q: '下列哪一個算式的結果與 99 × 25 相同？', options: ['(100-1)×25', '100×25-1', '90×25+9', '(90+9)×20'], a: '(100-1)×25' },
+        { id: 17, type: 'mc', q: '三角形底為 20m，面積為 100平方公尺，請問高是多少？', options: ['5m', '10m', '20m', '2.5m'], a: '10m' },
+        { id: 18, type: 'mc', q: '3日5時 × 4 = ?', options: ['12日20時', '12日5時', '13日20時', '15日20時'], a: '12日20時' },
+        { id: 19, type: 'mc', q: '有一個工程需要 45小時才能完成，若每天工作 5小時，需要幾天？', options: ['8天', '9天', '10天', '7天'], a: '9天' },
+        { id: 20, type: 'mc', q: '計算 720 ÷ 8 ÷ 9 = ?', options: ['10', '810', '90', '72'], a: '10' },
+        { id: 21, type: 'mc', q: '平行四邊形的底變為 3 倍，高變為 2 倍，面積變為原來的幾倍？', options: ['5倍', '6倍', '3倍', '2倍'], a: '6倍' },
+        { id: 22, type: 'mc', q: '900 - 30 × 5 + 50 = ?', options: ['4400', '800', '650', '700'], a: '800' },
+        { id: 23, type: 'mc', q: '20 分 30 秒 ÷ 6 = ?', options: ['3分25秒', '3分35秒', '3分5秒', '3分50秒'], a: '3分25秒' },
+        { id: 24, type: 'mc', q: '一塊三角形土地，底 30公尺，高 24公尺，若每平方公尺種 2 朵花，共可種幾朵？', options: ['720', '360', '1440', '180'], a: '720' }, // 30*24/2 = 360, 360*2=720
+        { id: 25, type: 'mc', q: '125 × 37 × 8 = ?', options: ['3700', '37000', '10000', '29600'], a: '37000' },
+        { id: 26, type: 'mc', q: '下列關於高的敘述何者正確？', options: ['高一定比底長', '高一定在圖形內部', '高與底互相垂直', '平行四邊形只有一條高'], a: '高與底互相垂直' },
+        { id: 27, type: 'mc', q: '某生練習跑步，跑一圈要 4分15秒，跑 5 圈要多久？', options: ['20分15秒', '21分15秒', '20分75秒', '22分'], a: '21分15秒' },
+        { id: 28, type: 'mc', q: '計算 (36 + 64) × 18 = ?', options: ['180', '1800', '3600', '6400'], a: '1800' },
+        { id: 29, type: 'mc', q: '梯形面積 60，上底 4，下底 6，求高？', options: ['6', '12', '10', '5'], a: '12' }, // (4+6)*h/2=60 -> 5h=60 -> h=12
+        { id: 30, type: 'mc', q: '540 ÷ 18 = 30，那麼 5400 ÷ 180 = ?', options: ['3', '30', '300', '3000'], a: '30' },
+
+        // --- 活用與素養題 (31-45) ---
+        { id: 31, type: 'mc', q: '【素養】小華家到學校走路要 25分鐘，他今天早上 7:40 出門，請問他幾點到達學校？', options: ['8:05', '8:15', '7:65', '8:00'], a: '8:05' },
+        { id: 32, type: 'mc', q: '【活用】有一塊梯形農地，上底 20m，下底 30m，高 15m，如果要在農地中間開一條寬 2m 的長方形道路(貫穿高)，剩餘面積大約是多少？', options: ['375', '345', '300', '330'], a: '345' }, // 總(20+30)*15/2=375。路假設是垂直高，則路面積2*15=30(若貫穿高代表長是15寬是2)。375-30=345。*簡化題意為扣除*
+        { id: 33, type: 'mc', q: '【計算】10 小時 20 分 - 6 小時 45 分 = ?', options: ['4小時35分', '3小時35分', '3小時25分', '4小時25分'], a: '3小時35分' },
+        { id: 34, type: 'mc', q: '【應用】一盒蘋果 12 顆賣 360 元，一盒橘子 10 顆賣 200 元，媽媽買了 2 盒蘋果和 3 盒橘子，共要付多少錢？', options: ['1120', '1220', '1320', '560'], a: '1320' }, // 360*2 + 200*3 = 720+600=1320
+        { id: 35, type: 'mc', q: '【活用】利用分配律計算：38 × 99 + 38 = ?', options: ['380', '3800', '3900', '3899'], a: '3800' },
+        { id: 36, type: 'mc', q: '【素養】電影「阿凡達」片長 3小時12分，電影院一天放映 4 場，中間休息 20 分鐘清場，請問第一場開始到第四場結束共經歷多久？', options: ['14小時8分', '13小時48分', '12小時48分', '13小時28分'], a: '13小時48分' }, // 4場電影+3次休息。 (3h12m)*4 + 20m*3 = 12h48m + 60m = 13h48m
+        { id: 37, type: 'mc', q: '【幾何】一個三角形的底擴大 4 倍，高縮小 2 倍，面積會如何變化？', options: ['不變', '變大 2 倍', '變大 4 倍', '變小 2 倍'], a: '變大 2 倍' },
+        { id: 38, type: 'mc', q: '【計算】(45 + 15) × (100 - 20) ÷ 4 = ?', options: ['1200', '1600', '800', '2400'], a: '1200' }, // 60 * 80 / 4 = 4800/4 = 1200
+        { id: 39, type: 'mc', q: '【應用】小明摺紙星星，每 5 分鐘可以摺 8 顆，他想摺 96 顆星星需要多久？', options: ['50分鐘', '60分鐘', '1小時10分', '48分鐘'], a: '60分鐘' }, // 96/8=12組, 12*5=60分
+        { id: 40, type: 'mc', q: '【陷阱】計算 400 - 50 × 4 ÷ 2 = ?', options: ['700', '300', '350', '100'], a: '300' }, // 400 - 200/2 = 400-100=300
+
+        // --- 配合題 (41-50) 轉化為選擇形式 ---
+        { id: 41, type: 'mc', q: '【配合】算式「102 × 55」可以拆解成？', options: ['(100+2)×55', '100×(2+55)', '102×50+5', '100×55+2'], a: '(100+2)×55' },
+        { id: 42, type: 'mc', q: '【配合】計算「梯形面積」需要哪個算式？', options: ['底×高', '底×高÷2', '(上底+下底)×高÷2', '邊長×邊長'], a: '(上底+下底)×高÷2' },
+        { id: 43, type: 'mc', q: '【配合】時間單位換算，480 分鐘等於？', options: ['6小時', '7小時', '8小時', '9小時'], a: '8小時' },
+        { id: 44, type: 'mc', q: '【配合】哪個圖形沿著對角線剪開，一定會變成兩個全等的三角形？', options: ['梯形', '平行四邊形', '任意四邊形', '以上皆非'], a: '平行四邊形' },
+        { id: 45, type: 'mc', q: '【配合】一天當中，時針轉了幾圈？', options: ['1圈', '2圈', '12圈', '24圈'], a: '2圈' },
+        { id: 46, type: 'mc', q: '【計算】1000 ÷ 8 ÷ 125 = ?', options: ['1', '10', '100', '0.1'], a: '1' }, // 1000 / (8*125) = 1000/1000=1
+        { id: 47, type: 'mc', q: '【應用】爸爸開車去高雄花了 4小時30分，回程開比較快，少花了 45分鐘，回程花了多久？', options: ['3小時45分', '3小時55分', '5小時15分', '3小時15分'], a: '3小時45分' },
+        { id: 48, type: 'mc', q: '【觀念】平行四邊形的高有幾條？', options: ['1條', '2條', '4條', '無限多條'], a: '無限多條' },
+        { id: 49, type: 'mc', q: '【計算】999 × 7 + 7 = ?', options: ['700', '7000', '6993', '7007'], a: '7000' },
+        { id: 50, type: 'mc', q: '【終極題】有一塊平行四邊形土地，底 50m，高 40m，若中間挖一個底 10m 高 10m 的三角形水池，剩餘土地面積是？', options: ['1900', '1950', '2000', '1800'], a: '1950' } // 2000 - 50 = 1950
+    ];
+
+    const container = document.getElementById('questions-container');
+    let timeLeft = 1200; // 20 minutes in seconds
+    let timerInterval;
+
+    // 初始化題目
+    function init() {
+        let html = '';
+        let sectionTitles = {1: '一、是非題 (每題2分)', 11: '二、選擇題 (每題2分)', 31: '三、素養與活用題 (每題2分)', 41: '四、觀念配合題 (每題2分)'};
+
+        questions.forEach((q, index) => {
+            if (sectionTitles[q.id]) {
+                html += `<div class="section-header">${sectionTitles[q.id]}</div>`;
+            }
+
+            let optionsHtml = '';
+            q.options.forEach((opt, i) => {
+                optionsHtml += `<label><input type="radio" name="q${q.id}" value="${opt}"> ${opt}</label>`;
+            });
+
+            html += `
+                <div class="question-block" id="block-${q.id}">
+                    <div class="question-title">
+                        ${q.id}. ${q.q}
+                        <label class="mark-review"><input type="checkbox" onchange="toggleMark(${q.id})"> 稍後作答</label>
+                    </div>
+                    <div class="options">${optionsHtml}</div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        startTimer();
+    }
+
+    // 標記稍後作答
+    function toggleMark(id) {
+        const block = document.getElementById(`block-${id}`);
+        if (block.classList.contains('marked')) {
+            block.classList.remove('marked');
+        } else {
+            block.classList.add('marked');
+        }
+    }
+
+    // 計時器邏輯
+    function startTimer() {
+        const timerDisplay = document.getElementById('timer');
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            timerDisplay.textContent = `剩餘時間：${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+
+            // 提醒邏輯
+            if (timeLeft === 600) alert("提醒：考試時間剩下 10 分鐘！");
+            if (timeLeft === 360) {
+                alert("提醒：考試時間剩下 6 分鐘！");
+                timerDisplay.classList.add('timer-warning');
+            }
+            if (timeLeft === 120) alert("注意：考試時間剩下 2 分鐘，請檢查是否都有作答！");
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                alert("時間到！系統將自動繳交試卷。");
+                checkSubmission(true);
+            }
+        }, 1000);
+    }
+
+    // 繳卷檢查與評分
+    function checkSubmission(forceSubmit = false) {
+        let score = 0;
+        let unanswered = [];
+        let wrongList = [];
+
+        // 檢查每一題
+        questions.forEach(q => {
+            const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
+            if (!selected) {
+                unanswered.push(q.id);
+            } else {
+                if (selected.value === q.a) {
+                    score += 2;
+                } else {
+                    wrongList.push(q.id);
+                }
+            }
+        });
+
+        if (!forceSubmit && unanswered.length > 0) {
+            let confirmSubmit = confirm(`您還有第 ${unanswered.join(', ')} 題尚未作答，確定要繳卷嗎？`);
+            if (!confirmSubmit) return;
+        }
+
+        // 停止計時
+        clearInterval(timerInterval);
+        
+        // 顯示結果
+        const resultArea = document.getElementById('result-area');
+        resultArea.style.display = 'block';
+        resultArea.innerHTML = `
+            <h2>測驗結果</h2>
+            <p>您的得分是：<strong>${score} / 100</strong></p>
+            <p>答錯題號：${wrongList.length > 0 ? wrongList.join(', ') : '恭喜全對！'}</p>
+        `;
+
+        // 鎖定所有選項
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => input.disabled = true);
+        document.querySelector('.submit-btn').style.display = 'none';
+        
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    // 顯示詳解 (密碼保護)
+    function showAnswers() {
+        let pass = prompt("請輸入密碼以查看詳解：");
+        if (pass === "0107") {
+            const answerKey = document.getElementById('answer-key');
+            let html = '<h3>題目詳解與正確答案</h3><ul>';
+            questions.forEach(q => {
+                html += `<li><strong>第 ${q.id} 題</strong> (${q.q}) <br> 正確答案：<span class="correct-ans">${q.a}</span></li>`;
+            });
+            html += '</ul>';
+            answerKey.innerHTML = html;
+            answerKey.style.display = 'block';
+            window.scrollTo(0, document.body.scrollHeight);
+        } else {
+            alert("密碼錯誤！");
+        }
+    }
+
+    // 啟動
+    window.onload = init;
+</script>
+
+</body>
+</html>
