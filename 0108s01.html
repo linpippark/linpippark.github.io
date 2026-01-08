@@ -55,22 +55,7 @@
                 🎲 隨機出題並開始
             </button>
         </div>
-        <p class="mt-4 text-sm text-gray-400">系統將從考古題庫中隨機抽取並打亂順序</p>
-    </div>
-
-    <div id="quizContainer" class="max-w-4xl mx-auto mt-24 px-4 hidden">
-        <form id="quizForm">
-            <div id="questionsList" class="space-y-6">
-                </div>
-        </form>
-        
-        <div class="mt-12 mb-8 text-center">
-            <button onclick="attemptSubmit()" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-full shadow-xl hover:shadow-2xl transition transform hover:scale-105">
-                🚀 繳卷送出
-            </button>
-        </div>
-
-        <div class="mt-16 mb-8 px-6 py-6 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-600">
+         <div class="mt-16 mb-8 px-6 py-6 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-600">
             <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
                 📚 試題來源與出處說明
             </h4>
@@ -99,6 +84,21 @@
             </div>
         </div>
         </div>
+    </div>
+
+    <div id="quizContainer" class="max-w-4xl mx-auto mt-24 px-4 hidden">
+        <form id="quizForm">
+            <div id="questionsList" class="space-y-6">
+                </div>
+        </form>
+        
+        <div class="mt-12 mb-8 text-center">
+            <button onclick="attemptSubmit()" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-full shadow-xl hover:shadow-2xl transition transform hover:scale-105">
+                🚀 繳卷送出
+            </button>
+        </div>
+
+      
 
     <div id="statsFooter" class="sticky-footer hidden flex justify-between items-center text-sm md:text-base">
         <div class="flex gap-4 md:gap-8 font-semibold text-gray-700">
@@ -461,3 +461,4 @@
     </script>
 </body>
 </html>
+
