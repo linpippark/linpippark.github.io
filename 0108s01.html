@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五上)社會線上期末測驗系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        .question-card { transition: all 0.3s ease; }
+        .question-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .option-label { cursor: pointer; transition: all 0.2s; }
+        .option-label:hover { background-color: #e0f2fe; }
+        .correct-answer { background-color: #d1fae5 !important; border-color: #10b981 !important; color: #065f46; font-weight: bold; }
+        .wrong-answer { background-color: #fee2e2 !important; border-color: #ef4444 !important; color: #991b1b; }
+        /* 固定底部統計列 */
+        .sticky-footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: white; border-top: 4px solid #3b82f6;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 50; padding: 10px 20px;
+        }
+    </style>
+</head>
+<body class="pb-32">
+
+    <header class="fixed top-0 w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg md:text-xl font-bold tracking-wider">113學年-康軒(五上)社會線上期末測驗系統</h1>
+            <div id="timerDisplay" class="text-xl font-mono font-bold bg-white text-blue-700 px-3 py-1 rounded shadow hidden">
+                40:00
+            </div>
+        </div>
+    </header>
+
+    <div id="startScreen" class="max-w-2xl mx-auto mt-24 p-8 bg-white rounded-xl shadow-2xl text-center">
+        <div class="mb-6">
+            <span class="text-6xl">🌏</span>
+        </div>
+        <h2 class="text-3xl font-bold text-gray-800 mb-4">社會科期末模擬考</h2>
+        <p class="text-gray-600 mb-6 text-left leading-relaxed">
+            親愛的同學你好，這是針對康軒版五上（單元3～單元4）的考古題測驗。<br>
+            包含：史前文化、原住民族、大航海時代。<br><br>
+            📝 <b>考試規則：</b><br>
+            1. 總分100分，共50題。<br>
+            2. 限時 40 分鐘。<br>
+            3. 答錯題目將會產生紅色標記的成績單。<br>
+        </p>
+        
+        <div class="flex flex-col md:flex-row gap-4 justify-center">
+            <button onclick="randomizeAndStart()" class="px-8 py-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-lg shadow-lg transition transform hover:scale-105 flex items-center justify-center gap-2">
+                🎲 隨機出題並開始
+            </button>
+        </div>
+        <p class="mt-4 text-sm text-gray-400">系統將從考古題庫中隨機抽取並打亂順序</p>
+    </div>
+
+    <div id="quizContainer" class="max-w-4xl mx-auto mt-24 px-4 hidden">
+        <form id="quizForm">
+            <div id="questionsList" class="space-y-6">
+                </div>
+        </form>
+        
+        <div class="mt-12 mb-8 text-center">
+            <button onclick="attemptSubmit()" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-full shadow-xl hover:shadow-2xl transition transform hover:scale-105">
+                🚀 繳卷送出
+            </button>
+        </div>
+    </div>
+
+    <div id="statsFooter" class="sticky-footer hidden flex justify-between items-center text-sm md:text-base">
+        <div class="flex gap-4 md:gap-8 font-semibold text-gray-700">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500"></span> 已答: <span id="answeredCount" class="text-green-600 font-bold text-lg">0</span></span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-300"></span> 未答: <span id="unansweredCount" class="text-red-500 font-bold text-lg">50</span></span>
+            <span class="flex items-center gap-1"><span class="text-yellow-500">⚠️</span> 稍後作答: <span id="markedCount" class="text-yellow-600 font-bold text-lg">0</span></span>
+        </div>
+        <div id="scoreDisplay" class="hidden text-2xl font-bold text-blue-800"></div>
+    </div>
+
+    <table id="exportTable" style="display:none;">
+        <thead>
+            <tr>
+                <th>題號</th>
+                <th>題目</th>
+                <th>你的答案</th>
+                <th>正確答案</th>
+                <th>結果</th>
+            </tr>
+        </thead>
+        <tbody id="exportBody"></tbody>
+    </table>
+
+    <script>
+        // --- 題庫資料 (模擬考古題與素養題) ---
+        // 題型包含：是非(True/False), 選擇(Single), 應用/素養(Context), 配合改編(Match)
+        const fullQuestionBank = [
+            // 單元 3.1 史前人類
+            { t: "choice", q: "關於「長濱文化」的敘述，下列哪一項是正確的？", options: ["已有農業耕作", "使用磨製石器", "已知用火並敲打石器", "會煉製鐵器"], a: "已知用火並敲打石器" },
+            { t: "choice", q: "小明在博物館看到一個「人獸形玉玦」，請問這最可能是哪一個史前文化的遺物？", options: ["長濱文化", "卑南文化", "圓山文化", "十三行文化"], a: "卑南文化" },
+            { t: "tf", q: "新石器時代的人類開始使用磨製石器，並且出現了農業和陶器的製作。", a: "O" },
+            { t: "choice", q: "臺灣金屬器時代的代表文化是「十三行文化」，請問他們主要的特徵是什麼？", options: ["懂得煉鐵", "住在高架屋", "只使用石器", "主要以狩獵大型哺乳類為生"], a: "懂得煉鐵" },
+            { t: "choice", q: "【素養題】考古學家在遺址中發現了來自海外的玻璃珠和瓷器，這代表當時的人類具備何種能力？", options: ["具有深海捕魚能力", "具有與海外貿易交流的能力", "具有製作玻璃的高科技", "具有潛水打撈的能力"], a: "具有與海外貿易交流的能力" },
+            { t: "choice", q: "臺北的大坌坑文化被認為是臺灣新石器時代早期的代表，其陶器上有什麼明顯特徵？", options: ["畫有幾何圖形", "有繩紋印痕", "純黑色無紋飾", "有彩繪花紋"], a: "有繩紋印痕" },
+            
+            // 單元 3.2 原住民族
+            { t: "choice", q: "清朝時期將臺灣原住民族分為「熟番」與「生番」，分類的依據主要是什麼？", options: ["居住的高度", "膚色的深淺", "是否歸順政府與繳稅", "語言的種類"], a: "是否歸順政府與繳稅" },
+            { t: "choice", q: "下列哪一個原住民族的社會是屬於「母系社會」，家產由女子繼承，男子入贅？", options: ["泰雅族", "阿美族", "布農族", "鄒族"], a: "阿美族" },
+            { t: "choice", q: "【活用題】小華參加豐年祭，看到大家手牽手跳舞慶祝豐收。請問他參加的可能是哪一族的祭典？", options: ["阿美族", "賽夏族", "布農族", "達悟族"], a: "阿美族" },
+            { t: "choice", q: "達悟族居住在蘭嶼，他們的生活與海洋密切相關，著名的祭典是什麼？", options: ["飛魚祭", "五年祭", "矮靈祭", "祖靈祭"], a: "飛魚祭" },
+            { t: "choice", q: "哪一個族群傳說祖先來自百步蛇，並且有嚴謹的貴族與平民階級制度？", options: ["排灣族", "泰雅族", "布農族", "賽德克族"], a: "排灣族" },
+            { t: "tf", q: "平埔族群主要分布在山區，保留了較多傳統文化與語言。", a: "X" },
+            { t: "choice", q: "【配合題】請選出正確的配對：", options: ["賽夏族 - 矮靈祭", "泰雅族 - 飛魚祭", "布農族 - 五年祭", "卑南族 - 戰祭"], a: "賽夏族 - 矮靈祭" },
+            
+            // 單元 4.1 大航海時代
+            { t: "choice", q: "17世紀的大航海時代，哪兩個國家曾先後在臺灣建立據點？", options: ["葡萄牙、英國", "荷蘭、西班牙", "日本、法國", "美國、西班牙"], a: "荷蘭、西班牙" },
+            { t: "choice", q: "荷蘭人當時在臺南安平建立了哪一座城，作為統治中心？", options: ["普羅民遮城", "熱蘭遮城", "聖多明哥城", "紅毛城"], a: "熱蘭遮城" },
+            { t: "choice", q: "西班牙人主要佔領臺灣的哪個區域？", options: ["南部", "北部", "東部", "中部"], a: "北部" },
+            { t: "choice", q: "荷蘭人後來將哪一國人逐出臺灣，獨占了臺灣的貿易利益？", options: ["葡萄牙人", "日本人", "西班牙人", "英國人"], a: "西班牙人" },
+            { t: "tf", q: "葡萄牙人經過臺灣時讚嘆為「福爾摩沙」(Formosa)，並登陸統治了臺灣50年。", a: "X" },
+
+            // 單元 4.2 經營與人物
+            { t: "choice", q: "荷蘭聯合東印度公司(VOC)來臺灣的主要目的是什麼？", options: ["傳播基督教", "建立殖民地進行貿易與轉運", "幫助漢人開墾", "尋找黃金"], a: "建立殖民地進行貿易與轉運" },
+            { t: "choice", q: "【活用題】為了增加稻米與蔗糖的產量，荷蘭人採取了什麼措施？", options: ["強迫原住民耕種", "從中國沿海招募漢人來臺開墾", "引進現代化機器", "自行下田耕作"], a: "從中國沿海招募漢人來臺開墾" },
+            { t: "choice", q: "1652年，因不滿荷蘭人的重稅與壓迫，誰率領漢人發動了抗爭事件？", options: ["林爽文", "郭懷一", "朱一貴", "莫那魯道"], a: "郭懷一" },
+            { t: "choice", q: "哪一位日本商人曾因貿易糾紛與荷蘭發生衝突，即「濱田彌兵衛事件」？", options: ["濱田彌兵衛", "豐臣秀吉", "德川家康", "伊藤博文"], a: "濱田彌兵衛" },
+            { t: "choice", q: "西班牙人在淡水建立的城堡是哪一座？", options: ["聖薩爾瓦多城", "聖多明哥城", "赤崁樓", "安平古堡"], a: "聖多明哥城" },
+
+            // 單元 4.3 影響
+            { t: "choice", q: "荷蘭統治時期，臺灣主要輸出的特產不包含下列哪一項？", options: ["稻米", "蔗糖", "鹿皮", "茶葉"], a: "茶葉" },
+            { t: "choice", q: "荷蘭傳教士為了向平埔族傳教，創造了什麼文字來拼寫原住民語言？", options: ["羅馬拼音", "新港文", "注音符號", "漢字"], a: "新港文" },
+            { t: "choice", q: "【素養題】新港文在荷蘭人離開後，仍然被平埔族人使用了很久，主要用來做什麼？", options: ["寫情書", "訂定土地契約(番仔契)", "寫小說", "紀錄食譜"], a: "訂定土地契約(番仔契)" },
+            { t: "tf", q: "荷蘭人將臺灣的鹿皮主要外銷到日本，用來製作武士的戰袍。", a: "O" },
+            { t: "choice", q: "關於大航海時代對臺灣的影響，下列敘述何者錯誤？", options: ["臺灣被納入世界貿易體系", "引進了黃牛幫助耕作", "造成野生梅花鹿數量大增", "基督教與天主教傳入臺灣"], a: "造成野生梅花鹿數量大增" },
+
+            // 補充混合題庫以湊滿 50 題 (延伸考古題)
+            { t: "tf", q: "長濱文化的人類主要居住在海邊的洞穴中。", a: "O" },
+            { t: "choice", q: "圓山文化的遺址中最著名的特徵是什麼？", options: ["貝塚", "石板棺", "煉鐵爐", "巨石"], a: "貝塚" },
+            { t: "choice", q: "哪一個原住民族有著名的「八部合音」？", options: ["布農族", "鄒族", "阿美族", "泰雅族"], a: "布農族" },
+            { t: "choice", q: "魯凱族與排灣族一樣，都喜愛使用什麼圖騰？", options: ["百步蛇", "飛魚", "山豬", "老鷹"], a: "百步蛇" },
+            { t: "choice", q: "荷蘭人在赤崁（今臺南市區）建立了哪一座城，作為商業行政中心？", options: ["熱蘭遮城", "普羅民遮城", "聖薩爾瓦多城", "億載金城"], a: "普羅民遮城" },
+            { t: "choice", q: "西班牙人因為什麼原因，後來減少駐軍並撤出臺灣？", options: ["水土不服與貿易不順", "被原住民打敗", "被日本消滅", "發現澳洲"], a: "水土不服與貿易不順" },
+            { t: "tf", q: "十三行文化的人類已經會使用陶器，這種陶器通常是紅褐色的。", a: "O" },
+            { t: "choice", q: "下列哪一個不是平埔族群？", options: ["凱達格蘭族", "西拉雅族", "噶瑪蘭族", "雅美族"], a: "雅美族" },
+            { t: "choice", q: "「王田」是荷蘭時代的土地制度，代表土地所有權屬於誰？", options: ["農民", "荷蘭東印度公司(王)", "原住民頭目", "日本幕府"], a: "荷蘭東印度公司(王)" },
+            { t: "choice", q: "哪一個史前文化的人類會使用「石板棺」來埋葬死者？", options: ["卑南文化", "長濱文化", "大坌坑文化", "網形文化"], a: "卑南文化" },
+            { t: "choice", q: "目前政府認定的臺灣原住民族共有幾族？(依據最新課本與政府公告)", options: ["9族", "12族", "16族", "20族"], a: "16族" },
+            { t: "choice", q: "荷蘭人引進哪種動物來協助漢人開墾荒地？", options: ["黃牛", "水牛", "馬", "羊"], a: "黃牛" },
+            { t: "choice", q: "賽夏族的矮靈祭通常幾年舉辦一次大祭？", options: ["每年", "兩年", "十年", "十年一大祭(兩年一小祭)"], a: "十年一大祭(兩年一小祭)" },
+            { t: "tf", q: "史前時代是指「還沒有文字記載」的時代。", a: "O" },
+            { t: "choice", q: "下列何者是舊石器時代人類獲取食物的主要方式？", options: ["種植水稻", "飼養家畜", "採集與漁獵", "購買"], a: "採集與漁獵" },
+            { t: "choice", q: "在蘭嶼的達悟族人，他們的房屋設計主要是為了防颱，稱為？", options: ["高腳屋", "地下屋", "石板屋", "干欄式建築"], a: "地下屋" },
+            { t: "choice", q: "下列哪種物品不是台灣大航海時代主要的轉口貿易商品？", options: ["絲綢", "瓷器", "香料", "電腦"], a: "電腦" },
+            { t: "choice", q: "邵族主要居住在哪個風景名勝區附近？", options: ["阿里山", "日月潭", "太魯閣", "墾丁"], a: "日月潭" },
+            { t: "choice", q: "噶瑪蘭族原本主要居住在現在的哪個縣市？", options: ["台北市", "宜蘭縣", "花蓮縣", "台東縣"], a: "宜蘭縣" },
+            { t: "choice", q: "荷蘭時代的傳教士甘治士等人，主要是向哪一族傳教？", options: ["西拉雅族", "泰雅族", "阿美族", "布農族"], a: "西拉雅族" },
+            { t: "tf", q: "西班牙人曾經在基隆和平島建立聖薩爾瓦多城。", a: "O" },
+            { t: "choice", q: "原住民族中的「紋面」文化，主要是哪兩個族群的特徵？", options: ["泰雅族、賽德克族", "阿美族、卑南族", "布農族、鄒族", "魯凱族、排灣族"], a: "泰雅族、賽德克族" },
+            { t: "choice", q: "新石器時代與舊石器時代最大的差別在於出現了什麼？", options: ["用火", "農業與陶器", "金屬器", "文字"], a: "農業與陶器" },
+            { t: "choice", q: "【活用題】如果時光回到1640年的台灣，你可能會在台南看到哪國人的士兵？", options: ["英國人", "荷蘭人", "法國人", "美國人"], a: "荷蘭人" },
+            { t: "choice", q: "哪一種農作物是荷蘭人為了經濟利益而大量推廣種植的？", options: ["甘蔗", "小麥", "玉米", "高粱"], a: "甘蔗" }
+        ];
+
+        // --- 全域變數 ---
+        let currentQuestions = [];
+        let timerInterval;
+        let timeLeft = 40 * 60; // 40分鐘
+        let isReviewMode = false;
+
+        // --- 初始化與開始 ---
+        function randomizeAndStart() {
+            // 洗牌並取50題 (題庫若不足50則全取，若超過則隨機50)
+            const shuffled = [...fullQuestionBank].sort(() => 0.5 - Math.random());
+            currentQuestions = shuffled.slice(0, 50);
+
+            // 顯示介面
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('quizContainer').classList.remove('hidden');
+            document.getElementById('statsFooter').classList.remove('hidden');
+            document.getElementById('timerDisplay').classList.remove('hidden');
+
+            renderQuestions();
+            startTimer();
+            updateStats();
+        }
+
+        // --- 渲染題目 ---
+        function renderQuestions() {
+            const list = document.getElementById('questionsList');
+            list.innerHTML = '';
+
+            currentQuestions.forEach((q, index) => {
+                const qNum = index + 1;
+                let html = `
+                <div class="question-card bg-white p-6 rounded-lg shadow border-l-4 border-blue-500" id="q_card_${index}">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm mr-2">第 ${qNum} 題</span>
+                            ${q.q}
+                        </h3>
+                        <label class="flex items-center space-x-2 text-sm text-yellow-600 cursor-pointer select-none">
+                            <input type="checkbox" onchange="updateStats()" class="review-check form-checkbox h-5 w-5 text-yellow-500 rounded focus:ring-yellow-500">
+                            <span>稍後作答</span>
+                        </label>
+                    </div>
+                `;
+
+                if (q.t === 'choice' || q.t === 'choice-multi') {
+                    html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+                    q.options.forEach(opt => {
+                        html += `
+                        <label class="option-label border rounded-md p-3 flex items-center gap-3">
+                            <input type="radio" name="q_${index}" value="${opt}" class="form-radio h-5 w-5 text-blue-600" onchange="updateStats()">
+                            <span class="text-gray-700">${opt}</span>
+                        </label>`;
+                    });
+                    html += `</div>`;
+                } else if (q.t === 'tf') {
+                    html += `<div class="flex gap-6">`;
+                    ['O', 'X'].forEach(opt => {
+                        html += `
+                        <label class="option-label border rounded-md px-6 py-3 flex items-center gap-3 flex-1 justify-center">
+                            <input type="radio" name="q_${index}" value="${opt}" class="form-radio h-5 w-5 text-blue-600" onchange="updateStats()">
+                            <span class="text-xl font-bold ${opt==='O'?'text-green-600':'text-red-600'}">${opt}</span>
+                        </label>`;
+                    });
+                    html += `</div>`;
+                }
+
+                // 結果顯示區 (隱藏)
+                html += `<div id="feedback_${index}" class="hidden mt-4 p-3 rounded bg-gray-50 text-sm"></div>`;
+                html += `</div>`;
+                list.innerHTML += html;
+            });
+        }
+
+        // --- 統計更新 ---
+        function updateStats() {
+            if (isReviewMode) return;
+            
+            const total = currentQuestions.length;
+            let answered = 0;
+            let marked = 0;
+
+            // 計算已答
+            for (let i = 0; i < total; i++) {
+                const inputs = document.getElementsByName(`q_${i}`);
+                for (let input of inputs) {
+                    if (input.checked) {
+                        answered++;
+                        break;
+                    }
+                }
+            }
+            
+            // 計算標記
+            const checks = document.querySelectorAll('.review-check');
+            checks.forEach(c => { if(c.checked) marked++; });
+
+            document.getElementById('answeredCount').innerText = answered;
+            document.getElementById('unansweredCount').innerText = total - answered;
+            document.getElementById('markedCount').innerText = marked;
+        }
+
+        // --- 計時器 ---
+        function startTimer() {
+            const display = document.getElementById('timerDisplay');
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const s = (timeLeft % 60).toString().padStart(2, '0');
+                display.innerText = `${m}:${s}`;
+
+                // 提醒邏輯
+                if (timeLeft === 15 * 60) Swal.fire('⏳ 提醒', '考試剩下 15 分鐘！', 'info');
+                if (timeLeft === 8 * 60) Swal.fire('⏳ 提醒', '考試剩下 8 分鐘，請把握時間！', 'warning');
+                if (timeLeft === 5 * 60) Swal.fire('🚨 緊急', '剩下 5 分鐘！請檢查是否還有未填寫的題目。', 'warning');
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    Swal.fire('⏰ 時間到', '考試結束，系統將自動繳卷。', 'error').then(() => {
+                        submitQuiz(true); // 強制繳卷
+                    });
+                }
+            }, 1000);
+        }
+
+        // --- 繳卷嘗試 ---
+        function attemptSubmit() {
+            const unans = parseInt(document.getElementById('unansweredCount').innerText);
+            const marked = parseInt(document.getElementById('markedCount').innerText);
+
+            if (unans > 0 || marked > 0) {
+                Swal.fire({
+                    title: '還有題目未完成！',
+                    text: `未答：${unans} 題，稍後作答：${marked} 題。確定要交卷嗎？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: '確定交卷',
+                    cancelButtonText: '繼續作答'
+                }).then((result) => {
+                    if (result.isConfirmed) submitQuiz(false);
+                });
+            } else {
+                Swal.fire({
+                    title: '確定交卷？',
+                    text: '交卷後將無法修改答案。',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '交卷'
+                }).then((result) => {
+                    if (result.isConfirmed) submitQuiz(false);
+                });
+            }
+        }
+
+        // --- 實際繳卷與評分 ---
+        function submitQuiz(force) {
+            clearInterval(timerInterval);
+            isReviewMode = true;
+            
+            let score = 0;
+            const tableBody = document.getElementById('exportBody');
+            tableBody.innerHTML = ''; // 清空舊資料
+            
+            currentQuestions.forEach((q, index) => {
+                // 1. 取得使用者答案
+                const inputs = document.getElementsByName(`q_${index}`);
+                let userVal = "未作答";
+                inputs.forEach(inp => { if(inp.checked) userVal = inp.value; });
+                
+                // 2. 判斷對錯
+                const isCorrect = (userVal === q.a);
+                if (isCorrect) score += 2; // 100分/50題 = 2分
+
+                // 3. UI 鎖定與標示
+                inputs.forEach(inp => inp.disabled = true);
+                const card = document.getElementById(`q_card_${index}`);
+                const feedback = document.getElementById(`feedback_${index}`);
+                feedback.classList.remove('hidden');
+                
+                if (isCorrect) {
+                    card.classList.add('bg-green-50');
+                    feedback.innerHTML = `<span class="text-green-700 font-bold">✅ 答對了！</span>`;
+                } else {
+                    card.classList.add('bg-red-50');
+                    feedback.innerHTML = `<span class="text-red-600 font-bold">❌ 答錯了！正確答案是：${q.a}</span>`;
+                    
+                    // 標示正確選項
+                    inputs.forEach(inp => {
+                       if (inp.value === q.a) {
+                           inp.parentElement.classList.add('correct-answer');
+                       } else if (inp.checked) {
+                           inp.parentElement.classList.add('wrong-answer');
+                       }
+                    });
+                }
+
+                // 4. 準備 Excel 資料 (若答錯，字體變紅)
+                // 為了讓 Excel 顯示紅色，我們在HTML Table使用 style
+                const rowColor = isCorrect ? 'black' : 'red';
+                const rowHtml = `
+                    <tr style="color: ${rowColor};">
+                        <td>${index + 1}</td>
+                        <td>${q.q}</td>
+                        <td>${userVal}</td>
+                        <td>${q.a}</td>
+                        <td>${isCorrect ? '正確' : '錯誤'}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += rowHtml;
+            });
+
+            // 5. 更新介面顯示分數
+            const statsFooter = document.getElementById('statsFooter');
+            statsFooter.innerHTML = `
+                <div class="flex-1 flex justify-center items-center gap-4">
+                    <span class="text-2xl font-bold text-gray-800">總分：<span class="text-blue-600 text-4xl">${score}</span> 分</span>
+                    <button onclick="downloadResults()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
+                        📥 下載成績與錯題 (Excel)
+                    </button>
+                    <button onclick="checkAnswersWithPassword()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded shadow">
+                        🔒 顯示詳解模式 (家長)
+                    </button>
+                </div>
+            `;
+            
+            // 滾動到頂部顯示分數
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            Swal.fire({
+                title: '考試結束！',
+                html: `你的得分是 <b>${score}</b> 分。<br>請下載 Excel 檔案以保存錯題記錄。`,
+                icon: score >= 80 ? 'success' : 'warning'
+            });
+
+            // 隱藏交卷按鈕
+            document.querySelector('button[onclick="attemptSubmit()"]').style.display = 'none';
+        }
+
+        // --- 密碼保護功能 ---
+        async function checkAnswersWithPassword() {
+            const { value: password } = await Swal.fire({
+                title: '請輸入密碼',
+                input: 'password',
+                inputLabel: '密碼為 1234',
+                inputPlaceholder: '請輸入密碼',
+                confirmButtonText: '確認',
+                showCancelButton: true
+            });
+
+            if (password === '1234') {
+                Swal.fire('驗證成功', '現在您可以查看所有題目的正確答案與解析。', 'success');
+                // 這裡其實畫面已經顯示了，此功能作為情境模擬
+            } else if (password) {
+                Swal.fire('密碼錯誤', '請重新輸入。', 'error');
+            }
+        }
+
+        // --- 匯出 Excel (含紅字) ---
+        function downloadResults() {
+            // 使用 SheetJS 將 HTML Table 轉為 Workbook
+            const tbl = document.getElementById('exportTable');
+            const wb = XLSX.utils.table_to_book(tbl, {sheet:"期末考成績"});
+            
+            // 下載
+            XLSX.writeFile(wb, 'exam_result.xlsx');
+        }
+
+    </script>
+</body>
+</html>
