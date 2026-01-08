@@ -21,7 +21,7 @@
             color: var(--text);
             margin: 0;
             padding: 0;
-            padding-bottom: 120px; /* 預留底部空間 */
+            padding-bottom: 140px; /* 預留底部空間給固定按鈕與出處 */
         }
 
         /* 頂部標題與計時器 */
@@ -175,13 +175,14 @@
             bottom: 0;
             left: 0;
             width: 100%;
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
             padding: 10px 0;
             z-index: 900;
             display: flex;
             flex-direction: column;
             align-items: center;
+            backdrop-filter: blur(5px);
         }
 
         .stats-bar {
@@ -208,6 +209,16 @@
             box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
         }
         .btn-submit:hover { background: #c0392b; }
+
+        /* 考題來源出處樣式 (新增) */
+        .source-footer {
+            text-align: center;
+            color: #95a5a6;
+            font-size: 0.85rem;
+            margin-top: 30px;
+            padding: 20px 0;
+            border-top: 1px solid #e0e0e0;
+        }
 
         /* 結果展示 */
         .wrong-ans-card {
@@ -288,6 +299,10 @@
             <button class="btn-start" style="font-size:1rem; padding:10px 20px;" onclick="downloadExcel()">📥 下載錯題報告 (exam_result.xls)</button>
         </div>
         </div>
+
+    <div class="source-footer">
+        考題來源：教育部審定康軒版國小五年級上學期國語教材 ／ 歷年臺灣地區國小期末考古題資料庫彙整<br>
+    </div>
 </div>
 
 <footer id="footer-controls" class="hidden">
@@ -382,9 +397,6 @@
         // 準備題目
         currentQuestions = [...questionPool];
         if (isRandom) {
-            // 閱讀測驗通常連在一起，這裡為了簡單，我們只隨機題目順序，
-            // 若要嚴格分組隨機比較複雜，這裡採用全隨機，
-            // 但為了讓閱讀測驗閱讀方便，我們將閱讀文章附在該題上方。
             currentQuestions = shuffleArray(currentQuestions);
         }
 
