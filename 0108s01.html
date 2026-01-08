@@ -6,7 +6,7 @@
     <title>113學年-康軒(五上)社會線上期末測驗系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
@@ -27,7 +27,9 @@
         ul.list-circle { list-style-type: circle; }
     </style>
 </head>
-<body class="pb-40"> <header class="fixed top-0 w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg z-50">
+<body class="pb-40"> 
+
+    <header class="fixed top-0 w-full bg-gradient-to-r from-teal-600 to-blue-600 text-white shadow-lg z-50">
         <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-lg md:text-xl font-bold tracking-wider">113學年-康軒(五上)社會線上期末測驗系統</h1>
             <div id="timerDisplay" class="text-xl font-mono font-bold bg-white text-blue-700 px-3 py-1 rounded shadow hidden">
@@ -55,7 +57,22 @@
                 🎲 隨機出題並開始
             </button>
         </div>
-         <div class="mt-16 mb-8 px-6 py-6 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-600">
+        <p class="mt-4 text-sm text-gray-400">系統將從考古題庫中隨機抽取並打亂順序</p>
+    </div>
+
+    <div id="quizContainer" class="max-w-4xl mx-auto mt-24 px-4 hidden">
+        <form id="quizForm">
+            <div id="questionsList" class="space-y-6">
+                </div>
+        </form>
+        
+        <div class="mt-12 mb-8 text-center">
+            <button onclick="attemptSubmit()" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-full shadow-xl hover:shadow-2xl transition transform hover:scale-105">
+                🚀 繳卷送出
+            </button>
+        </div>
+
+        <div class="mt-16 mb-8 px-6 py-6 bg-gray-100 rounded-lg border border-gray-200 text-sm text-gray-600">
             <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
                 📚 試題來源與出處說明
             </h4>
@@ -83,22 +100,8 @@
                 本測驗系統僅供學術交流與學生自我檢測使用，題目版權歸原出題學校與出版社所有。
             </div>
         </div>
-        </div>
+
     </div>
-
-    <div id="quizContainer" class="max-w-4xl mx-auto mt-24 px-4 hidden">
-        <form id="quizForm">
-            <div id="questionsList" class="space-y-6">
-                </div>
-        </form>
-        
-        <div class="mt-12 mb-8 text-center">
-            <button onclick="attemptSubmit()" class="px-12 py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-xl font-bold rounded-full shadow-xl hover:shadow-2xl transition transform hover:scale-105">
-                🚀 繳卷送出
-            </button>
-        </div>
-
-      
 
     <div id="statsFooter" class="sticky-footer hidden flex justify-between items-center text-sm md:text-base">
         <div class="flex gap-4 md:gap-8 font-semibold text-gray-700">
@@ -109,22 +112,8 @@
         <div id="scoreDisplay" class="hidden text-2xl font-bold text-blue-800"></div>
     </div>
 
-    <table id="exportTable" style="display:none;">
-        <thead>
-            <tr>
-                <th>題號</th>
-                <th>題目</th>
-                <th>你的答案</th>
-                <th>正確答案</th>
-                <th>結果</th>
-            </tr>
-        </thead>
-        <tbody id="exportBody"></tbody>
-    </table>
-
     <script>
         // --- 題庫資料 (模擬考古題與素養題) ---
-        // 題型包含：是非(True/False), 選擇(Single), 應用/素養(Context), 配合改編(Match)
         const fullQuestionBank = [
             // 單元 3.1 史前人類
             { t: "choice", q: "關於「長濱文化」的敘述，下列哪一項是正確的？", options: ["已有農業耕作", "使用磨製石器", "已知用火並敲打石器", "會煉製鐵器"], a: "已知用火並敲打石器" },
@@ -200,11 +189,9 @@
 
         // --- 初始化與開始 ---
         function randomizeAndStart() {
-            // 洗牌並取50題 (題庫若不足50則全取，若超過則隨機50)
             const shuffled = [...fullQuestionBank].sort(() => 0.5 - Math.random());
             currentQuestions = shuffled.slice(0, 50);
 
-            // 顯示介面
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('quizContainer').classList.remove('hidden');
             document.getElementById('statsFooter').classList.remove('hidden');
@@ -258,7 +245,6 @@
                     html += `</div>`;
                 }
 
-                // 結果顯示區 (隱藏)
                 html += `<div id="feedback_${index}" class="hidden mt-4 p-3 rounded bg-gray-50 text-sm"></div>`;
                 html += `</div>`;
                 list.innerHTML += html;
@@ -273,7 +259,6 @@
             let answered = 0;
             let marked = 0;
 
-            // 計算已答
             for (let i = 0; i < total; i++) {
                 const inputs = document.getElementsByName(`q_${i}`);
                 for (let input of inputs) {
@@ -284,7 +269,6 @@
                 }
             }
             
-            // 計算標記
             const checks = document.querySelectorAll('.review-check');
             checks.forEach(c => { if(c.checked) marked++; });
 
@@ -303,7 +287,6 @@
                 const s = (timeLeft % 60).toString().padStart(2, '0');
                 display.innerText = `${m}:${s}`;
 
-                // 提醒邏輯
                 if (timeLeft === 15 * 60) Swal.fire('⏳ 提醒', '考試剩下 15 分鐘！', 'info');
                 if (timeLeft === 8 * 60) Swal.fire('⏳ 提醒', '考試剩下 8 分鐘，請把握時間！', 'warning');
                 if (timeLeft === 5 * 60) Swal.fire('🚨 緊急', '剩下 5 分鐘！請檢查是否還有未填寫的題目。', 'warning');
@@ -311,7 +294,7 @@
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     Swal.fire('⏰ 時間到', '考試結束，系統將自動繳卷。', 'error').then(() => {
-                        submitQuiz(true); // 強制繳卷
+                        submitQuiz(true); 
                     });
                 }
             }, 1000);
@@ -352,20 +335,15 @@
             isReviewMode = true;
             
             let score = 0;
-            const tableBody = document.getElementById('exportBody');
-            tableBody.innerHTML = ''; // 清空舊資料
             
             currentQuestions.forEach((q, index) => {
-                // 1. 取得使用者答案
                 const inputs = document.getElementsByName(`q_${index}`);
                 let userVal = "未作答";
                 inputs.forEach(inp => { if(inp.checked) userVal = inp.value; });
                 
-                // 2. 判斷對錯
                 const isCorrect = (userVal === q.a);
-                if (isCorrect) score += 2; // 100分/50題 = 2分
+                if (isCorrect) score += 2; 
 
-                // 3. UI 鎖定與標示
                 inputs.forEach(inp => inp.disabled = true);
                 const card = document.getElementById(`q_card_${index}`);
                 const feedback = document.getElementById(`feedback_${index}`);
@@ -378,7 +356,6 @@
                     card.classList.add('bg-red-50');
                     feedback.innerHTML = `<span class="text-red-600 font-bold">❌ 答錯了！正確答案是：${q.a}</span>`;
                     
-                    // 標示正確選項
                     inputs.forEach(inp => {
                        if (inp.value === q.a) {
                            inp.parentElement.classList.add('correct-answer');
@@ -387,23 +364,8 @@
                        }
                     });
                 }
-
-                // 4. 準備 Excel 資料 (若答錯，字體變紅)
-                // 為了讓 Excel 顯示紅色，我們在HTML Table使用 style
-                const rowColor = isCorrect ? 'black' : 'red';
-                const rowHtml = `
-                    <tr style="color: ${rowColor};">
-                        <td>${index + 1}</td>
-                        <td>${q.q}</td>
-                        <td>${userVal}</td>
-                        <td>${q.a}</td>
-                        <td>${isCorrect ? '正確' : '錯誤'}</td>
-                    </tr>
-                `;
-                tableBody.innerHTML += rowHtml;
             });
 
-            // 5. 更新介面顯示分數
             const statsFooter = document.getElementById('statsFooter');
             statsFooter.innerHTML = `
                 <div class="flex-1 flex justify-center items-center gap-4">
@@ -417,15 +379,13 @@
                 </div>
             `;
             
-            // 滾動到頂部顯示分數
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             Swal.fire({
                 title: '考試結束！',
-                html: `你的得分是 <b>${score}</b> 分。<br>請下載 Excel 檔案以保存錯題記錄。`,
+                html: `你的得分是 <b>${score}</b> 分。<br>請務必下載 Excel 檔案，<span style="color:red">紅色標記</span>為需要複習的題目。`,
                 icon: score >= 80 ? 'success' : 'warning'
             });
 
-            // 隱藏交卷按鈕
             document.querySelector('button[onclick="attemptSubmit()"]').style.display = 'none';
         }
 
@@ -442,23 +402,103 @@
 
             if (password === '1234') {
                 Swal.fire('驗證成功', '現在您可以查看所有題目的正確答案與解析。', 'success');
-                // 這裡其實畫面已經顯示了，此功能作為情境模擬
             } else if (password) {
                 Swal.fire('密碼錯誤', '請重新輸入。', 'error');
             }
         }
 
-        // --- 匯出 Excel (含紅字) ---
+        // --- 匯出 Excel (含顏色樣式) ---
         function downloadResults() {
-            // 使用 SheetJS 將 HTML Table 轉為 Workbook
-            const tbl = document.getElementById('exportTable');
-            const wb = XLSX.utils.table_to_book(tbl, {sheet:"期末考成績"});
-            
-            // 下載
-            XLSX.writeFile(wb, 'exam_result.xlsx');
-        }
+            // 1. 準備 Excel 標頭資料
+            const data = [
+                ["題號", "題目", "你的答案", "正確答案", "結果"]
+            ];
 
+            // 2. 填充資料並收集需要標記紅色的列
+            const errorRows = []; // 紀錄哪一列是錯誤的
+
+            currentQuestions.forEach((q, index) => {
+                const inputs = document.getElementsByName(`q_${index}`);
+                let userVal = "未作答";
+                inputs.forEach(inp => { if(inp.checked) userVal = inp.value; });
+                
+                const isCorrect = (userVal === q.a);
+                
+                // 新增一列資料
+                data.push([
+                    index + 1,
+                    q.q,
+                    userVal,
+                    q.a,
+                    isCorrect ? "正確" : "錯誤"
+                ]);
+
+                // 如果錯誤，記錄目前的列索引 (header是第0列，所以現在是 data.length - 1)
+                if (!isCorrect) {
+                    errorRows.push(data.length - 1);
+                }
+            });
+
+            // 3. 建立 Worksheet
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // 設定欄寬 (Wch = width chars)
+            ws['!cols'] = [
+                { wch: 6 },  // 題號
+                { wch: 60 }, // 題目
+                { wch: 15 }, // 你的答案
+                { wch: 15 }, // 正確答案
+                { wch: 8 }   // 結果
+            ];
+
+            // 4. 套用樣式 (重點！)
+            // 遍歷所有單元格，如果有在 errorRows 裡的列，就變色
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            
+            for (let R = range.s.r; R <= range.e.r; R++) {
+                // 標題列加粗
+                if (R === 0) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const cellRef = XLSX.utils.encode_cell({c: C, r: R});
+                        if (!ws[cellRef]) continue;
+                        ws[cellRef].s = { 
+                            font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } },
+                            fill: { fgColor: { rgb: "4472C4" } }, // 藍色背景
+                            alignment: { horizontal: "center" }
+                        };
+                    }
+                    continue;
+                }
+
+                // 判斷是否為錯誤列
+                const isErrorRow = errorRows.includes(R);
+                
+                for (let C = range.s.c; C <= range.e.c; C++) {
+                    const cellRef = XLSX.utils.encode_cell({c: C, r: R});
+                    if (!ws[cellRef]) continue; // 避免空值報錯
+
+                    // 預設樣式
+                    let cellStyle = {
+                        font: { sz: 12 },
+                        alignment: { wrapText: true, vertical: "center" }
+                    };
+
+                    // 如果是錯誤列，字體變紅、加粗
+                    if (isErrorRow) {
+                        cellStyle.font = { color: { rgb: "FF0000" }, bold: true, sz: 12 };
+                        // 可以加背景色凸顯 (選擇性)
+                        // cellStyle.fill = { fgColor: { rgb: "FFF2F2" } }; 
+                    }
+
+                    ws[cellRef].s = cellStyle;
+                }
+            }
+
+            // 5. 建立 Workbook 並下載
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "期末考成績");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
     </script>
 </body>
 </html>
-
