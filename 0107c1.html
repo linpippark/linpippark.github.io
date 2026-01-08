@@ -6,12 +6,13 @@
     <title>113學年-康軒(五上)國語線上期末測驗系統</title>
     <style>
         :root {
-            --primary: #4a90e2; /* 專業藍 */
-            --secondary: #50e3c2; /* 活潑綠 */
-            --accent: #ff6b6b; /* 警示紅 */
-            --bg: #f4f7f6;
+            --primary: #2c3e50;
+            --secondary: #e67e22; /* 活力橘 */
+            --accent: #e74c3c; /* 警示紅 */
+            --bg: #f3f5f7;
             --card-bg: #ffffff;
-            --text: #333333;
+            --text: #2c3e50;
+            --success: #27ae60;
         }
 
         body {
@@ -20,32 +21,34 @@
             color: var(--text);
             margin: 0;
             padding: 0;
-            padding-bottom: 100px; /* 留給 Footer */
+            padding-bottom: 120px; /* 預留底部空間 */
         }
 
-        /* 標題列 */
+        /* 頂部標題與計時器 */
         header {
-            background: linear-gradient(135deg, var(--primary), #8e44ad);
+            background: linear-gradient(135deg, #3498db, #8e44ad);
             color: white;
             padding: 15px 20px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        h1 { margin: 0; font-size: 1.6rem; letter-spacing: 1px; }
+        h1 { margin: 0; font-size: 1.4rem; }
         
-        #timer-box {
-            background: rgba(0, 0, 0, 0.25);
-            display: inline-block;
-            padding: 5px 20px;
+        #timer-display {
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
             border-radius: 20px;
-            margin-top: 10px;
             font-size: 1.5rem;
             font-weight: bold;
             font-family: monospace;
+            min-width: 100px;
+            text-align: center;
         }
 
         .container {
@@ -54,480 +57,584 @@
             padding: 0 15px;
         }
 
-        /* 歡迎畫面 */
+        /* 開始畫面 */
         #start-screen {
             background: var(--card-bg);
             border-radius: 15px;
-            padding: 50px;
+            padding: 40px;
             text-align: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             margin-top: 50px;
+        }
+
+        .random-switch {
+            margin: 20px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+        
+        .random-switch input {
+            width: 20px;
+            height: 20px;
         }
 
         .btn-start {
             background: var(--secondary);
-            color: #005f4e;
+            color: white;
             font-size: 1.5rem;
             padding: 15px 50px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
-            font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 0 #d35400;
         }
-        .btn-start:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(80, 227, 194, 0.4);
-        }
-
-        .btn-admin {
-            margin-top: 20px;
-            background: #ccc;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
+        .btn-start:active { transform: translateY(4px); box-shadow: none; }
 
         /* 題目卡片 */
         .question-card {
             background: var(--card-bg);
-            border-radius: 10px;
-            padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-left: 6px solid var(--primary);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 6px solid #3498db;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             position: relative;
-            transition: background-color 0.3s;
         }
 
-        .question-card.review-marked {
-            background-color: #fff8e1; /* 黃色標記 */
-            border-left-color: #f1c40f;
-        }
-
-        .question-text {
-            font-size: 1.15rem;
-            font-weight: bold;
+        .q-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 15px;
+        }
+
+        .q-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: 85%;
             line-height: 1.5;
         }
 
-        .options-group label {
-            display: block;
-            margin: 8px 0;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .options-group label:hover { background: #eef2f5; }
-        .options-group input { margin-right: 10px; transform: scale(1.2); }
-
-        /* 稍後作答勾選 */
-        .review-check {
-            position: absolute;
-            top: 15px;
-            right: 15px;
+        /* 稍後作答 */
+        .review-label {
             font-size: 0.9rem;
-            color: #777;
+            color: #7f8c8d;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            cursor: pointer;
+            gap: 5px;
+            background: #ecf0f1;
+            padding: 5px 10px;
+            border-radius: 15px;
         }
-        .review-check input { margin-right: 5px; }
+        .review-label input { cursor: pointer; }
+        
+        .marked-review {
+            border-left-color: var(--secondary) !important;
+            background-color: #fffaf0;
+        }
+
+        /* 選項樣式 */
+        .options-container label {
+            display: block;
+            margin: 10px 0;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .options-container label:hover {
+            background: #eaf2f8;
+            border-color: #3498db;
+        }
+
+        .options-container input { margin-right: 12px; transform: scale(1.2); }
 
         /* 閱讀測驗區塊 */
-        .reading-section {
-            background: #e3f2fd;
+        .reading-passage {
+            background: #e8f6f3;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 20px;
-            border: 2px dashed var(--primary);
             line-height: 1.8;
-            font-size: 1.05rem;
+            border: 2px dashed #1abc9c;
+            color: #16a085;
         }
 
-        /* 底部控制列 */
+        /* 底部固定統計與按鈕 */
         footer {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background: #ffffff;
-            border-top: 1px solid #ddd;
+            background: white;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
             padding: 10px 0;
-            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+            z-index: 900;
             display: flex;
             flex-direction: column;
             align-items: center;
-            z-index: 900;
         }
 
         .stats-bar {
             display: flex;
             gap: 20px;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            width: 100%;
-            justify-content: center;
-            background: #f0f0f0;
-            padding: 5px 0;
+            margin-bottom: 10px;
+            font-size: 1rem;
         }
 
-        .stat-item b { font-size: 1.1rem; }
-        .stat-answered { color: var(--primary); }
-        .stat-unanswered { color: var(--accent); }
-        .stat-review { color: #f39c12; }
+        .stat-item b { font-size: 1.2rem; margin-left: 5px; }
+        .stat-ans { color: var(--success); }
+        .stat-unans { color: var(--accent); }
+        .stat-mark { color: var(--secondary); }
 
-        .submit-btn {
+        .btn-submit {
             background: var(--accent);
             color: white;
             border: none;
-            padding: 12px 60px;
+            padding: 10px 60px;
             border-radius: 30px;
-            font-size: 1.2rem;
-            font-weight: bold;
+            font-size: 1.3rem;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(255, 107, 107, 0.4);
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.4);
         }
-        .submit-btn:hover { background: #ff5252; }
+        .btn-submit:hover { background: #c0392b; }
 
-        /* 結果樣式 */
-        .wrong-answer-card {
+        /* 結果展示 */
+        .wrong-ans-card {
+            background-color: #ffecec !important;
             border-left-color: var(--accent) !important;
-            background-color: #fff0f0 !important;
         }
-        .correct-answer-text {
-            color: #d32f2f;
+        
+        .feedback-text {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(231, 76, 60, 0.1);
+            color: #c0392b;
+            border-radius: 5px;
             font-weight: bold;
-            margin-top: 10px;
-            padding: 5px;
-            background: rgba(255, 0, 0, 0.05);
-            border-radius: 4px;
         }
-        .user-wrong { text-decoration: line-through; color: #999; }
-        .score-display {
-            font-size: 2.5rem;
-            color: var(--primary);
-            font-weight: bold;
+
+        .correct-ref { margin-left: 10px; color: #c0392b; }
+        
+        #result-header {
             text-align: center;
+            padding: 20px;
+            background: white;
             margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        
+        .score-big {
+            font-size: 3rem;
+            color: var(--secondary);
+            font-weight: bold;
         }
 
         .hidden { display: none !important; }
+        
+        .btn-admin {
+            margin-top: 20px;
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <h1>113學年-康軒(五上)國語線上期末測驗系統</h1>
-    <div id="timer-box">40:00</div>
+    <div id="timer-display">40:00</div>
 </header>
 
 <div class="container" id="main-container">
+    
     <div id="start-screen">
         <h2>👋 各位家長與同學好！</h2>
-        <p style="font-size: 1.1rem; line-height: 1.6;">
-            這是由補教名師精選的「康軒五上期末考」模擬試題。<br>
-            範圍包含：畫家的天空、L7-L12、閱讀階梯二。<br>
-            共 50 題，滿分 100 分。準備好了嗎？
-        </p>
-        <button class="btn-start" onclick="startQuiz()">開始作答 (計時開始)</button>
+        <p>範圍：康軒五上 畫家的天空、L7-L12、閱讀階梯二</p>
+        <p>題數：50題 (每題2分) | 時間：40分鐘</p>
+        
+        <label class="random-switch">
+            <input type="checkbox" id="randomize-toggle" checked>
+            <span>🎲 開啟隨機出題模式 (題目順序打亂)</span>
+        </label>
+        
+        <button class="btn-start" onclick="startQuiz()">開始作答</button>
         <br>
-        <button class="btn-admin" onclick="showAnswerKey()">🔑 顯示答案 (家長專用)</button>
+        <button class="btn-admin" onclick="checkAnswersAdmin()">🔑 顯示答案 (密碼保護)</button>
     </div>
 
     <div id="quiz-area" class="hidden">
-        <form id="quiz-form">
-            </form>
-        <div style="height: 100px;"></div> </div>
-    
+        </div>
+
     <div id="result-area" class="hidden">
-        <div class="score-display" id="final-score"></div>
-        <div style="text-align: center; margin-bottom: 20px;">
-            <p>錯題已標示為紅色，請詳細檢查。<br>系統已自動整理錯題並下載為 Excel/CSV 檔。</p>
+        <div id="result-header">
+            <h3>測驗結果</h3>
+            <div class="score-big" id="final-score">0 分</div>
+            <p>錯題已用紅色標示，請往下查看詳細檢討。</p>
+            <button class="btn-start" style="font-size:1rem; padding:10px 20px;" onclick="downloadExcel()">📥 下載錯題報告 (exam_result.xls)</button>
         </div>
         </div>
 </div>
 
 <footer id="footer-controls" class="hidden">
     <div class="stats-bar">
-        <span class="stat-item stat-answered">已答：<b id="count-ans">0</b></span>
-        <span class="stat-item stat-unanswered">未答：<b id="count-unans">50</b></span>
-        <span class="stat-item stat-review">稍後作答：<b id="count-review">0</b></span>
+        <span class="stat-item stat-ans">已答：<b id="count-ans">0</b></span>
+        <span class="stat-item stat-unans">未答：<b id="count-unans">50</b></span>
+        <span class="stat-item stat-mark">稍後作答：<b id="count-mark">0</b></span>
     </div>
-    <button class="submit-btn" onclick="preSubmitCheck()">繳卷送出</button>
+    <button class="btn-submit" onclick="preSubmitCheck()">繳卷送出</button>
 </footer>
 
 <script>
-    // 題庫資料 (模擬考古題)
-    const questions = [
-        // 是非題 (1-10)
-        {id:1, type:'tf', q:'【第七課】在「為生命找出口」中，作者提到沙漠中的植物為了生存，必須有很深的根或很厚的皮，這是生命適應環境的表現。', a:'O'},
-        {id:2, type:'tf', q:'【閱讀階梯一】齊白石是近代著名的畫家，他畫蝦子最講究的是「像真的一樣」，連蝦子的腳數都必須完全正確，不能有藝術誇張。', a:'X'},
-        {id:3, type:'tf', q:'【第八課】馬拉拉因為爭取女孩受教育的權利而受傷，但她沒有因此退縮，反而更勇敢地為兒童發聲。', a:'O'},
-        {id:4, type:'tf', q:'【第九課】「在挫折中成長」一文告訴我們，挫折是失敗的象徵，遇到挫折代表我們沒有天分。', a:'X'},
-        {id:5, type:'tf', q:'【第十課】「山中寄情」的作者認為，只有晴天的山林才值得欣賞，雨天的山林充滿危險與陰暗，不值得停留。', a:'X'},
-        {id:6, type:'tf', q:'【第十一課】在布農族的傳說中，黑熊曾幫助過人類，所以布農族人將黑熊視為朋友，不可以隨意獵殺。', a:'O'},
-        {id:7, type:'tf', q:'【第十二課】魯濱遜漂流到荒島後，因為絕望而整天哭泣，最後是等待別人的救援才活下來的。', a:'X'},
-        {id:8, type:'tf', q:'【閱讀階梯二】「分享的金牌」故事中，特奧會的跑者跌倒了，其他參賽者停下腳步扶起他，最後大家一起手牽手走向終點。', a:'O'},
-        {id:9, type:'tf', q:'【字音字形】「強」人所難的「強」讀作「ㄑㄧㄤˊ」。', a:'X'}, // 應為 ㄑㄧㄤˇ
-        {id:10, type:'tf', q:'【修辭】「那雙眼睛像星星一樣閃亮。」這是使用了「擬人」修辭。', a:'X'}, // 譬喻
+    // 題庫資料 (50題)
+    const questionPool = [
+        // 是非題 (15題)
+        {id: 1, type: 'tf', q: '【第七課】在「為生命找出口」一文中，作者以仙人掌為例，說明生物為了適應沙漠缺水的環境，將葉子演化成針狀。', a: 'O'},
+        {id: 2, type: 'tf', q: '【第八課】馬拉拉來自美國，她是為了爭取兒童及年輕人受教育的權利而受傷的。', a: 'X', note: '馬拉拉來自巴基斯坦。'},
+        {id: 3, type: 'tf', q: '【第十課】「山中寄情」一文中，作者認為山林不論是晴天或雨天，都有它獨特的美感。', a: 'O'},
+        {id: 4, type: 'tf', q: '【第十二課】「荒島上的國王」是改編自小說《魯濱遜漂流記》，主角最後選擇留在荒島不回人類社會。', a: 'X', note: '主角最後獲救回到人類社會。'},
+        {id: 5, type: 'tf', q: '【閱讀階梯一】齊白石畫蝦子講求「神韻」，他認為畫畫若是太像真的就像在媚俗，太不像則是欺世。', a: 'O'},
+        {id: 6, type: 'tf', q: '【第十一課】布農族人稱黑熊為「達駭」，在傳說中黑熊是懶惰且愚笨的動物。', a: 'X', note: '黑熊在傳說中是有力量且受尊敬的。'},
+        {id: 7, type: 'tf', q: '【第九課】「在挫折中成長」告訴我們，李安導演曾經失業六年，但他沒有放棄電影夢，這就是越挫越勇的表現。', a: 'O'},
+        {id: 8, type: 'tf', q: '【字音】「強」人所難的「強」讀音是「ㄑㄧㄤˊ」。', a: 'X', note: '應讀作「ㄑㄧㄤˇ」。'},
+        {id: 9, type: 'tf', q: '【修辭】「風兒輕輕的唱著歌」這句話使用了「譬喻」修辭。', a: 'X', note: '這是「轉化(擬人)」修辭。'},
+        {id: 10, type: 'tf', q: '【閱讀階梯二】「分享的金牌」故事中，特奧會的選手們為了金牌互相推擠，競爭非常激烈。', a: 'X', note: '他們展現了互助合作的精神。'},
+        {id: 11, type: 'tf', q: '【第十二課】魯濱遜在島上救下的野人，因為是在星期五救的，所以取名為「星期五」。', a: 'O'},
+        {id: 12, type: 'tf', q: '【第七課】斷了腿的蜘蛛如果不放棄，依然可以結出完整的網，這是生命力的展現。', a: 'O'},
+        {id: 13, type: 'tf', q: '【字形】「恍然大悟」的「恍」是心部，意思是忽然明白。', a: 'O'},
+        {id: 14, type: 'tf', q: '【第十課】作者在山林中感到恐懼，因為樹木長得太高大遮住了陽光。', a: 'X', note: '作者感到寧靜與放鬆。'},
+        {id: 15, type: 'tf', q: '【第十一課】作者認為人類應該要征服山林，證明人類比野生動物優越。', a: 'X', note: '應是互相尊重，和平共存。'},
 
-        // 選擇題 (11-40)
-        {id:11, type:'mc', q:'【第七課】下列哪一種自然景象「不是」文中提到展現生命力的例子？', opts:['斷腿的蜘蛛結網','石縫中的小草','溫室裡的花朵','沙漠中的仙人掌'], a:'溫室裡的花朵'},
-        {id:12, type:'mc', q:'【第八課】馬拉拉來自哪個國家？', opts:['美國','巴基斯坦','印度','阿富汗'], a:'巴基斯坦'},
-        {id:13, type:'mc', q:'【第八課】「最勇敢的女孩」一課中，馬拉拉最主要的訴求是什麼？', opts:['爭取女孩受教權','爭取投票權','保護環境','拯救流浪動物'], a:'爭取女孩受教權'},
-        {id:14, type:'mc', q:'【第九課】面對挫折，作者建議我們應抱持何種態度？', opts:['怨天尤人','逃避現實','正向思考','依賴他人'], a:'正向思考'},
-        {id:15, type:'mc', q:'【第十課】作者在山中聽到了什麼聲音讓他覺得悅耳？', opts:['車聲','蟲鳴鳥叫','廣播聲','人的吵架聲'], a:'蟲鳴鳥叫'},
-        {id:16, type:'mc', q:'【第十一課】「與達駭黑熊走入山林」文中，作者對黑熊的情感為何？', opts:['恐懼與厭惡','尊敬與感激','嘲笑與輕視','冷漠與無視'], a:'尊敬與感激'},
-        {id:17, type:'mc', q:'【第十二課】魯濱遜在荒島上遇見的野人朋友，他將其取名為？', opts:['星期一','星期五','星期天','魯濱遜二世'], a:'星期五'},
-        {id:18, type:'mc', q:'【字音】下列「」中的字，何者讀音正確？', opts:['「供」應：ㄍㄨㄥ','「處」罰：ㄔㄨˋ','「創」傷：ㄔㄨㄤˋ','「強」迫：ㄑㄧㄤˇ'], a:'「強」迫：ㄑㄧㄤˇ'},
-        {id:19, type:'mc', q:'【字形】下列哪個詞語的用字完全正確？', opts:['恍然大悟','慌然大悟','恍然大誤','光然大悟'], a:'恍然大悟'},
-        {id:20, type:'mc', q:'【成語】形容一個人意志堅定，不因失敗而退縮。', opts:['半途而廢','越挫越勇','得意忘形','自暴自棄'], a:'越挫越勇'},
-        {id:21, type:'mc', q:'【成語】「名落孫山」的意思是？', opts:['考試合格','住在山上','考試落榜','名字刻在山上'], a:'考試落榜'},
-        {id:22, type:'mc', q:'【修辭】「風兒輕輕的唱著歌。」使用了哪種修辭？', opts:['誇飾','轉化(擬人)','排比','設問'], a:'轉化(擬人)'},
-        {id:23, type:'mc', q:'【畫家的天空】齊白石原本是做什麼工作的？', opts:['鐵匠','木匠','廚師','漁夫'], a:'木匠'},
-        {id:24, type:'mc', q:'【第十二課】魯濱遜在荒島上生活了將近幾年？', opts:['3年','10年','28年','50年'], a:'28年'},
-        {id:25, type:'mc', q:'【句型】「與其......不如......」是用來表示？', opts:['因果關係','選擇關係','條件關係','假設關係'], a:'選擇關係'},
-        {id:26, type:'mc', q:'下列哪一個字的部首錯誤？', opts:['「寄」：宀部','「勇」：力部','「挫」：手部','「島」：鳥部'], a:'「島」：鳥部'}, // 島是山部
-        {id:27, type:'mc', q:'「崎嶇」的意思是？', opts:['形容路面平坦','形容山路高低不平','形容水流湍急','形容心情愉快'], a:'形容山路高低不平'},
-        {id:28, type:'mc', q:'【第十一課】文中提到人類應該如何對待山林？', opts:['大量開發','互相尊重，和平共存','捕捉所有動物','砍光樹木種檳榔'], a:'互相尊重，和平共存'},
-        {id:29, type:'mc', q:'「靜謐」的意思與下列何者相反？', opts:['安靜','喧鬧','幽靜','沉靜'], a:'喧鬧'},
-        {id:30, type:'mc', q:'【第九課】下列哪位名人是「在挫折中成長」的好例子？', opts:['李安(曾失業六年)','含著金湯匙出生的人','中樂透的人','未經努力就成功的人'], a:'李安(曾失業六年)'},
-        {id:31, type:'mc', q:'下列哪一句話含有「鼓勵」的語氣？', opts:['你怎麼這麼笨！','這點小事都做不好。','失敗沒關係，下次再努力就好。','放棄吧，你做不到的。'], a:'失敗沒關係，下次再努力就好。'},
-        {id:32, type:'mc', q:'「肆虐」的意思是？', opts:['任意作惡','幫助別人','四處遊玩','天氣很好'], a:'任意作惡'},
-        {id:33, type:'mc', q:'【第十課】作者認為山林像什麼？', opts:['一位嚴厲的老師','一位慈祥的母親','一個吵鬧的市場','一座冰冷的監獄'], a:'一位慈祥的母親'},
-        {id:34, type:'mc', q:'【閱讀階梯二】分享的金牌故事發生在什麼比賽？', opts:['奧運','世界盃','特奧會(特殊奧林匹克運動會)','校慶運動會'], a:'特奧會(特殊奧林匹克運動會)'},
-        {id:35, type:'mc', q:'下列詞語何者是用來形容「齊白石」的畫風？', opts:['金碧輝煌','樸實自然','抽象難懂','陰森恐怖'], a:'樸實自然'},
-        {id:36, type:'mc', q:'「他因為一時的疏忽，導致全盤皆輸。」句中的「疏忽」可以替換為？', opts:['謹慎','大意','努力','聰明'], a:'大意'},
-        {id:37, type:'mc', q:'【字音】「創」作的讀音？', opts:['ㄔㄨㄤ','ㄔㄨㄤˋ','ㄘㄤ','ㄘㄤˋ'], a:'ㄔㄨㄤˋ'},
-        {id:38, type:'mc', q:'【字義】荒島的「荒」意思是？', opts:['慌張','偏僻、無人開墾','豐收','說謊'], a:'偏僻、無人開墾'},
-        {id:39, type:'mc', q:'下列何者不是魯濱遜在島上做的事？', opts:['蓋房子','種麥子','開超商','做陶器'], a:'開超商'},
-        {id:40, type:'mc', q:'【第十一課】「黑熊」在布農族語中被稱為什麼？', opts:['達駭(Tutum)','百步蛇','雲豹','山豬'], a:'達駭(Tutum)'},
+        // 選擇題 (30題)
+        {id: 16, type: 'mc', q: '【第八課】關於馬拉拉的敘述，下列何者正確？', opts: ['她是諾貝爾物理獎得主', '她為了爭取投票權而受傷', '她是史上最年輕的諾貝爾和平獎得主', '她發明了新的教學法'], a: '她是史上最年輕的諾貝爾和平獎得主'},
+        {id: 17, type: 'mc', q: '【第九課】面對挫折時，作者建議我們應抱持何種態度？', opts: ['怨天尤人', '逃避現實', '正向思考，從中學習', '依賴父母解決'], a: '正向思考，從中學習'},
+        {id: 18, type: 'mc', q: '【字音】下列「」中的字音何者正確？', opts: ['「供」應：ㄍㄨㄥ', '「處」罰：ㄔㄨˋ', '「創」傷：ㄔㄨㄤˋ', '勉強：ㄇㄧㄢˇ ㄑㄧㄤˊ'], a: '「創」傷：ㄔㄨㄤˋ'}, // 供gong1, 處chu3, 強qiang3
+        {id: 19, type: 'mc', q: '【成語】形容一個人雖然失敗了，但意志更加堅定。', opts: ['半途而廢', '越挫越勇', '得意忘形', '自暴自棄'], a: '越挫越勇'},
+        {id: 20, type: 'mc', q: '【第十二課】魯濱遜在荒島上度過了幾年？', opts: ['約10年', '約28年', '約50年', '約3個月'], a: '約28年'},
+        {id: 21, type: 'mc', q: '【第七課】下列哪一個例子「不是」文中提到生命尋找出路的表現？', opts: ['岩縫中的小草', '溫室裡的蘭花', '沙漠中的仙人掌', '斷腿的蜘蛛'], a: '溫室裡的蘭花'},
+        {id: 22, type: 'mc', q: '【修辭】「那雙眼睛像星星一樣閃亮。」使用了哪種修辭？', opts: ['排比', '譬喻', '擬人', '設問'], a: '譬喻'},
+        {id: 23, type: 'mc', q: '【字形】下列哪個詞語用字完全正確？', opts: ['名落孫山', '名落深山', '明落孫山', '名洛孫山'], a: '名落孫山'},
+        {id: 24, type: 'mc', q: '【閱讀階梯一】齊白石原本從事什麼行業？', opts: ['鐵匠', '木匠', '廚師', '裁縫師'], a: '木匠'},
+        {id: 25, type: 'mc', q: '【第十一課】「與達駭黑熊走入山林」中，作者對黑熊的情感是？', opts: ['憎恨', '恐懼', '敬重', '輕視'], a: '敬重'},
+        {id: 26, type: 'mc', q: '「靜謐」的意思是？', opts: ['非常吵鬧', '安靜', '祕密', '動作快速'], a: '安靜'},
+        {id: 27, type: 'mc', q: '【句型】「與其......不如......」這句型表示？', opts: ['因果關係', '選擇關係', '條件關係', '轉折關係'], a: '選擇關係'},
+        {id: 28, type: 'mc', q: '【第十課】作者在山中聽到了什麼聲音讓他覺得悅耳？', opts: ['車水馬龍聲', '蟲鳴鳥叫聲', '工廠機器聲', '雷聲'], a: '蟲鳴鳥叫聲'},
+        {id: 29, type: 'mc', q: '【字義】荒島的「荒」意思是？', opts: ['慌張', '荒唐', '偏僻、無人開墾', '飢荒'], a: '偏僻、無人開墾'},
+        {id: 30, type: 'mc', q: '下列哪一個字的部首錯誤？', opts: ['「寄」：宀部', '「勇」：力部', '「島」：鳥部', '「挫」：手部'], a: '「島」：鳥部'}, // 島是山部
+        {id: 31, type: 'mc', q: '「肆虐」的意思是？', opts: ['任意作惡', '幫助別人', '四處遊玩', '天氣晴朗'], a: '任意作惡'},
+        {id: 32, type: 'mc', q: '【第九課】下列哪個人物是課文中提到「面對挫折」的例子？', opts: ['愛迪生', '李安', '貝多芬', '林書豪'], a: '李安'},
+        {id: 33, type: 'mc', q: '【第十二課】魯濱遜在島上為了生存，做了哪件事？', opts: ['開便利商店', '種植大麥和稻子', '打電話求救', '與野人開戰'], a: '種植大麥和稻子'},
+        {id: 34, type: 'mc', q: '下列詞語何者可以用來形容「齊白石」的畫風？', opts: ['金碧輝煌', '樸實自然', '抽象難懂', '華麗複雜'], a: '樸實自然'},
+        {id: 35, type: 'mc', q: '「措手不及」的意思是？', opts: ['事情發生太快，來不及應付', '手受傷了', '形容非常高興', '形容很有計畫'], a: '事情發生太快，來不及應付'},
+        {id: 36, type: 'mc', q: '【第八課】馬拉拉利用什麼方式讓世界聽見她的聲音？', opts: ['拍電影', '寫部落格(日記)', '畫漫畫', '唱歌'], a: '寫部落格(日記)'},
+        {id: 37, type: 'mc', q: '【第十一課】文中提到人類應如何與山林相處？', opts: ['大量砍伐', '互相尊重，和平共存', '捕捉所有動物', '蓋滿別墅'], a: '互相尊重，和平共存'},
+        {id: 38, type: 'mc', q: '下列哪一句話含有「鼓勵」的語氣？', opts: ['你怎麼這麼笨！', '這點小事都做不好。', '失敗沒關係，下次再努力就好。', '放棄吧。'], a: '失敗沒關係，下次再努力就好。'},
+        {id: 39, type: 'mc', q: '「崎嶇」通常用來形容？', opts: ['路面平坦', '山路高低不平', '水流湍急', '心情平靜'], a: '山路高低不平'},
+        {id: 40, type: 'mc', q: '【閱讀階梯二】特奧會選手跌倒後，其他選手怎麼做？', opts: ['嘲笑他', '繼續往前跑', '停下來扶起他，一起走', '向裁判抗議'], a: '停下來扶起他，一起走'},
+        {id: 41, type: 'mc', q: '【字音】「創」作的讀音？', opts: ['ㄔㄨㄤ', 'ㄔㄨㄤˋ', 'ㄘㄤ', 'ㄘㄤˋ'], a: 'ㄔㄨㄤˋ'},
+        {id: 42, type: 'mc', q: '【修辭】「失敗是成功的墊腳石。」使用了什麼修辭？', opts: ['誇飾', '譬喻', '擬人', '類疊'], a: '譬喻'},
+        {id: 43, type: 'mc', q: '下列哪個詞語與「堅持到底」意思相近？', opts: ['半途而廢', '鍥而不捨', '一暴十寒', '三心二意'], a: '鍥而不捨'},
+        {id: 44, type: 'mc', q: '【第十課】「山中寄情」顯示出作者具有什麼樣的性格？', opts: ['喜愛自然', '貪圖富貴', '膽小怕事', '喜歡熱鬧'], a: '喜愛自然'},
+        {id: 45, type: 'mc', q: '【第十二課】魯濱遜剛到荒島時的心情是如何的？', opts: ['興奮', '絕望恐懼', '平靜', '憤怒'], a: '絕望恐懼'},
 
-        // 閱讀測驗 (41-50)
-        {id:41, type:'read', group:'read1', passage:'【閱讀測驗：愛迪生與電燈】\n愛迪生在發明電燈的過程中，經歷了上千次的失敗。有人嘲笑他：「你已經失敗了一千次了，為什麼不放棄？」愛迪生卻微笑著回答：「我沒有失敗，我只是發現了一千種不適合做燈絲的材料。」這種堅持到底、正向思考的精神，終於讓他點亮了世界。', q:'愛迪生發明了什麼？', opts:['電話','電燈','飛機','火車'], a:'電燈'},
-        {id:42, type:'read', group:'read1', q:'面對別人的嘲笑，愛迪生的態度是？', opts:['生氣','放棄','正向思考','大哭'], a:'正向思考'},
-        {id:43, type:'read', group:'read1', q:'這篇文章主要在勉勵我們？', opts:['要有錢','要堅持到底','要聰明','要運氣好'], a:'要堅持到底'},
-        {id:44, type:'read', group:'read1', q:'愛迪生認為他的「失敗」是？', opts:['浪費時間','發現不適合的材料','運氣不好','別人的錯'], a:'發現不適合的材料'},
-        
-        {id:45, type:'read', group:'read2', passage:'【閱讀測驗：樹的智慧】\n森林裡的樹木，雖然不會說話，但它們懂得合作。科學家發現，樹木的根部會在地下相連，透過真菌傳遞養分。當一棵樹生病或太小時，周圍的大樹會分送養分給它。這告訴我們，強者應該照顧弱者，互助合作才能共存。', q:'文章提到樹木透過什麼傳遞養分？', opts:['葉子','根部與真菌','樹枝','風'], a:'根部與真菌'},
-        {id:46, type:'read', group:'read2', q:'當一棵樹生病時，周圍的大樹會？', opts:['搶它的養分','分送養分給它','置之不理','把它推倒'], a:'分送養分給它'},
-        {id:47, type:'read', group:'read2', q:'這篇文章想告訴我們的道理是？', opts:['適者生存','弱肉強食','互助合作','獨善其身'], a:'互助合作'},
-
-        {id:48, type:'read', group:'read3', passage:'【閱讀測驗：神奇的蝙蝠】\n蝙蝠是唯一會飛的哺乳類動物。牠們雖然視力不好，但聽力極佳。蝙蝠在飛行時會發出超音波，當聲波碰到物體反射回來，牠就能判斷前方障礙物的位置與大小，這稱為「回聲定位」。人類模仿這個原理，發明了雷達。', q:'蝙蝠是屬於哪一類動物？', opts:['鳥類','昆蟲','哺乳類','爬蟲類'], a:'哺乳類'},
-        {id:49, type:'read', group:'read3', q:'蝙蝠利用什麼來判斷方位？', opts:['視力','嗅覺','回聲定位','觸覺'], a:'回聲定位'},
-        {id:50, type:'read', group:'read3', q:'人類模仿蝙蝠發明了什麼？', opts:['飛機','雷達','潛水艇','望遠鏡'], a:'雷達'}
+        // 閱讀測驗 (5題) - 一個題組
+        {
+            id: 46, type: 'read', group: 'read1', 
+            passage: '【閱讀測驗：神奇的蝙蝠】\n蝙蝠是唯一會飛的哺乳類動物。牠們雖然視力不好，但聽力極佳。蝙蝠在飛行時會發出超音波，當聲波碰到物體反射回來，牠就能判斷前方障礙物的位置與大小，這稱為「回聲定位」。科學家模仿這個原理，發明了雷達，廣泛應用在飛機導航與氣象觀測上。',
+            q: '蝙蝠屬於哪一類動物？', opts: ['鳥類', '昆蟲', '哺乳類', '爬蟲類'], a: '哺乳類'
+        },
+        {id: 47, type: 'read', group: 'read1', q: '蝙蝠利用什麼來判斷障礙物的位置？', opts: ['視力', '嗅覺', '回聲定位', '觸覺'], a: '回聲定位'},
+        {id: 48, type: 'read', group: 'read1', q: '人類模仿蝙蝠的原理發明了什麼？', opts: ['飛機', '雷達', '潛水艇', '望遠鏡'], a: '雷達'},
+        {id: 49, type: 'read', group: 'read1', q: '根據文章，蝙蝠的哪種感官最靈敏？', opts: ['視覺', '聽覺', '味覺', '觸覺'], a: '聽覺'},
+        {id: 50, type: 'read', group: 'read1', q: '文章中提到的「超音波」功能是什麼？', opts: ['用來攻擊敵人', '用來導航與探測', '用來求偶', '用來照明'], a: '用來導航與探測'}
     ];
 
-    // 系統變數
     let timer;
     let timeLeft = 40 * 60; // 40分鐘
-    let quizStarted = false;
-
-    // 初始化
-    function init() {
-        const form = document.getElementById('quiz-form');
-        let currentGroup = '';
-
-        questions.forEach((q, idx) => {
-            // 處理閱讀測驗文章顯示
-            if(q.type === 'read' && q.group !== currentGroup) {
-                const p = document.createElement('div');
-                p.className = 'reading-section';
-                p.innerText = q.passage;
-                form.appendChild(p);
-                currentGroup = q.group;
-            }
-
-            const card = document.createElement('div');
-            card.className = 'question-card';
-            card.id = `card-${q.id}`;
-
-            // 題目標題
-            const title = document.createElement('div');
-            title.className = 'question-text';
-            title.innerText = `${idx + 1}. ${q.q} (2分)`;
-            card.appendChild(title);
-
-            // 稍後作答
-            const reviewLabel = document.createElement('label');
-            reviewLabel.className = 'review-check';
-            reviewLabel.innerHTML = `<input type="checkbox" onchange="toggleReview(${q.id})"> 稍後作答`;
-            card.appendChild(reviewLabel);
-
-            // 選項
-            const optsDiv = document.createElement('div');
-            optsDiv.className = 'options-group';
-            
-            let options = q.type === 'tf' ? ['O', 'X'] : q.opts;
-            options.forEach(opt => {
-                const label = document.createElement('label');
-                const radio = document.createElement('input');
-                radio.type = 'radio';
-                radio.name = `q${q.id}`;
-                radio.value = opt;
-                radio.onchange = updateStats;
-                
-                label.appendChild(radio);
-                label.appendChild(document.createTextNode(opt));
-                optsDiv.appendChild(label);
-            });
-            card.appendChild(optsDiv);
-            form.appendChild(card);
-        });
+    let currentQuestions = [];
+    
+    // 洗牌函數 (Fisher-Yates Shuffle)
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
-    // 開始測驗
     function startQuiz() {
-        init();
+        const isRandom = document.getElementById('randomize-toggle').checked;
+        
+        // 準備題目
+        currentQuestions = [...questionPool];
+        if (isRandom) {
+            // 閱讀測驗通常連在一起，這裡為了簡單，我們只隨機題目順序，
+            // 若要嚴格分組隨機比較複雜，這裡採用全隨機，
+            // 但為了讓閱讀測驗閱讀方便，我們將閱讀文章附在該題上方。
+            currentQuestions = shuffleArray(currentQuestions);
+        }
+
+        // UI 切換
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('quiz-area').classList.remove('hidden');
         document.getElementById('footer-controls').classList.remove('hidden');
-        quizStarted = true;
         
-        timer = setInterval(() => {
-            timeLeft--;
-            updateTimerDisplay();
-            checkTimeAlerts();
-            if(timeLeft <= 0) {
-                clearInterval(timer);
-                alert('時間到！系統將自動繳卷。');
-                submitQuiz(true);
+        // 渲染題目
+        renderQuestions();
+        
+        // 啟動計時
+        timer = setInterval(updateTimer, 1000);
+    }
+
+    function renderQuestions() {
+        const quizArea = document.getElementById('quiz-area');
+        quizArea.innerHTML = '';
+
+        currentQuestions.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.id = `q-card-${q.id}`;
+
+            // 閱讀測驗文章 (如果是該題組第一題或是隨機模式下的閱讀題)
+            if (q.passage) {
+                const passage = document.createElement('div');
+                passage.className = 'reading-passage';
+                passage.innerText = q.passage;
+                card.appendChild(passage);
             }
-        }, 1000);
-    }
 
-    function updateTimerDisplay() {
-        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-        const s = (timeLeft % 60).toString().padStart(2, '0');
-        document.getElementById('timer-box').innerText = `${m}:${s}`;
-        
-        if(timeLeft < 300) document.getElementById('timer-box').style.color = '#ff6b6b';
-    }
+            // 標題與稍後作答
+            const header = document.createElement('div');
+            header.className = 'q-header';
+            
+            const title = document.createElement('div');
+            title.className = 'q-text';
+            title.innerText = `${index + 1}. ${q.q}`;
+            
+            const reviewLabel = document.createElement('label');
+            reviewLabel.className = 'review-label';
+            reviewLabel.innerHTML = `<input type="checkbox" onchange="toggleReview('${q.id}')"> 稍後作答`;
+            
+            header.appendChild(title);
+            header.appendChild(reviewLabel);
+            card.appendChild(header);
 
-    function checkTimeAlerts() {
-        if(timeLeft === 15 * 60) alert('提醒：考試時間剩下 15 分鐘！');
-        if(timeLeft === 8 * 60) alert('提醒：考試時間剩下 8 分鐘！請加快速度！');
-        if(timeLeft === 5 * 60) alert('警告：考試時間剩下 5 分鐘！請檢查是否有未填寫的題目。');
-    }
+            // 選項
+            const optsContainer = document.createElement('div');
+            optsContainer.className = 'options-container';
 
-    // 狀態更新
-    function updateStats() {
-        let ans = 0, review = 0;
-        questions.forEach(q => {
-            if(document.querySelector(`input[name="q${q.id}"]:checked`)) ans++;
-            if(document.querySelector(`#card-${q.id} .review-check input`).checked) review++;
+            let options = q.type === 'tf' ? ['O', 'X'] : q.opts;
+            
+            options.forEach(opt => {
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `q-${q.id}`; // 保持原始ID以利對應
+                input.value = opt;
+                input.onchange = updateStats;
+                
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(opt));
+                optsContainer.appendChild(label);
+            });
+
+            card.appendChild(optsContainer);
+            quizArea.appendChild(card);
         });
-        document.getElementById('count-ans').innerText = ans;
-        document.getElementById('count-unans').innerText = 50 - ans;
-        document.getElementById('count-review').innerText = review;
     }
 
-    function toggleReview(id) {
-        const card = document.getElementById(`card-${id}`);
-        const chk = card.querySelector('.review-check input');
-        if(chk.checked) card.classList.add('review-marked');
-        else card.classList.remove('review-marked');
+    function toggleReview(qid) {
+        const card = document.getElementById(`q-card-${qid}`);
+        const checkbox = card.querySelector('.review-label input');
+        
+        if (checkbox.checked) {
+            card.classList.add('marked-review');
+        } else {
+            card.classList.remove('marked-review');
+        }
         updateStats();
     }
 
-    // 繳卷檢查
-    function preSubmitCheck() {
-        let unans = [], reviews = [];
-        questions.forEach((q, i) => {
-            if(!document.querySelector(`input[name="q${q.id}"]:checked`)) unans.push(i+1);
-            if(document.querySelector(`#card-${q.id} .review-check input`).checked) reviews.push(i+1);
+    function updateStats() {
+        let answered = 0;
+        let marked = 0;
+        
+        currentQuestions.forEach(q => {
+            const isAns = document.querySelector(`input[name="q-${q.id}"]:checked`);
+            if (isAns) answered++;
+            
+            const isMark = document.querySelector(`#q-card-${q.id} .review-label input`).checked;
+            if (isMark) marked++;
         });
 
-        let msg = "";
-        if(unans.length > 0) msg += `⚠️ 您有 ${unans.length} 題未作答！\n`;
-        if(reviews.length > 0) msg += `⚠️ 您有 ${reviews.length} 題標記為「稍後作答」！\n`;
-        
-        if(msg) {
-            msg += "\n確定要繳卷嗎？";
-            if(confirm(msg)) submitQuiz();
-        } else {
-            if(confirm("確定要繳卷送出嗎？")) submitQuiz();
+        document.getElementById('count-ans').innerText = answered;
+        document.getElementById('count-unans').innerText = 50 - answered;
+        document.getElementById('count-mark').innerText = marked;
+    }
+
+    function updateTimer() {
+        timeLeft--;
+        const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const s = (timeLeft % 60).toString().padStart(2, '0');
+        const display = document.getElementById('timer-display');
+        display.innerText = `${m}:${s}`;
+
+        // 提醒邏輯
+        if (timeLeft === 15 * 60) {
+            display.style.color = 'yellow';
+            alert('🔔 提醒：考試時間剩下 15 分鐘！');
+        }
+        if (timeLeft === 8 * 60) {
+            display.style.color = 'orange';
+            alert('🔔 提醒：考試時間剩下 8 分鐘！請加快速度！');
+        }
+        if (timeLeft === 5 * 60) {
+            display.style.color = 'red';
+            alert('⚠️ 警告：考試時間剩下 5 分鐘！請檢查是否有漏答！');
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            alert('⏰ 時間到！系統將自動繳卷。');
+            submitQuiz(true);
         }
     }
 
-    // 繳卷邏輯
+    function preSubmitCheck() {
+        let unansCount = 0;
+        let markedCount = 0;
+        
+        currentQuestions.forEach(q => {
+            if (!document.querySelector(`input[name="q-${q.id}"]:checked`)) unansCount++;
+            if (document.querySelector(`#q-card-${q.id} .review-label input`).checked) markedCount++;
+        });
+
+        let msg = '';
+        if (unansCount > 0) msg += `還有 ${unansCount} 題未作答！\n`;
+        if (markedCount > 0) msg += `還有 ${markedCount} 題標記為「稍後作答」！\n`;
+        
+        if (msg !== '') {
+            if (confirm(`⚠️ 系統檢查發現：\n${msg}\n確定要直接繳卷嗎？`)) {
+                submitQuiz();
+            }
+        } else {
+            if (confirm('確定要繳卷送出嗎？')) {
+                submitQuiz();
+            }
+        }
+    }
+
     function submitQuiz(force = false) {
         clearInterval(timer);
-        window.scrollTo(0,0);
-        document.getElementById('footer-controls').classList.add('hidden'); // Hide footer
-        document.getElementById('timer-box').style.display = 'none';
-
-        let score = 0;
-        let resultData = [["題號", "題目", "您的答案", "正確答案", "結果"]];
+        window.scrollTo(0, 0);
+        document.getElementById('footer-controls').classList.add('hidden');
+        document.getElementById('timer-display').style.display = 'none';
         
-        questions.forEach((q, idx) => {
-            const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
-            const userVal = selected ? selected.value : "未作答";
-            const isCorrect = userVal === q.a;
+        let score = 0;
+        
+        currentQuestions.forEach(q => {
+            const userAnsEl = document.querySelector(`input[name="q-${q.id}"]:checked`);
+            const userAns = userAnsEl ? userAnsEl.value : "未作答";
+            const card = document.getElementById(`q-card-${q.id}`);
             
-            const card = document.getElementById(`card-${q.id}`);
+            // 鎖定題目
             const inputs = card.querySelectorAll('input');
-            inputs.forEach(i => i.disabled = true); // Disable inputs
+            inputs.forEach(i => i.disabled = true);
 
-            if(isCorrect) {
+            if (userAns === q.a) {
                 score += 2;
+                // 正確不需特別標示，或者標示綠色
             } else {
-                card.classList.add('wrong-answer-card');
-                const correctDiv = document.createElement('div');
-                correctDiv.className = 'correct-answer-text';
-                correctDiv.innerText = `❌ 答錯了！正確答案是：${q.a}`;
-                card.appendChild(correctDiv);
-
-                // Add to CSV data
-                resultData.push([idx+1, q.q, userVal, q.a, "錯誤"]);
+                // 錯誤處理
+                card.classList.add('wrong-ans-card');
+                const feedback = document.createElement('div');
+                feedback.className = 'feedback-text';
+                feedback.innerHTML = `❌ 您的答案：<span style="text-decoration: line-through;">${userAns}</span> <span class="correct-ref">正確答案：${q.a}</span>`;
+                if(q.note) feedback.innerHTML += `<br><small>解析：${q.note}</small>`;
+                card.appendChild(feedback);
             }
         });
 
-        // 顯示結果
         document.getElementById('result-area').classList.remove('hidden');
-        document.getElementById('final-score').innerText = `總分：${score} 分`;
-        
-        // 自動下載 CSV
-        if(resultData.length > 1) { // 如果有錯題
-            downloadCSV(resultData);
-        }
+        document.getElementById('final-score').innerText = `${score} 分`;
     }
 
-    function downloadCSV(data) {
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-        data.forEach(row => {
-            // 處理逗號避免 CSV 格式錯誤
-            let cleanRow = row.map(item => `"${String(item).replace(/"/g, '""')}"`); 
-            csvContent += cleanRow.join(",") + "\r\n";
+    // 產生並下載 Excel (.xls 格式以支援顏色)
+    function downloadExcel() {
+        let tableHTML = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+            </head>
+            <body>
+                <table border="1">
+                    <thead>
+                        <tr style="background-color: #cccccc;">
+                            <th>題號</th>
+                            <th>題目</th>
+                            <th>您的答案</th>
+                            <th>正確答案</th>
+                            <th>結果</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        currentQuestions.forEach((q, index) => {
+            const userAnsEl = document.querySelector(`input[name="q-${q.id}"]:checked`);
+            const userAns = userAnsEl ? userAnsEl.value : "未作答";
+            const isCorrect = userAns === q.a;
+            
+            // 這裡設定紅字樣式
+            const rowStyle = isCorrect ? "" : "color: red; font-weight: bold;";
+            const resultText = isCorrect ? "正確" : "錯誤";
+
+            tableHTML += `
+                <tr style="${rowStyle}">
+                    <td>${index + 1}</td>
+                    <td>${q.q}</td>
+                    <td>${userAns}</td>
+                    <td>${q.a}</td>
+                    <td>${resultText}</td>
+                </tr>
+            `;
         });
-        
+
+        tableHTML += `</tbody></table></body></html>`;
+
+        const blob = new Blob([tableHTML], { type: "application/vnd.ms-excel" });
         const link = document.createElement("a");
-        link.setAttribute("href", encodeURI(csvContent));
-        link.setAttribute("download", "exam_result.csv");
+        link.href = URL.createObjectURL(blob);
+        link.download = "exam_result.xls";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     }
 
-    // 管理員查看答案
-    function showAnswerKey() {
+    function checkAnswersAdmin() {
         const pwd = prompt("請輸入密碼：");
-        if(pwd === "1234") {
-            let key = "【參考答案】\n";
-            questions.forEach((q, i) => {
-                key += `${i+1}.${q.a}  `;
-                if((i+1)%5 === 0) key += "\n";
+        if (pwd === "1234") {
+            let list = "參考答案：\n";
+            questionPool.forEach(q => {
+                list += `${q.id}. ${q.a}\n`;
             });
-            alert(key);
+            alert(list);
         } else {
-            alert("密碼錯誤！");
+            alert("密碼錯誤");
         }
     }
 </script>
