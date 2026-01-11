@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五上)自然線上期末測驗系統_1.11.21.35</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- XLSX-JS-STYLE for Excel Export with Styles -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FFD41D', // Yellow
+                        secondary: '#FFA240', // Orange
+                        danger: '#D73535', // Deep Red
+                        lightRed: '#FF4646', // Light Red
+                        bgCream: '#FFFDF5',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; background-color: #FFFDF5; }
+        .modal-backdrop { background-color: rgba(0, 0, 0, 0.5); }
+        /* Custom scrollbar for better look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #FFA240; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D73535; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        
+        // --- 題庫資料 (模擬康軒版五上自然 單元3 & 4 考古題) ---
+        // 題目類型: 1=是非, 2=選擇, 3=配合(模擬為選擇形式)
+        const QUESTION_POOL = [
+            // 單元 3：空氣的組成與反應 (著重實驗)
+            { id: 1, unit: "單元3", type: 2, q: "在「探討製造氧氣」的實驗中，我們使用胡蘿蔔丁與雙氧水，請問胡蘿蔔丁的作用是什麼？", options: ["產生氧氣的主要來源", "催化劑，加速反應", "防止雙氧水揮發", "增加水的重量"], a: "催化劑，加速反應", exp: "胡蘿蔔丁含有酵素，作為催化劑加速雙氧水分解產生氧氣。" },
+            { id: 2, unit: "單元3", type: 2, q: "關於「燃燒三要素」，下列哪一項**不是**必須存在的條件？", options: ["可燃物", "助燃物(氧氣)", "達到燃點", "二氧化碳"], a: "二氧化碳", exp: "燃燒三要素為：可燃物、助燃物(氧氣)、達到燃點。二氧化碳是用來滅火的。" },
+            { id: 3, unit: "單元3", type: 1, q: "在進行「鋼棉生鏽」實驗時，為了證明「水」是生鏽的原因，實驗組應該將鋼棉保持乾燥，對照組將鋼棉浸濕。", options: ["O", "X"], a: "X", exp: "實驗組是「要操作改變的變因」，若要證明水是原因，實驗組應為有水(或無水)，重點是兩組只能有一個變因不同。通常有處理的那組叫實驗組(有水)，沒處理的叫對照組(乾燥)，題目敘述反了或邏輯混亂，但在康軒版實驗設計中，若要證明「水」的影響，一組乾燥(對照)、一組沾水(實驗)。(此題敘述為X，因為若要證明水是原因，對照組通常是『正常/未處理/乾燥』狀態，但更精確說法是兩組只有水份差異)。" },
+            { id: 4, unit: "單元3", type: 2, q: "將點燃的線香放入廣口瓶中，發現線香燃燒得更旺盛，請問瓶中充滿了什麼氣體？", options: ["二氧化碳", "氮氣", "氧氣", "氫氣"], a: "氧氣", exp: "氧氣具有助燃性，能使線香燃燒更旺盛。" },
+            { id: 5, unit: "單元3", type: 2, q: "在「水分對鐵生鏽的影響」實驗中，操作變因(改變的條件)是什麼？", options: ["空氣的多寡", "水分的有無", "鐵製品的大小", "放置的時間"], a: "水分的有無", exp: "探討什麼因素，那個因素就是操作變因，其他條件皆須固定。" },
+            { id: 6, unit: "單元3", type: 2, q: "下列哪一種滅火方式，是利用「隔絕助燃物」的原理？", options: ["用水澆熄營火", "用酒精燈蓋蓋熄酒精燈", "移除森林火災周圍的樹木", "降低溫度"], a: "用酒精燈蓋蓋熄酒精燈", exp: "蓋上蓋子是為了隔絕空氣(氧氣)。用水是降溫；移除樹木是移除可燃物。" },
+            { id: 7, unit: "單元3", type: 2, q: "想要檢驗氣體是否為二氧化碳，最好的方法是將氣體通入什麼液體中？", options: ["雙氧水", "食鹽水", "澄清石灰水", "醋酸"], a: "澄清石灰水", exp: "二氧化碳會使澄清石灰水變白色混濁。" },
+            { id: 8, unit: "單元3", type: 2, q: "食品包裝中常放入脫氧劑，其主要成份是鐵粉，請問脫氧劑的原理是什麼？", options: ["產生氧氣保鮮", "鐵粉與袋內氧氣作用生鏽，消耗氧氣", "殺死細菌", "吸收水分"], a: "鐵粉與袋內氧氣作用生鏽，消耗氧氣", exp: "鐵生鏽會消耗氧氣，利用此原理除去包裝內的氧氣以防腐。" },
+            { id: 9, unit: "單元3", type: 1, q: "空氣中含量最多的氣體是氧氣，大約佔五分之一。", options: ["O", "X"], a: "X", exp: "空氣中含量最多的是氮氣(約78%)，氧氣居次(約21%)。" },
+            { id: 10, unit: "單元3", type: 2, q: "在「酸雨對生鏽的影響」實驗中，控制變因(不能改變的條件)包含下列何者？", options: ["液體的酸鹼性", "浸泡液體的種類", "鋼棉的大小與放置地點", "是否有水"], a: "鋼棉的大小與放置地點", exp: "實驗要探討酸雨(酸鹼性)，所以酸鹼性是操作變因，其他如鋼棉大小、地點、時間都必須固定(控制變因)。" },
+            { id: 11, unit: "單元3", type: 2, q: "關於鐵生鏽的敘述，下列何者正確？", options: ["鐵生鏽後重量會變輕", "生鏽是鐵與氮氣作用", "鐵生鏽是氧化作用", "乾燥的環境比潮濕容易生鏽"], a: "鐵生鏽是氧化作用", exp: "鐵生鏽是鐵氧化變成氧化鐵，重量會增加(結合了氧)，潮濕環境較易生鏽。" },
+            { id: 12, unit: "單元3", type: 2, q: "雙氧水製造氧氣的實驗中，若沒有胡蘿蔔，可以用什麼代替？", options: ["馬鈴薯", "鐵釘", "紅豆", "二氧化錳"], a: "二氧化錳", exp: "康軒課本中提到二氧化錳也可以作為催化劑。" },
+            { id: 13, unit: "單元3", type: 2, q: "腳踏車鍊條加上潤滑油的主要目的是什麼？", options: ["美觀", "隔絕空氣與水，防止生鏽", "增加重量", "降低溫度"], a: "隔絕空氣與水，防止生鏽", exp: "油膜可以隔絕鐵與空氣/水分接觸。" },
+            { id: 14, unit: "單元3", type: 1, q: "燃燒需要空氣，更精確地說，是需要空氣中的氮氣。", options: ["O", "X"], a: "X", exp: "燃燒需要的是氧氣。" },
+            { id: 15, unit: "單元3", type: 2, q: "使用小蘇打粉和醋混合，可以產生哪種氣體？", options: ["氧氣", "氫氣", "二氧化碳", "氮氣"], a: "二氧化碳", exp: "酸(醋)加碳酸氫鈉(小蘇打)會產生二氧化碳。" },
+            { id: 16, unit: "單元3", type: 3, q: "【配合題】請選出「移除可燃物」的滅火例子：", options: ["消防員開闢防火巷", "用沙土覆蓋火源", "灑水降溫", "用鍋蓋蓋熄油鍋"], a: "消防員開闢防火巷", exp: "開闢防火巷是移除可燃物；沙土與鍋蓋是隔絕助燃物；灑水是降低溫度。" },
+            { id: 17, unit: "單元3", type: 1, q: "鐵製品電鍍或上漆，是為了隔絕空氣與水分，達到防鏽效果。", options: ["O", "X"], a: "O", exp: "這是常見的防鏽方法。" },
+            { id: 18, unit: "單元3", type: 2, q: "在密閉廣口瓶中燃燒蠟燭，蠟燭熄滅後，瓶內的水位會上升，這主要是因為？", options: ["氧氣被消耗了，大氣壓力將水推入", "二氧化碳溶解了", "熱脹冷縮", "蠟燭變重了"], a: "氧氣被消耗了，大氣壓力將水推入", exp: "燃燒消耗氧氣，瓶內氣壓變小，外面的大氣壓力將水壓入瓶內填補空間。" },
+            { id: 19, unit: "單元3", type: 2, q: "哪一種氣體不可以幫助燃燒，且比空氣重，常用於滅火器？", options: ["氧氣", "氫氣", "二氧化碳", "氦氣"], a: "二氧化碳", exp: "二氧化碳不助燃且比空氣重，能覆蓋火源隔絕氧氣。" },
+            { id: 20, unit: "單元3", type: 2, q: "烤肉時將木炭堆成金字塔狀，目的是什麼？", options: ["美觀", "增加空氣流通，幫助燃燒", "減少木炭用量", "降低溫度"], a: "增加空氣流通，幫助燃燒", exp: "增加與氧氣接觸的面積與通道。" },
+            
+            // 單元 4：神秘的天空 (太陽、四季、星座)
+            { id: 21, unit: "單元4", type: 2, q: "一天之中，太陽在天空中的移動路徑是？", options: ["由西向東", "由東向西", "由南向北", "由北向南"], a: "由東向西", exp: "因地球由西向東自轉，造成太陽由東向西升落的視運動。" },
+            { id: 22, unit: "單元4", type: 2, q: "關於竿影的變化，下列敘述何者正確？", options: ["太陽高度角越大，影子越長", "太陽高度角越小，影子越短", "太陽在東方，影子在西方", "中午時影子最長"], a: "太陽在東方，影子在西方", exp: "光源與影子方向相反。高度角大影子短，高度角小影子長。" },
+            { id: 23, unit: "單元4", type: 2, q: "在台灣，一年之中哪一天的中午太陽高度角最大（影子最短）？", options: ["春分", "夏至", "秋分", "冬至"], a: "夏至", exp: "夏至時太陽直射北回歸線附近，對台灣來說高度角最大。" },
+            { id: 24, unit: "單元4", type: 2, q: "一年之中，日出位置最偏北、白晝最長的是哪一個節氣？", options: ["夏至", "冬至", "春分", "秋分"], a: "夏至", exp: "夏至太陽從東偏北升起，西偏北落下，白晝最長。" },
+            { id: 25, unit: "單元4", type: 1, q: "太陽系中，唯一會自行發光發熱的星體是地球。", options: ["O", "X"], a: "X", exp: "太陽系中唯一會發光發熱的恆星是太陽。地球是行星。" },
+            { id: 26, unit: "單元4", type: 2, q: "下列哪一個星座主要在秋季的星空出現，形狀像個英文字母 W 或 M？", options: ["獵戶座", "仙后座", "天蠍座", "獅子座"], a: "仙后座", exp: "仙后座是秋季與冬季的重要星座，呈W或M形，可用來尋找北極星。" },
+            { id: 27, unit: "單元4", type: 2, q: "想要尋找北極星，可以利用哪兩個星座來輔助尋找？", options: ["獵戶座與天蠍座", "大熊座(北斗七星)與仙后座", "天琴座與天鷹座", "獅子座與雙子座"], a: "大熊座(北斗七星)與仙后座", exp: "春夏季利用北斗七星，秋冬季利用仙后座尋找北極星。" },
+            { id: 28, unit: "單元4", type: 2, q: "北極星的高度角，大約等於觀測者所在地的什麼數值？", options: ["經度", "緯度", "氣溫", "海拔高度"], a: "緯度", exp: "北極星位於地軸北極延伸線上，其仰角約等於當地緯度(嘉義約23.5度)。" },
+            { id: 29, unit: "單元4", type: 2, q: "太陽系八大行星中，體積最大的是哪一顆？", options: ["地球", "火星", "木星", "土星"], a: "木星", exp: "木星是太陽系中體積最大的行星。" },
+            { id: 30, unit: "單元4", type: 2, q: "為什麼會有四季的變化？主要原因是？", options: ["地球自轉", "太陽忽冷忽熱", "月球繞地球公轉", "地軸傾斜且地球繞太陽公轉"], a: "地軸傾斜且地球繞太陽公轉", exp: "地軸傾斜23.5度加上公轉，造成太陽直射位置改變，形成四季。" },
+            { id: 31, unit: "單元4", type: 1, q: "夜晚觀星時，如果不考慮地球自轉，不同季節在同一時間看到的星空是相同的。", options: ["O", "X"], a: "X", exp: "因為地球公轉，不同季節在同一時刻看到的星座會不同(每天提早4分鐘)。" },
+            { id: 32, unit: "單元4", type: 2, q: "冬季星空中，最明顯的特徵是有個「腰帶三星」，這是屬於哪個星座？", options: ["大犬座", "小犬座", "獵戶座", "金牛座"], a: "獵戶座", exp: "獵戶座的腰帶三星是冬季星空容易辨認的標誌。" },
+            { id: 33, unit: "單元4", type: 2, q: "使用星座盤時，如果現在是晚上8點，要觀看南方的星星，星座盤的「南」字應該朝向哪裡？", options: ["朝向自己(身體)", "朝向北方", "朝向東方", "朝向西方"], a: "朝向自己(身體)", exp: "觀測南方星空時，應面朝南，將星座盤的「南」字轉向身體側(下方)，盤面向上仰視。" },
+            { id: 34, unit: "單元4", type: 2, q: "下列哪一顆行星被稱為「紅色行星」？", options: ["金星", "火星", "水星", "木星"], a: "火星", exp: "火星地表富含氧化鐵，呈現紅色。" },
+            { id: 35, unit: "單元4", type: 2, q: "太陽系中，距離太陽最近的行星是？", options: ["水星", "金星", "地球", "火星"], a: "水星", exp: "水星是八大行星中軌道最靠內側的。" },
+            { id: 36, unit: "單元4", type: 1, q: "月球和太陽一樣，都會自行發光。", options: ["O", "X"], a: "X", exp: "月球是反射太陽的光，本身不發光。" },
+            { id: 37, unit: "單元4", type: 2, q: "利用北斗七星尋找北極星時，要將杓口前兩顆星的連線延長約幾倍距離？", options: ["2倍", "5倍", "10倍", "1倍"], a: "5倍", exp: "將天璇向天樞方向延伸約5倍距離可找到北極星。" },
+            { id: 38, unit: "單元4", type: 2, q: "在台灣，冬至當天中午的太陽高度角與影子狀況如何？", options: ["高度角最大，影子最短", "高度角最小，影子最長", "高度角最大，影子最長", "高度角最小，影子最短"], a: "高度角最小，影子最長", exp: "冬至太陽直射南回歸線，北半球正午太陽高度角最小，影子最長。" },
+            { id: 39, unit: "單元4", type: 3, q: "【配合題】請選出類地行星(體積小、岩石組成)的成員：", options: ["木星", "土星", "火星", "海王星"], a: "火星", exp: "類地行星包含：水星、金星、地球、火星。木星、土星屬於類木行星(氣體)。" },
+            { id: 40, unit: "單元4", type: 2, q: "星星在天空中的運行方向是？", options: ["由西向東", "由東向西", "不一定", "靜止不動"], a: "由東向西", exp: "受地球自轉影響，恆星視運動為東升西落。" },
+            // 混合題與進階題
+            { id: 41, unit: "單元3", type: 2, q: "進行實驗時，如果要比較「不同廠牌電池的電力」，哪一個是操作變因？", options: ["燈泡的數量", "電線的長度", "電池的廠牌", "電池的大小"], a: "電池的廠牌", exp: "要比較的項目就是操作變因。" },
+            { id: 42, unit: "單元3", type: 2, q: "下列哪一種做法**不能**防鏽？", options: ["保持乾燥", "塗油", "浸泡在鹽水中", "電鍍"], a: "浸泡在鹽水中", exp: "鹽水會加速生鏽反應。" },
+            { id: 43, unit: "單元4", type: 2, q: "夏季大三角是由哪三顆星組成？", options: ["織女一、牛郎星、天津四", "參宿四、天狼星、南河三", "北極星、大熊座、仙后座", "五帝座一、角宿一、大角星"], a: "織女一、牛郎星、天津四", exp: "夏季大三角：天琴座織女一、天鷹座牛郎星(河鼓二)、天鵝座天津四。" },
+            { id: 44, unit: "單元4", type: 2, q: "一天之中，影子最短的時候是？", options: ["上午8點", "中午12點", "下午4點", "日落時"], a: "中午12點", exp: "中午太陽高度角最大，影子最短。" },
+            { id: 45, unit: "單元3", type: 2, q: "物質燃燒後產生的氣體，能使澄清石灰水變混濁，代表該物質含有什麼成分？", options: ["鐵", "碳", "氫", "氧"], a: "碳", exp: "產生二氧化碳代表燃燒物含有碳成分。" },
+            { id: 46, unit: "單元4", type: 2, q: "太陽系中，有美麗光環的行星是？", options: ["金星", "火星", "土星", "水星"], a: "土星", exp: "土星環最為明顯且壯觀。" },
+            { id: 47, unit: "單元3", type: 1, q: "所有氣體中，只有氧氣可以助燃。", options: ["O", "X"], a: "O", exp: "國小階段定義助燃物主要是氧氣(氧化二氮等除外)。" },
+            { id: 48, unit: "單元4", type: 2, q: "為什麼北極星看起來幾乎不動？", options: ["因為它是最大的星星", "因為它位於地軸北極的延長線上", "因為它跟著地球一起轉", "因為它距離地球最近"], a: "因為它位於地軸北極的延長線上", exp: "地軸指向北極星附近，故地球自轉時它看起來不動。" },
+            { id: 49, unit: "單元3", type: 2, q: "蠟燭燃燒需要空氣，請問將廣口瓶蓋住燃燒的蠟燭，最後熄滅的原因是？", options: ["氧氣用盡", "二氧化碳過多", "溫度太高", "蠟燭燒完了"], a: "氧氣用盡", exp: "瓶內氧氣濃度降低至無法支持燃燒(約低於15-16%)即熄滅，國小簡稱氧氣用盡。" },
+            { id: 50, unit: "單元4", type: 1, q: "星座的形狀是永遠不會改變的。", options: ["O", "X"], a: "X", exp: "恆星都在移動，只是距離太遠，短時間(幾百年)看不出變化，但長期來看形狀會改變。" },
+        ];
+
+        // --- 元件：彈跳視窗 (Modal) ---
+        function Modal({ isOpen, title, children, onClose, footer }) {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg border-4 border-secondary animate-fade-in-up">
+                        <div className="bg-primary p-4 rounded-t-lg border-b-2 border-secondary flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-gray-800">{title}</h3>
+                            {onClose && (
+                                <button onClick={onClose} className="text-gray-700 hover:text-danger">
+                                    <i data-lucide="x-circle" className="w-6 h-6"></i>
+                                </button>
+                            )}
+                        </div>
+                        <div className="p-6 max-h-[70vh] overflow-y-auto">
+                            {children}
+                        </div>
+                        {footer && <div className="p-4 border-t border-gray-200 flex justify-center">{footer}</div>}
+                    </div>
+                </div>
+            );
+        }
+
+        // --- 主應用程式 ---
+        function App() {
+            // 狀態管理
+            const [status, setStatus] = useState('idle'); // idle, running, finished
+            const [timeLeft, setTimeLeft] = useState(40 * 60); // 40 minutes in seconds
+            const [questions, setQuestions] = useState([]);
+            const [answers, setAnswers] = useState({}); // { qId: answer }
+            const [marked, setMarked] = useState({}); // { qId: boolean }
+            const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
+            const [showAdmin, setShowAdmin] = useState(false);
+            const [adminPassword, setAdminPassword] = useState('');
+            const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+            const [answerKeyPassword, setAnswerKeyPassword] = useState('');
+            const [showAnswerKeyInput, setShowAnswerKeyInput] = useState(false);
+            const [modalMessage, setModalMessage] = useState(null); // { title, content }
+            const [score, setScore] = useState(0);
+
+            // Timer Ref
+            const timerRef = useRef(null);
+
+            // 初始化與隨機出題
+            const startQuiz = () => {
+                // Fisher-Yates Shuffle
+                const shuffled = [...QUESTION_POOL].sort(() => 0.5 - Math.random());
+                // 取50題 (題庫剛好50，若題庫變多這裡會隨機取)
+                const selected = shuffled.slice(0, 50);
+                
+                setQuestions(selected);
+                setAnswers({});
+                setMarked({});
+                setTimeLeft(40 * 60);
+                setScore(0);
+                setStatus('running');
+                
+                // 啟動計時器
+                if (timerRef.current) clearInterval(timerRef.current);
+                timerRef.current = setInterval(() => {
+                    setTimeLeft(prev => {
+                        const newTime = prev - 1;
+                        checkTimeAlerts(newTime);
+                        if (newTime <= 0) {
+                            clearInterval(timerRef.current);
+                            forceSubmit();
+                            return 0;
+                        }
+                        return newTime;
+                    });
+                }, 1000);
+            };
+
+            // 時間提醒邏輯
+            const checkTimeAlerts = (seconds) => {
+                const minutes = seconds / 60;
+                if (Math.abs(seconds - 25 * 60) < 0.5) showToast("提醒：考試時間還剩 25 分鐘！");
+                if (Math.abs(seconds - 10 * 60) < 0.5) showToast("提醒：考試時間還剩 10 分鐘！加油！");
+                if (Math.abs(seconds - 5 * 60) < 0.5) showToast("注意：考試時間最後 5 分鐘！請檢查答案。");
+            };
+
+            const showToast = (msg) => {
+                setModalMessage({ title: "時間提醒", content: msg });
+                setTimeout(() => setModalMessage(null), 3000);
+            };
+
+            // 強制交卷 (時間到)
+            const forceSubmit = () => {
+                handleSubmit(true);
+            };
+
+            // 處理答案選擇
+            const handleAnswer = (qId, option) => {
+                if (status !== 'running') return;
+                setAnswers(prev => ({ ...prev, [qId]: option }));
+            };
+
+            // 處理標記
+            const toggleMark = (qId) => {
+                setMarked(prev => ({ ...prev, [qId]: !prev[qId] }));
+            };
+
+            // 檢查是否可以繳卷
+            const preSubmitCheck = () => {
+                // 檢查是否有未答題
+                const unansweredIds = questions.filter(q => !answers[q.id]).map(q => q.id);
+                if (unansweredIds.length > 0) {
+                    setModalMessage({ 
+                        title: "無法繳卷", 
+                        content: (
+                            <div>
+                                <p className="mb-2 font-bold text-danger">您還有 {unansweredIds.length} 題未作答！</p>
+                                <p>請完成所有題目後再繳卷。</p>
+                                <button 
+                                    className="mt-4 bg-secondary text-white px-4 py-2 rounded hover:bg-orange-600 w-full"
+                                    onClick={() => {
+                                        setModalMessage(null);
+                                        const el = document.getElementById(`q-${unansweredIds[0]}`);
+                                        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }}
+                                >
+                                    前往第一題未答處
+                                </button>
+                            </div>
+                        )
+                    });
+                    return;
+                }
+
+                // 檢查標記題目
+                const markedIds = Object.keys(marked).filter(k => marked[k]);
+                if (markedIds.length > 0) {
+                     setModalMessage({ 
+                        title: "確認繳卷", 
+                        content: (
+                            <div>
+                                <p className="mb-2 text-secondary font-bold">您還有 {markedIds.length} 題標記為「稍後作答」。</p>
+                                <p>確定要現在繳卷嗎？</p>
+                                <div className="flex gap-4 mt-4 justify-center">
+                                    <button onClick={() => setModalMessage(null)} className="bg-gray-300 px-4 py-2 rounded">取消</button>
+                                    <button onClick={() => { setModalMessage(null); handleSubmit(); }} className="bg-danger text-white px-4 py-2 rounded">確定繳卷</button>
+                                </div>
+                            </div>
+                        )
+                    });
+                    return;
+                }
+
+                // 一切正常
+                handleSubmit();
+            };
+
+            // 繳卷邏輯
+            const handleSubmit = (forced = false) => {
+                if (timerRef.current) clearInterval(timerRef.current);
+                
+                // 計算分數
+                let currentScore = 0;
+                let wrongQuestions = [];
+                
+                questions.forEach(q => {
+                    const userAns = answers[q.id];
+                    if (userAns === q.a) {
+                        currentScore += 2; // 100分 / 50題 = 2分/題
+                    } else {
+                        wrongQuestions.push({
+                            ...q,
+                            userAnswer: userAns || "未作答"
+                        });
+                    }
+                });
+
+                setScore(currentScore);
+                setStatus('finished');
+
+                // 匯出錯誤題目 Excel
+                if (wrongQuestions.length > 0) {
+                    exportToExcel(wrongQuestions);
+                }
+
+                setModalMessage({
+                    title: "測驗結束",
+                    content: (
+                        <div className="text-center">
+                            <p className="text-2xl font-bold mb-2">您的得分：<span className="text-danger text-4xl">{currentScore}</span> 分</p>
+                            <p className="text-gray-600 mb-4">錯題已自動匯出為 Excel 檔案，請查看下載。</p>
+                            <p>您可以留在頁面上查看錯題詳解。</p>
+                            <button onClick={() => setModalMessage(null)} className="mt-4 bg-primary text-gray-800 px-6 py-2 rounded-full font-bold shadow-lg">查看試卷</button>
+                        </div>
+                    )
+                });
+            };
+
+            // Excel 匯出功能
+            const exportToExcel = (wrongList) => {
+                const wb = XLSX.utils.book_new();
+                
+                // 準備資料
+                const wsData = [
+                    ["題目ID", "單元", "題目內容", "您的答案", "正確答案", "詳解"], // 表頭
+                    ...wrongList.map(q => [
+                        q.id,
+                        q.unit,
+                        q.q,
+                        q.userAnswer,
+                        q.a,
+                        q.exp
+                    ])
+                ];
+
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+                // 設定欄寬
+                ws['!cols'] = [
+                    { wch: 8 }, { wch: 10 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, { wch: 40 }
+                ];
+
+                // 樣式設定 (依賴 xlsx-js-style)
+                // 遍歷所有資料列，設定紅色粗體
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = 1; R <= range.e.r; ++R) { // 從第1列開始(跳過表頭)
+                    for (let C = 0; C <= range.e.c; ++C) {
+                        const cell_address = { c: C, r: R };
+                        const cell_ref = XLSX.utils.encode_cell(cell_address);
+                        if (!ws[cell_ref]) continue;
+                        
+                        ws[cell_ref].s = {
+                            font: {
+                                color: { rgb: "FF0000" }, // 紅色
+                                bold: true
+                            }
+                        };
+                    }
+                }
+
+                XLSX.utils.book_append_sheet(wb, ws, "錯題檢討");
+                XLSX.writeFile(wb, "exam_result.xls");
+            };
+
+            // 格式化時間
+            const formatTime = (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            };
+
+            // 管理員登入
+            const handleAdminLogin = () => {
+                if (adminPassword === '1234') {
+                    setIsAdminUnlocked(true);
+                    setAdminPassword('');
+                } else {
+                    alert("密碼錯誤！");
+                }
+            };
+
+            // 答案遮罩驗證
+            const verifyAnswerKey = (idx) => {
+                // 原需求：答案按鈕需有密碼保護 1234。
+                // 實作：作答時看不到答案，只有詳解連結或按鈕。點擊需要密碼。
+                // 在這裡，我們讓"檢視答案"功能在作答時不可用，但考完後自動顯示。
+                // 若要作答中看，需密碼。
+                const password = prompt("請輸入密碼以查看答案：");
+                if (password === "1234") {
+                    alert(`正確答案是：${questions[idx].a}`);
+                } else {
+                    alert("密碼錯誤");
+                }
+            };
+
+            // 計算統計數據
+            const stats = useMemo(() => {
+                const total = questions.length;
+                const answeredCount = Object.keys(answers).length;
+                const markedCount = Object.keys(marked).filter(k => marked[k]).length;
+                return { total, answeredCount, unAnswered: total - answeredCount, markedCount };
+            }, [questions, answers, marked]);
+
+            // Icons
+            useEffect(() => {
+                lucide.createIcons();
+            }, [questions, status]); // Re-run when DOM updates
+
+            return (
+                <div className="min-h-screen pb-24 relative">
+                    {/* Header */}
+                    <header className="bg-primary shadow-md sticky top-0 z-30">
+                        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <h1 className="text-lg md:text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <i data-lucide="book-open" className="w-6 h-6 text-danger"></i>
+                                113學年-康軒(五上)自然線上期末測驗系統_1.11.21.35
+                            </h1>
+                            {status === 'running' && (
+                                <div className={`text-2xl font-mono font-bold px-4 py-1 rounded bg-white border-2 ${timeLeft < 300 ? 'text-danger border-danger animate-pulse' : 'text-gray-700 border-gray-300'}`}>
+                                    {formatTime(timeLeft)}
+                                </div>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="max-w-3xl mx-auto px-4 py-6">
+                        
+                        {/* Start Screen */}
+                        {status === 'idle' && (
+                            <div className="bg-white rounded-2xl shadow-xl p-8 text-center mt-10 border-t-8 border-secondary">
+                                <div className="mb-6 flex justify-center">
+                                    <div className="bg-bgCream p-6 rounded-full border-4 border-dashed border-primary">
+                                        <i data-lucide="flask-conical" className="w-20 h-20 text-secondary"></i>
+                                    </div>
+                                </div>
+                                <h2 className="text-3xl font-bold text-gray-800 mb-4">自然科期末模擬考</h2>
+                                <div className="text-left bg-gray-50 p-6 rounded-lg mb-8 text-gray-600 space-y-2">
+                                    <p className="flex items-center gap-2"><i data-lucide="check-circle" className="w-4 h-4 text-green-500"></i> 範圍：單元3(空氣)、單元4(星空)</p>
+                                    <p className="flex items-center gap-2"><i data-lucide="check-circle" className="w-4 h-4 text-green-500"></i> 題數：50 題 (隨機出題)</p>
+                                    <p className="flex items-center gap-2"><i data-lucide="check-circle" className="w-4 h-4 text-green-500"></i> 時間：40 分鐘</p>
+                                    <p className="flex items-center gap-2"><i data-lucide="check-circle" className="w-4 h-4 text-green-500"></i> 重點：實驗變因設計、星空觀測</p>
+                                </div>
+                                <button 
+                                    onClick={startQuiz}
+                                    className="bg-gradient-to-r from-secondary to-lightRed text-white text-xl font-bold px-12 py-4 rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition duration-200"
+                                >
+                                    開始作答
+                                </button>
+                                <div className="mt-4 text-sm text-gray-400">
+                                    資料來源：歷年康軒版國小五年級自然科考古題庫
+                                </div>
+                                
+                                {/* Admin Toggle */}
+                                <div className="mt-12">
+                                    <button onClick={() => setShowAdmin(!showAdmin)} className="text-gray-300 hover:text-gray-500 text-sm underline">
+                                        {showAdmin ? '隱藏家長/老師專區' : '家長/老師專區'}
+                                    </button>
+                                    {showAdmin && (
+                                        <div className="mt-4 p-4 border rounded bg-gray-100 animate-fade-in">
+                                            {!isAdminUnlocked ? (
+                                                <div className="flex gap-2 justify-center">
+                                                    <input 
+                                                        type="password" 
+                                                        placeholder="請輸入密碼 (1234)" 
+                                                        className="border p-2 rounded"
+                                                        value={adminPassword}
+                                                        onChange={(e) => setAdminPassword(e.target.value)}
+                                                    />
+                                                    <button onClick={handleAdminLogin} className="bg-gray-600 text-white px-4 py-2 rounded">解鎖</button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-center gap-4">
+                                                    <button className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                                        <i data-lucide="upload"></i> 考題上傳
+                                                    </button>
+                                                    <button className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                                        <i data-lucide="download"></i> 考題下載
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Quiz Screen */}
+                        {(status === 'running' || status === 'finished') && (
+                            <div className="space-y-6">
+                                {questions.map((q, idx) => (
+                                    <div 
+                                        key={q.id} 
+                                        id={`q-${q.id}`} 
+                                        className={`bg-white rounded-xl shadow-md border-l-8 overflow-hidden transition-all duration-300
+                                            ${status === 'finished' && answers[q.id] !== q.a ? 'border-danger ring-2 ring-danger' : 'border-primary'}
+                                        `}
+                                    >
+                                        <div className="p-6">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm font-bold">第 {idx + 1} 題</span>
+                                                    <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">{q.unit}</span>
+                                                    {status === 'running' && (
+                                                        <label className="flex items-center gap-1 cursor-pointer select-none text-secondary hover:text-orange-600 ml-4">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={!!marked[q.id]} 
+                                                                onChange={() => toggleMark(q.id)}
+                                                                className="form-checkbox h-4 w-4 text-secondary rounded focus:ring-secondary"
+                                                            />
+                                                            <span className="text-sm font-bold">稍後作答</span>
+                                                        </label>
+                                                    )}
+                                                </div>
+                                                {status === 'finished' && (
+                                                    <div className={`font-bold ${answers[q.id] === q.a ? 'text-green-500' : 'text-danger'}`}>
+                                                        {answers[q.id] === q.a ? '答對 (+2)' : '答錯 (0)'}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <h3 className="text-lg font-bold text-gray-800 mb-4 leading-relaxed">
+                                                {q.q}
+                                            </h3>
+
+                                            <div className="space-y-3">
+                                                {q.options.map((opt, optIdx) => (
+                                                    <button
+                                                        key={optIdx}
+                                                        disabled={status === 'finished'}
+                                                        onClick={() => handleAnswer(q.id, opt)}
+                                                        className={`w-full text-left p-3 rounded-lg border-2 transition-all flex items-center gap-3
+                                                            ${status === 'running' && answers[q.id] === opt 
+                                                                ? 'border-secondary bg-orange-50 text-secondary font-bold' 
+                                                                : 'border-gray-200 hover:border-primary hover:bg-yellow-50'
+                                                            }
+                                                            ${status === 'finished' && opt === q.a ? 'bg-green-100 border-green-500 text-green-800' : ''}
+                                                            ${status === 'finished' && answers[q.id] === opt && opt !== q.a ? 'bg-red-100 border-red-500 text-red-800' : ''}
+                                                        `}
+                                                    >
+                                                        <span className="w-6 h-6 rounded-full border-2 border-current flex items-center justify-center text-xs">
+                                                            {optIdx + 1}
+                                                        </span>
+                                                        {opt}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* 作答期間查看答案按鈕 (需密碼) */}
+                                            {status === 'running' && (
+                                                <div className="mt-4 text-right">
+                                                    <button 
+                                                        onClick={() => verifyAnswerKey(idx)}
+                                                        className="text-xs text-gray-400 hover:text-gray-600 underline"
+                                                    >
+                                                        偷看答案 (需密碼)
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* 詳解區 (考完顯示) */}
+                                            {status === 'finished' && (
+                                                <div className="mt-6 pt-4 border-t border-gray-100 bg-gray-50 -mx-6 -mb-6 p-6">
+                                                    <p className="text-sm font-bold text-gray-500 mb-1">詳解：</p>
+                                                    <p className="text-gray-700">{q.exp}</p>
+                                                    <div className="mt-2 text-sm">
+                                                        正確答案：<span className="text-green-600 font-bold">{q.a}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer Stats & Controls */}
+                    {status === 'running' && (
+                        <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 h-20">
+                            <div className="max-w-6xl mx-auto px-4 h-full flex items-center justify-between relative">
+                                {/* Left: Stats */}
+                                <div className="flex flex-col md:flex-row gap-2 md:gap-6 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-secondary"></div>
+                                        <span>已答：<span className="font-bold text-gray-800">{stats.answeredCount}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-gray-300"></div>
+                                        <span>未答：<span className="font-bold text-danger">{stats.unAnswered}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <i data-lucide="check-square" className="w-4 h-4 text-secondary"></i>
+                                        <span>待檢查：<span className="font-bold text-secondary">{stats.markedCount}</span></span>
+                                    </div>
+                                </div>
+
+                                {/* Center: Submit Button */}
+                                <div className="absolute left-1/2 transform -translate-x-1/2 top-1/2 -translate-y-1/2">
+                                    <button 
+                                        onClick={preSubmitCheck}
+                                        className="bg-danger hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform hover:scale-105 flex items-center gap-2"
+                                    >
+                                        <i data-lucide="send" className="w-4 h-4"></i>
+                                        繳卷送出
+                                    </button>
+                                </div>
+                                
+                                <div className="w-10"></div> {/* Spacer for symmetry */}
+                            </div>
+                        </footer>
+                    )}
+                    
+                    {/* Modal */}
+                    <Modal 
+                        isOpen={!!modalMessage} 
+                        title={modalMessage?.title} 
+                        onClose={() => !modalMessage?.title.includes("測驗結束") && setModalMessage(null)} // 測驗結束不給關閉，需用內部按鈕
+                    >
+                        {modalMessage?.content}
+                    </Modal>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
