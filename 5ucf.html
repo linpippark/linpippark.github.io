@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五上)國語線上期末測驗系統_1.12.16.25</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx-bundle.min.js"></script>
+
+    <style>
+        /* 定義色系 */
+        :root {
+            --color-main: #4B9DA9;    /* 主色 */
+            --color-light: #91C6BC;   /* 淺色裝飾 */
+            --color-bg: #F6F3C2;      /* 背景色 */
+            --color-accent: #E37434;  /* 強調色 (按鈕/重點) */
+        }
+        
+        body {
+            background-color: var(--color-bg);
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; /* 微軟正黑體 */
+        }
+
+        /* 自定義樣式類別 */
+        .btn-accent {
+            background-color: var(--color-accent);
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn-accent:hover {
+            background-color: #c9632a;
+            transform: scale(1.05);
+        }
+
+        .question-card {
+            transition: all 0.3s ease;
+        }
+
+        /* 未作答時的震動與紅框效果 */
+        .unanswered-highlight {
+            border: 2px solid var(--color-accent) !important;
+            box-shadow: 0 0 15px rgba(227, 116, 52, 0.6);
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* 答案狀態樣式 */
+        .correct-ans { color: #166534; font-weight: bold; background-color: #dcfce7; border-color: #166534; }
+        .wrong-ans { color: #991b1b; text-decoration: line-through; background-color: #fee2e2; border-color: #991b1b; }
+        
+        /* 隱藏元素 */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <header class="bg-[#4B9DA9] text-white shadow-lg fixed w-full top-0 z-50">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+            <h1 class="text-lg md:text-2xl font-bold truncate">113學年-康軒(五上)國語線上期末測驗系統_1.12.16.25</h1>
+            <div id="timerDisplay" class="hidden text-xl font-mono font-bold bg-white text-[#4B9DA9] px-4 py-1 rounded shadow-inner">
+                40:00
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 mt-24 mb-40 flex-grow">
+        
+        <div id="startScreen" class="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in">
+            <div class="bg-white p-8 rounded-3xl shadow-xl max-w-2xl w-full border-t-8 border-[#4B9DA9]">
+                <h2 class="text-3xl font-bold text-[#4B9DA9] mb-6">期末考準備好了嗎？</h2>
+                
+                <div class="text-left text-gray-700 mb-8 space-y-3 bg-[#F6F3C2] p-6 rounded-xl">
+                    <p class="flex items-center"><span class="text-xl mr-2">📚</span> <strong>範圍：</strong> 康軒五上 第七課至第十二課</p>
+                    <p class="flex items-center"><span class="text-xl mr-2">⏱️</span> <strong>時間：</strong> 40 分鐘 (倒數計時)</p>
+                    <p class="flex items-center"><span class="text-xl mr-2">📝</span> <strong>題數：</strong> 50 題 (滿分 100 分)</p>
+                    <p class="flex items-center"><span class="text-xl mr-2">💡</span> <strong>題型：</strong> 字音字形、成語、改錯、閱讀測驗</p>
+                </div>
+                
+                <button onclick="window.startExam()" class="btn-accent text-2xl font-bold py-4 px-16 rounded-full shadow-lg mb-4">
+                    開始作答
+                </button>
+                
+                <div class="mt-2 text-sm text-gray-500">
+                    資料來源：康軒版國小五年級上學期歷屆考古題
+                </div>
+
+                <div class="mt-10 pt-6 border-t border-gray-200">
+                    <button onclick="window.toggleTeacherZone()" class="text-gray-400 hover:text-[#4B9DA9] text-sm underline">
+                        老師/家長專區 (考題下載/上傳) 🔒
+                    </button>
+                    <div id="teacherZone" class="hidden mt-4 p-4 bg-gray-50 rounded border border-gray-300 text-left">
+                        <h3 class="font-bold text-gray-700 mb-2">💾 考題資料管理 (JSON)</h3>
+                        <div class="flex gap-4">
+                            <button onclick="window.downloadQuestions()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 shadow">
+                                📥 下載目前考題
+                            </button>
+                            <label class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 shadow cursor-pointer">
+                                📤 上傳新考題
+                                <input type="file" id="uploadFile" onchange="window.uploadQuestions(this)" class="hidden" accept=".json">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="examScreen" class="hidden">
+            <div id="questionsContainer" class="space-y-6">
+                </div>
+            </div>
+    </main>
+
+    <footer id="statsFooter" class="fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.1)] h-20 hidden z-40 border-t-4 border-[#4B9DA9]">
+        <div class="container mx-auto h-full px-4 flex items-center justify-between relative">
+            
+            <div class="flex flex-col md:flex-row gap-1 md:gap-6 text-sm md:text-base font-bold text-gray-700">
+                <div class="flex gap-4">
+                    <span>總題: <span id="totalCount" class="text-black">50</span></span>
+                    <span>已答: <span id="answeredCount" class="text-green-600">0</span></span>
+                </div>
+                <div class="flex gap-4">
+                    <span>未答: <span id="unansweredCount" class="text-red-500">50</span></span>
+                    <span class="bg-yellow-100 px-2 rounded text-yellow-700 text-xs md:text-sm flex items-center">📌 稍後: <span id="markCount" class="ml-1">0</span></span>
+                </div>
+            </div>
+
+            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <button onclick="window.attemptSubmit()" class="btn-accent text-lg md:text-xl font-bold py-2 px-8 rounded-full shadow-lg border-2 border-white whitespace-nowrap">
+                    繳卷送出
+                </button>
+            </div>
+
+            <div class="text-xs text-gray-400 hidden md:block">
+                Ver 1.12.16.25
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- 題目資料庫 (內建 50 題康軒五上範圍) ---
+        const defaultQuestions = [
+            // 第七課：為生命找出口
+            { id: 1, unit: "第七課", type: "字音", q: "下列「」中的字，注音何者正確？", options: ["「縫」隙：ㄈㄥˊ", "「茁」壯：ㄓㄨㄛˊ", "堅「毅」：ㄧˋ", "「這」裡：ㄓㄜˋ"], ans: 3, explanation: "縫隙(ㄈㄥˋ)、茁壯(ㄓㄨㄛˊ)、這裡(ㄓㄜˋ)。堅毅(ㄧˋ)正確。" },
+            { id: 2, unit: "第七課", type: "改錯字", q: "請找出句中的錯別字：「這株植物展現了堅強的生侖力。」", options: ["植", "展", "侖", "力"], ans: 3, explanation: "應為生「命」力。" },
+            { id: 3, unit: "第七課", type: "成語", q: "「這裡花草長得□□□□，充滿生氣。」空格應填？", options: ["生機勃勃", "死氣沉沉", "奄奄一息", "無精打采"], ans: 1, explanation: "生機勃勃：形容充滿生命力。" },
+            { id: 4, unit: "第七課", type: "閱讀", q: "作者在牆角發現非洲堇，這個故事主要告訴我們什麼？", options: ["要多種花", "牆角很髒", "生命會自己尋找出路", "不要亂丟垃圾"], ans: 3, explanation: "主旨為生命在逆境中仍會努力生存。" },
+            { id: 5, unit: "第七課", type: "詞語", q: "「這項設計十分□□，解決了多年的問題。」", options: ["奧妙", "巧妙", "奇妙", "美妙"], ans: 2, explanation: "巧妙：精巧高明。" },
+            { id: 6, unit: "第七課", type: "字形", q: "「縫」隙的部首是什麼？", options: ["糸", "逢", "辶", "半"], ans: 1, explanation: "縫是糸部。" },
+            { id: 7, unit: "第七課", type: "相反詞", q: "「堅毅」的相反詞是？", options: ["剛強", "軟弱", "堅持", "果斷"], ans: 2, explanation: "堅毅意指剛強，相反為軟弱。" },
+            
+            // 第八課：最勇敢的女孩
+            { id: 8, unit: "第八課", type: "人物", q: "本課主角馬拉拉來自哪個國家？", options: ["美國", "巴基斯坦", "印度", "英國"], ans: 2, explanation: "馬拉拉來自巴基斯坦。" },
+            { id: 9, unit: "第八課", type: "注音", q: "「權」利的注音是？", options: ["ㄑㄩㄢ", "ㄑㄩㄢˊ", "ㄑㄩㄢˇ", "ㄑㄩㄢˋ"], ans: 2, explanation: "權：ㄑㄩㄢˊ。" },
+            { id: 10, unit: "第八課", type: "部首", q: "「恐」怖的恐是什麼部首？", options: ["工", "凡", "心", "力"], ans: 3, explanation: "恐是心部。" },
+            { id: 11, unit: "第八課", type: "修辭", q: "「書本和筆是我們最強大的武器。」運用了何種修辭？", options: ["擬人", "譬喻", "誇飾", "借代"], ans: 2, explanation: "將書筆比喻為武器。" },
+            { id: 12, unit: "第八課", type: "字義", q: "「剝奪」的意思是？", options: ["給予", "強制奪去", "互相交換", "放棄"], ans: 2, explanation: "強制奪去權利或財物。" },
+            { id: 13, unit: "第八課", type: "改錯字", q: "「這些恐佈份子威脅村民。」哪裡有錯字？", options: ["恐", "佈", "份", "威"], ans: 2, explanation: "應為恐「怖」。" },
+            { id: 14, unit: "第八課", type: "閱讀", q: "馬拉拉爭取的是什麼權利？", options: ["玩遊戲的權利", "受教育的權利", "吃糖果的權利", "不用考試的權利"], ans: 2, explanation: "女孩受教育的權利。" },
+            
+            // 第九課：在挫折中成長
+            { id: 15, unit: "第九課", type: "人物", q: "本課介紹的名人是誰？", options: ["愛迪生", "林肯", "華盛頓", "國父"], ans: 2, explanation: "美國總統林肯。" },
+            { id: 16, unit: "第九課", type: "成語", q: "形容「意志剛強，雖受盡挫折也不屈服」的成語？", options: ["百折不撓", "一意孤行", "千方百計", "百戰百勝"], ans: 1, explanation: "百折不撓。" },
+            { id: 17, unit: "第九課", type: "字音", q: "不「僅」的讀音？", options: ["ㄐㄧㄣ", "ㄐㄧㄣˇ", "ㄐㄧㄥ", "ㄐㄧㄥˇ"], ans: 2, explanation: "僅：ㄐㄧㄣˇ。" },
+            { id: 18, unit: "第九課", type: "改錯字", q: "「他經歴了無數次失敗才成功。」錯字是？", options: ["經", "歴", "無", "數"], ans: 2, explanation: "應為經「歷」。" },
+            { id: 19, unit: "第九課", type: "詞語", q: "「磨鍊」的意思是？", options: ["鍛鍊、考驗", "折磨", "練習", "玩耍"], ans: 1, explanation: "在艱難困苦的環境中鍛鍊。" },
+            { id: 20, unit: "第九課", type: "句型", q: "「與其……不如……」是什麼複句？", options: ["因果", "轉折", "選擇", "遞進"], ans: 3, explanation: "選擇複句。" },
+            { id: 21, unit: "第九課", type: "字形", q: "「挫」折的挫，部首是？", options: ["土", "手", "坐", "人"], ans: 2, explanation: "手部。" },
+
+            // 第十課：山中寄情
+            { id: 22, unit: "第十課", type: "詞義", q: "「靜謐」的意思是？", options: ["熱鬧", "安靜", "神秘", "快速"], ans: 2, explanation: "靜謐：安靜。" },
+            { id: 23, unit: "第十課", type: "字音", q: "蜿「蜒」的讀音？", options: ["ㄧㄢˊ", "ㄉㄢˋ", "ㄊㄧㄥˊ", "ㄒㄧㄢˊ"], ans: 1, explanation: "蜿蜒：ㄨㄢ ㄧㄢˊ。" },
+            { id: 24, unit: "第十課", type: "字形", q: "下列哪一個字是「山」部？", options: ["幽", "密", "岳", "歲"], ans: 3, explanation: "岳是山部。" },
+            { id: 25, unit: "第十課", type: "修辭", q: "「山風吹來，樹葉沙沙作響，像是在竊竊私語。」修辭是？", options: ["設問", "擬人", "引用", "映襯"], ans: 2, explanation: "擬人（竊竊私語）。" },
+            { id: 26, unit: "第十課", type: "成語", q: "「人聲鼎沸」的意思是？", options: ["非常安靜", "人聲吵雜", "鍋子煮開", "音樂好聽"], ans: 2, explanation: "形容人聲嘈雜，像水煮沸一樣。" },
+            { id: 27, unit: "第十課", type: "改錯字", q: "「這座森林十分幽靜，適合散布。」錯字是？", options: ["幽", "靜", "散", "布"], ans: 4, explanation: "散「步」。" },
+            { id: 28, unit: "第十課", type: "多音字", q: "下列「」中讀音何者正確？", options: ["「重」新：ㄓㄨㄥˋ", "「為」難：ㄨㄟˋ", "「樂」趣：ㄌㄜˋ", "「空」白：ㄎㄨㄥ"], ans: 3, explanation: "重新(ㄔㄨㄥˊ)、為難(ㄨㄟˊ)、空白(ㄎㄨㄥˋ)。樂趣(ㄌㄜˋ)正確。" },
+
+            // 第十一課：與達駭黑熊走入山林
+            { id: 29, unit: "第十一課", type: "詞語", q: "「瀕臨」的意思是？", options: ["遠離", "接近、將要", "放棄", "抵抗"], ans: 2, explanation: "瀕臨：臨近。" },
+            { id: 30, unit: "第十一課", type: "字音", q: "「巡」守員的讀音？", options: ["ㄒㄩㄣˊ", "ㄒㄩㄣˋ", "ㄕㄨㄣˊ", "ㄙㄨㄣˊ"], ans: 1, explanation: "巡：ㄒㄩㄣˊ。" },
+            { id: 31, unit: "第十一課", type: "內容", q: "課文中的「達駭」指的是？", options: ["一位獵人", "一隻台灣黑熊", "一座山", "一條河"], ans: 2, explanation: "台灣黑熊的名字。" },
+            { id: 32, unit: "第十一課", type: "改錯字", q: "「他在森林設下陷井。」錯字是？", options: ["森", "林", "陷", "井"], ans: 4, explanation: "陷「阱」。" },
+            { id: 33, unit: "第十一課", type: "成語", q: "「這裡的生態豐富，物種□□。」", options: ["繁多", "稀少", "單調", "枯竭"], ans: 1, explanation: "物種繁多。" },
+            { id: 34, unit: "第十一課", type: "字形", q: "「蹤」跡的部首？", options: ["足", "从", "止", "身"], ans: 1, explanation: "足部。" },
+            { id: 35, unit: "第十一課", type: "閱讀", q: "作者希望我們如何對待黑熊？", options: ["捕捉牠們", "尊重並保護", "把它當寵物", "趕出森林"], ans: 2, explanation: "尊重生命，保護生態。" },
+
+            // 第十二課：荒島上的國王
+            { id: 36, unit: "第十二課", type: "常識", q: "本課改寫自哪本小說？", options: ["格列佛遊記", "魯濱遜漂流記", "金銀島", "西遊記"], ans: 2, explanation: "魯濱遜漂流記。" },
+            { id: 37, unit: "第十二課", type: "注音", q: "「柵」欄的讀音？", options: ["ㄕㄢ", "ㄓㄚˋ", "ㄘㄜˋ", "ㄆㄥˊ"], ans: 2, explanation: "柵：ㄓㄚˋ。" },
+            { id: 38, unit: "第十二課", type: "詞義", q: "「簡陋」的意思是？", options: ["簡單不完備", "豪華", "乾淨", "複雜"], ans: 1, explanation: "設備簡單粗陋。" },
+            { id: 39, unit: "第十二課", type: "字音", q: "「處」境的處讀音？", options: ["ㄔㄨˋ", "ㄔㄨˇ", "ㄘㄨˋ", "ㄘㄨˇ"], ans: 2, explanation: "處(ㄔㄨˇ)境：處於某種狀況。" },
+            { id: 40, unit: "第十二課", type: "改錯字", q: "「他感到十分孤獨與絕忘。」錯字是？", options: ["孤", "獨", "絕", "忘"], ans: 4, explanation: "絕「望」。" },
+            { id: 41, unit: "第十二課", type: "修辭", q: "「我是這裡的國王，這群動物是我的臣民。」修辭是？", options: ["譬喻", "誇飾", "轉化", "映襯"], ans: 1, explanation: "隱喻（暗喻）。" },
+            { id: 42, unit: "第十二課", type: "成語", q: "「垂頭喪氣」相反詞？", options: ["趾高氣揚", "無精打采", "灰心喪志", "一蹶不振"], ans: 1, explanation: "垂頭喪氣為失意，趾高氣揚為得意。" },
+
+            // 綜合複習題
+            { id: 43, unit: "綜合", type: "部首", q: "「啟」發的啟是什麼部首？", options: ["口", "攴", "又", "户"], ans: 1, explanation: "口部。" },
+            { id: 44, unit: "綜合", type: "標點", q: "「這一座森林真美□充滿了生機。」", options: ["，", "！", "？", "："], ans: 2, explanation: "感嘆句用驚嘆號。" },
+            { id: 45, unit: "綜合", type: "字音", q: "教「誨」的讀音？", options: ["ㄏㄨㄟˇ", "ㄏㄨㄟˋ", "ㄏㄨㄟ", "ㄇㄟˇ"], ans: 2, explanation: "教誨：ㄏㄨㄟˋ。" },
+            { id: 46, unit: "綜合", type: "詞語", q: "「栩栩如生」形容？", options: ["死氣沉沉", "非常生動逼真", "很安靜", "很吵鬧"], ans: 2, explanation: "形容貌態逼真，像活的一樣。" },
+            { id: 47, unit: "綜合", type: "改錯字", q: "「這是一個千載難逢的機遇。」是否有錯字？", options: ["載應為載", "逢應為蓬", "遇應為迂", "全對"], ans: 4, explanation: "完全正確。" },
+            { id: 48, unit: "綜合", type: "字音", q: "「數」落的讀音？", options: ["ㄕㄨˋ", "ㄕㄨˇ", "ㄕㄨㄛˋ", "ㄙㄨˋ"], ans: 2, explanation: "數落：ㄕㄨˇ。" },
+            { id: 49, unit: "綜合", type: "成語", q: "「自暴自棄」的意思？", options: ["自我反省", "自己糟蹋自己，不求上進", "非常有自信", "脾氣很暴躁"], ans: 2, explanation: "自己瞧不起自己，甘於墮落。" },
+            { id: 50, unit: "綜合", type: "邏輯", q: "哪一課告訴我們要「愛護動物」？", options: ["為生命找出口", "山中寄情", "與達駭黑熊走入山林", "荒島上的國王"], ans: 3, explanation: "第十一課。" }
+        ];
+
+        // --- 變數宣告 ---
+        let questions = [...defaultQuestions];
+        let currentQuestions = [];
+        let userAnswers = {}; // 紀錄答案 { id: 選項索引 }
+        let markedQuestions = new Set(); // 稍後作答紀錄
+        let timerInterval;
+        let timeRemaining = 2400; // 40分鐘 = 2400秒
+
+        // --- 全域功能函數 ---
+
+        // 1. 洗牌算法 (隨機出題)
+        window.shuffle = function(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // 2. 開始測驗
+        window.startExam = function() {
+            // 初始化
+            currentQuestions = window.shuffle([...questions]);
+            userAnswers = {};
+            markedQuestions.clear();
+            timeRemaining = 2400;
+
+            // 渲染畫面
+            window.renderQuestions();
+            window.updateStats();
+
+            // 切換畫面
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('examScreen').classList.remove('hidden');
+            document.getElementById('statsFooter').classList.remove('hidden');
+            document.getElementById('timerDisplay').classList.remove('hidden');
+
+            // 啟動計時
+            window.startTimer();
+            
+            // 捲動到頂部
+            window.scrollTo(0, 0);
+        }
+
+        // 3. 計時器邏輯
+        window.startTimer = function() {
+            window.updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                window.updateTimerDisplay();
+
+                // 時間提醒
+                if (timeRemaining === 1500) window.showToast("🔔 提醒：剩餘 25 分鐘");
+                if (timeRemaining === 600) window.showToast("⚠️ 注意：剩餘 10 分鐘", "warning");
+                if (timeRemaining === 300) window.showToast("🔥 警告：剩餘 5 分鐘！", "error");
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    Swal.fire({
+                        title: "時間到！",
+                        text: "系統將自動繳卷",
+                        icon: "info",
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        window.submitExam(true);
+                    });
+                }
+            }, 1000);
+        }
+
+        window.updateTimerDisplay = function() {
+            const m = Math.floor(timeRemaining / 60);
+            const s = timeRemaining % 60;
+            const text = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const el = document.getElementById('timerDisplay');
+            el.innerText = text;
+            
+            if (timeRemaining < 300) { // 最後5分鐘變紅
+                el.classList.remove('text-[#4B9DA9]');
+                el.classList.add('text-red-600', 'animate-pulse');
+            }
+        }
+
+        window.showToast = function(title, icon = 'info') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: icon,
+                title: title,
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+
+        // 4. 渲染題目
+        window.renderQuestions = function() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            currentQuestions.forEach((q, index) => {
+                const card = document.createElement('div');
+                card.id = `q-${q.id}`;
+                card.className = "bg-white p-6 rounded-2xl shadow-md border-l-8 border-[#4B9DA9] question-card";
+                
+                let html = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="bg-[#4B9DA9] text-white px-3 py-1 rounded-full font-bold text-lg">Q${index + 1}</span>
+                            <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border">${q.unit}</span>
+                            <span class="text-xs text-[#E37434] border border-[#E37434] px-2 py-1 rounded">${q.type}</span>
+                        </div>
+                        <label class="flex items-center space-x-2 cursor-pointer select-none bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200 hover:bg-yellow-100">
+                            <input type="checkbox" onchange="window.toggleMark(${q.id})" class="form-checkbox text-yellow-500 h-5 w-5">
+                            <span class="text-sm font-bold text-gray-600">稍後作答</span>
+                        </label>
+                    </div>
+                    
+                    <p class="text-xl font-bold text-gray-800 mb-6 leading-relaxed border-b pb-4">${q.q}</p>
+                    
+                    <div class="grid gap-3">
+                `;
+
+                q.options.forEach((opt, optIndex) => {
+                    const val = optIndex + 1;
+                    html += `
+                        <label class="flex items-center p-4 rounded-xl border-2 border-transparent bg-gray-50 hover:bg-[#F6F3C2] hover:border-[#91C6BC] cursor-pointer transition-all" id="opt-${q.id}-${val}">
+                            <input type="radio" name="q_${q.id}" value="${val}" onchange="window.selectAnswer(${q.id}, ${val})" class="w-6 h-6 text-[#4B9DA9] focus:ring-[#4B9DA9]">
+                            <span class="ml-3 text-lg text-gray-700 font-medium">(${val}) ${opt}</span>
+                        </label>
+                    `;
+                });
+
+                // 解析區塊 (預設隱藏)
+                html += `
+                    </div>
+                    <div id="explain-${q.id}" class="hidden mt-6 bg-orange-50 p-4 rounded-xl border border-orange-200 text-left animate-fade-in">
+                        <p class="font-bold text-[#E37434] mb-1 flex items-center">💡 解析：</p>
+                        <p class="text-gray-700">${q.explanation}</p>
+                    </div>
+                `;
+
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+
+        // 5. 使用者互動
+        window.selectAnswer = function(qId, val) {
+            userAnswers[qId] = val;
+            const card = document.getElementById(`q-${qId}`);
+            if (card) card.classList.remove('unanswered-highlight');
+            window.updateStats();
+        }
+
+        window.toggleMark = function(qId) {
+            if (markedQuestions.has(qId)) markedQuestions.delete(qId);
+            else markedQuestions.add(qId);
+            window.updateStats();
+        }
+
+        window.updateStats = function() {
+            const total = currentQuestions.length;
+            const answered = Object.keys(userAnswers).length;
+            const unanswered = total - answered;
+            const marked = markedQuestions.size;
+
+            document.getElementById('answeredCount').innerText = answered;
+            document.getElementById('unansweredCount').innerText = unanswered;
+            document.getElementById('markCount').innerText = marked;
+        }
+
+        // 6. 繳卷檢查
+        window.attemptSubmit = async function() {
+            // 檢查未答
+            const unansweredIds = currentQuestions.filter(q => !userAnswers[q.id]).map(q => q.id);
+            
+            if (unansweredIds.length > 0) {
+                // 自動跳轉到第一題未答
+                Swal.fire({
+                    icon: 'warning',
+                    title: '還有題目沒寫喔！',
+                    text: `您還有 ${unansweredIds.length} 題未作答。`,
+                    confirmButtonText: '去補寫',
+                    confirmButtonColor: '#E37434'
+                }).then(() => {
+                    const targetId = `q-${unansweredIds[0]}`;
+                    const el = document.getElementById(targetId);
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('unanswered-highlight');
+                    setTimeout(() => el.classList.remove('unanswered-highlight'), 2000);
+                });
+                return;
+            }
+
+            // 檢查標記
+            if (markedQuestions.size > 0) {
+                const confirm = await Swal.fire({
+                    icon: 'question',
+                    title: '還有「稍後作答」的記號',
+                    text: `有 ${markedQuestions.size} 題還留著記號，確定要交卷嗎？`,
+                    showCancelButton: true,
+                    confirmButtonText: '確定繳卷',
+                    cancelButtonText: '再檢查一下',
+                    confirmButtonColor: '#4B9DA9'
+                });
+                if (!confirm.isConfirmed) return;
+            }
+
+            // 直接繳卷
+            window.submitExam(false);
+        }
+
+        // 7. 執行繳卷與評分
+        window.submitExam = function(auto) {
+            clearInterval(timerInterval);
+            
+            let score = 0;
+            let wrongList = [];
+            const scorePerQ = 100 / currentQuestions.length;
+
+            currentQuestions.forEach(q => {
+                const userAns = userAnswers[q.id];
+                const isCorrect = userAns === q.ans;
+                
+                if (isCorrect) score += scorePerQ;
+                else wrongList.push({ ...q, userAns });
+
+                // 顯示詳解與對錯
+                const card = document.getElementById(`q-${q.id}`);
+                document.getElementById(`explain-${q.id}`).classList.remove('hidden');
+                
+                // 鎖定選項
+                card.querySelectorAll('input').forEach(i => i.disabled = true);
+
+                // 標示顏色
+                const correctLabel = card.querySelector(`#opt-${q.id}-${q.ans}`);
+                if (correctLabel) {
+                    correctLabel.classList.add('correct-ans');
+                    correctLabel.innerHTML += ` ✅`;
+                }
+
+                if (!isCorrect && userAns) {
+                    const wrongLabel = card.querySelector(`#opt-${q.id}-${userAns}`);
+                    if (wrongLabel) {
+                        wrongLabel.classList.add('wrong-ans');
+                        wrongLabel.innerHTML += ` ❌`;
+                    }
+                }
+            });
+
+            score = Math.round(score);
+
+            // 隱藏底部統計與繳卷按鈕 (確保無法重複提交)
+            document.getElementById('statsFooter').classList.add('hidden');
+
+            // 顯示成績單
+            Swal.fire({
+                title: '測驗結束！',
+                html: `
+                    <div class="text-6xl font-bold ${score >= 60 ? 'text-green-500' : 'text-red-500'} mb-4">${score} 分</div>
+                    <p class="text-gray-600">答錯：${wrongList.length} 題</p>
+                    <p class="text-sm text-gray-400 mt-2">系統已自動下載 Excel 訂正表</p>
+                `,
+                icon: score >= 90 ? 'success' : 'info',
+                confirmButtonText: '查看錯題詳解',
+                confirmButtonColor: '#4B9DA9'
+            });
+
+            // 匯出 Excel
+            if (wrongList.length > 0) {
+                window.exportToExcel(wrongList, score);
+            }
+        }
+
+        // 8. Excel 匯出功能
+        window.exportToExcel = function(wrongList, score) {
+            const data = [
+                ["113學年-康軒(五上)國語線上期末測驗系統 - 錯題訂正表"],
+                [`得分：${score} 分`, `日期：${new Date().toLocaleDateString()}`],
+                [],
+                ["題號", "單元", "題目", "正確答案", "您的答案", "解析"]
+            ];
+
+            wrongList.forEach(item => {
+                const correctText = item.options[item.ans - 1];
+                const userText = item.userAns ? item.options[item.userAns - 1] : "未作答";
+                data.push([item.id, item.unit, item.q, correctText, userText, item.explanation]);
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // 設定紅字加粗樣式
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = 4; R <= range.e.r; ++R) {
+                const cellRef = XLSX.utils.encode_cell({r: R, c: 4});
+                if (ws[cellRef]) {
+                    ws[cellRef].s = {
+                        font: { bold: true, color: { rgb: "FF0000" } },
+                        fill: { fgColor: { rgb: "FEE2E2" } }
+                    };
+                }
+            }
+
+            // 調整欄寬
+            ws['!cols'] = [{wch:5}, {wch:10}, {wch:40}, {wch:20}, {wch:20}, {wch:40}];
+
+            XLSX.utils.book_append_sheet(wb, ws, "錯題分析");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
+
+        // 9. 老師專區功能
+        window.toggleTeacherZone = async function() {
+            const el = document.getElementById('teacherZone');
+            if (el.classList.contains('hidden')) {
+                const { value: pass } = await Swal.fire({
+                    title: '輸入老師密碼',
+                    input: 'password',
+                    inputPlaceholder: '密碼：1234',
+                    confirmButtonColor: '#4B9DA9'
+                });
+                if (pass === '1234') {
+                    el.classList.remove('hidden');
+                } else if(pass) {
+                    Swal.fire('密碼錯誤', '無法進入設定區', 'error');
+                }
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+
+        window.downloadQuestions = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = "questions_data.json";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        window.uploadQuestions = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (Array.isArray(json) && json.length > 0) {
+                        questions = json;
+                        Swal.fire('成功', `已更新 ${questions.length} 題考題！`, 'success');
+                    } else {
+                        throw new Error();
+                    }
+                } catch (err) {
+                    Swal.fire('錯誤', '檔案格式不正確 (需為 JSON)', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        console.log("System Ready. Version 1.12.16.25");
+    </script>
+</body>
+</html>
