@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五上)社會線上期末測驗系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgMain: '#EBF4DD',
+                        primary: '#90AB8B',
+                        secondary: '#5A7863',
+                        dark: '#3B4953',
+                        accent: '#d9534f'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #EBF4DD;
+            color: #3B4953;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        .question-card {
+            transition: all 0.3s ease;
+        }
+
+        .question-card.unanswered-highlight {
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #EBF4DD;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #90AB8B;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5A7863;
+        }
+
+        /* Animation for teacher zone appearance */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen">
+
+    <header class="bg-secondary text-white p-4 shadow-lg fixed w-full top-0 z-40">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold tracking-wide">
+                <i class="fa-solid fa-book-open mr-2"></i>113學年-康軒(五上)社會線上期末測驗系統_1.13.16.20
+            </h1>
+            <div id="timer-display"
+                class="text-2xl font-mono font-bold bg-white text-dark px-4 py-1 rounded hidden shadow-inner">
+                40:00
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto mt-24 mb-32 p-4 flex-grow">
+
+        <div id="start-screen" class="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
+            <div class="bg-white p-10 rounded-2xl shadow-xl max-w-2xl w-full border-t-8 border-primary">
+                <h2 class="text-3xl font-bold text-dark mb-6">期末考準備好了嗎？</h2>
+                <div class="text-left text-lg space-y-2 mb-8 text-gray-700 bg-bgMain p-6 rounded-lg">
+                    <p><i class="fa-solid fa-circle-check text-secondary mr-2"></i><strong>範圍：</strong>康軒五上 單元3 (史前/原住民)
+                        ~ 單元4 (大航海時代)</p>
+                    <p><i class="fa-solid fa-clock text-secondary mr-2"></i><strong>時間：</strong>40 分鐘</p>
+                    <p><i class="fa-solid fa-list-ol text-secondary mr-2"></i><strong>題數：</strong>50 題 (是非、選擇、配合)</p>
+                    <p><i class="fa-solid fa-shield-halved text-secondary mr-2"></i><strong>機制：</strong>隨機出題，防呆保護</p>
+                </div>
+                <button onclick="startQuiz()"
+                    class="bg-primary hover:bg-secondary text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transform hover:scale-105 transition duration-300 w-full md:w-auto">
+                    <i class="fa-solid fa-play mr-2"></i>開始作答
+                </button>
+                <div class="mt-4 text-sm text-gray-500">
+                    資料來源：康軒版國小五年級社會科歷屆考古題庫
+                </div>
+            </div>
+
+            <div class="w-full max-w-2xl pb-10">
+                <button onclick="toggleTeacherZone()"
+                    class="text-secondary hover:text-dark underline text-base font-bold flex items-center justify-center w-full py-2">
+                    <i class="fa-solid fa-chalkboard-user mr-2"></i> 老師/家長專區 (點擊展開)
+                </button>
+
+                <div id="teacher-zone"
+                    class="hidden mt-4 bg-white p-6 rounded-lg shadow-xl border-2 border-secondary animate-slide-down relative">
+                    <div class="absolute top-0 left-0 bg-secondary text-white px-3 py-1 text-sm rounded-br-lg">已登入</div>
+                    <h3 class="font-bold text-lg mb-4 text-dark border-b pb-2 pt-4">試題管理後台</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="downloadQuestions()"
+                            class="bg-gray-100 hover:bg-gray-200 text-dark py-3 px-4 rounded border border-gray-400 flex items-center justify-center font-bold transition">
+                            <i class="fa-solid fa-download mr-2 text-secondary"></i>下載目前考題 (JSON)
+                        </button>
+                        <div class="relative">
+                            <input type="file" id="upload-json" accept=".json" class="hidden"
+                                onchange="uploadQuestions(this)">
+                            <button onclick="document.getElementById('upload-json').click()"
+                                class="bg-gray-100 hover:bg-gray-200 text-dark py-3 px-4 rounded border border-gray-400 w-full flex items-center justify-center font-bold transition">
+                                <i class="fa-solid fa-upload mr-2 text-secondary"></i>上傳新考題 (JSON)
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-xs text-gray-500 text-left">
+                        * 上傳後請務必重新整理頁面或按下「開始作答」以套用新題庫。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quiz-container" class="hidden space-y-6">
+        </div>
+
+    </main>
+
+    <footer id="status-bar"
+        class="fixed bottom-0 w-full bg-dark text-white p-3 shadow-lg z-50 hidden transition-all duration-300">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+
+            <div class="flex space-x-6 text-sm md:text-base font-mono">
+                <div class="flex items-center">
+                    <span class="w-3 h-3 rounded-full bg-green-400 mr-2"></span>
+                    已答: <span id="answered-count" class="ml-1 font-bold">0</span>
+                </div>
+                <div class="flex items-center cursor-pointer" onclick="scrollToFirstUnanswered()">
+                    <span class="w-3 h-3 rounded-full bg-red-400 mr-2"></span>
+                    未答: <span id="unanswered-count" class="ml-1 font-bold">50</span>
+                </div>
+                <div class="flex items-center text-yellow-300">
+                    <i class="fa-regular fa-bookmark mr-2"></i>
+                    稍後: <span id="review-count" class="ml-1 font-bold">0</span>
+                </div>
+            </div>
+
+            <button onclick="attemptSubmit()"
+                class="bg-primary hover:bg-secondary text-white font-bold py-2 px-8 rounded shadow-lg transform active:scale-95 transition">
+                <i class="fa-solid fa-paper-plane mr-2"></i>繳卷送出
+            </button>
+        </div>
+    </footer>
+
+    <div id="result-controls" class="hidden fixed bottom-24 right-4 z-50 flex-col gap-2">
+        <button onclick="downloadWrongAnswers()"
+            class="bg-red-500 hover:bg-red-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center transform hover:scale-110 transition"
+            title="下載錯題Excel">
+            <i class="fa-solid fa-file-excel text-2xl"></i>
+        </button>
+    </div>
+
+    <div id="modal" class="modal-overlay fixed inset-0 hidden items-center justify-center z-[100]">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all scale-100">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4 text-dark text-center">提示</h3>
+            <div id="modal-content" class="text-gray-700 mb-6 text-center text-lg"></div>
+            <div id="modal-actions" class="flex justify-center space-x-4">
+                <button onclick="closeModal()"
+                    class="bg-primary text-white px-6 py-2 rounded hover:bg-secondary">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pwd-modal" class="modal-overlay fixed inset-0 hidden items-center justify-center z-[100]">
+        <div class="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full mx-4">
+            <h3 class="text-xl font-bold mb-4 text-dark text-center">權限驗證</h3>
+            <p class="mb-4 text-center text-gray-600">請輸入密碼以繼續</p>
+            <input type="password" id="pwd-input" onkeydown="handlePwdEnter(event)"
+                class="w-full border-2 border-primary rounded p-2 mb-4 text-center text-lg tracking-widest"
+                placeholder="輸入密碼">
+            <div class="flex justify-between space-x-2">
+                <button onclick="closePwdModal()"
+                    class="flex-1 bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">取消</button>
+                <button onclick="verifyPwd()"
+                    class="flex-1 bg-secondary text-white px-4 py-2 rounded hover:bg-primary">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data: Question Bank (50 Questions) ---
+        const defaultQuestions = [
+            // 單元 3.1 史前人類
+            { id: 1, unit: "3.1 史前人類", type: "MC", q: "舊石器時代的長濱文化人，主要的謀生方式是什麼？", options: ["種植水稻", "採集與漁獵", "使用鐵器交易", "飼養家畜"], ans: "採集與漁獵", detail: "長濱文化人還不知道農耕，主要靠採集野果和捕捉魚蝦野獸維生。" },
+            { id: 2, unit: "3.1 史前人類", type: "MC", q: "下列哪一個史前文化遺址發現了「凹石」，推測是用來敲碎堅果的工具？", options: ["長濱文化", "圓山文化", "卑南文化", "十三行文化"], ans: "長濱文化", detail: "長濱文化出土的石器多為打製而成，凹石是其特色之一，用來處理食物。" },
+            { id: 3, unit: "3.1 史前人類", type: "TF", q: "新石器時代的人類開始懂得使用火，這是他們與舊石器時代最大的差別。", ans: "X", detail: "舊石器時代（如長濱文化）的人類已經知道使用火了。新石器時代的特色是磨製石器、燒製陶器與出現農業。" },
+            { id: 4, unit: "3.1 史前人類", type: "MC", q: "臺灣目前發現最早的史前文化是哪一個？", options: ["大坌坑文化", "長濱文化", "卑南文化", "圓山文化"], ans: "長濱文化", detail: "長濱文化位於臺東，距今約五萬至五千年前，是臺灣已知最早的舊石器文化。" },
+            { id: 5, unit: "3.1 史前人類", type: "MC", q: "「繩紋陶」是臺灣哪一個史前文化的重要特徵？", options: ["十三行文化", "大坌坑文化", "長濱文化", "網形文化"], ans: "大坌坑文化", detail: "大坌坑文化屬於新石器時代早期，其陶器表面印有繩紋，故又稱繩紋陶文化。" },
+            { id: 6, unit: "3.1 史前人類", type: "MC", q: "卑南文化人製作大量的什麼物品，可能作為裝飾品或隨身護身符？", options: ["鐵渣", "玉器", "玻璃珠", "青銅器"], ans: "玉器", detail: "卑南遺址出土了大量精美的玉耳飾、玉管等，顯示當時已有精湛的玉石加工技術。" },
+            { id: 7, unit: "3.1 史前人類", type: "MC", q: "十三行文化屬於哪一個時代？", options: ["舊石器時代", "新石器時代", "金屬器時代", "電器時代"], ans: "金屬器時代", detail: "十三行文化人已知煉鐵，進入了金屬器時代。" },
+            { id: 8, unit: "3.1 史前人類", type: "TF", q: "十三行文化遺址中發現了中國銅錢和玻璃珠，代表他們當時已經有對外貿易的行為。", ans: "O", detail: "這些外來物品證明十三行文化人與外界（如中國東南沿海或東南亞）有貿易往來。" },
+            { id: 9, unit: "3.1 史前人類", type: "MC", q: "關於史前時代的演進順序，下列何者正確？", options: ["金屬器 -> 新石器 -> 舊石器", "舊石器 -> 新石器 -> 金屬器", "舊石器 -> 金屬器 -> 新石器", "新石器 -> 舊石器 -> 金屬器"], ans: "舊石器 -> 新石器 -> 金屬器", detail: "人類文明演進依序為舊石器（打製）、新石器（磨製、陶器）、金屬器（煉鐵）。" },
+            { id: 10, unit: "3.1 史前人類", type: "TF", q: "圓山文化著名的「貝塚」遺跡，推測是當時人類食用貝類後丟棄所形成的垃圾堆。", ans: "O", detail: "貝塚是古人食用貝類後將殼集中丟棄形成的，也保存了許多生活遺物。" },
+
+            // 單元 3.2 原住民族
+            { id: 11, unit: "3.2 原住民族", type: "MC", q: "清代時期，漢人主要依據什麼標準將原住民分為「熟番」與「生番」？", options: ["居住的高度", "納稅服役與漢化程度", "打獵的技術", "皮膚的顏色"], ans: "納稅服役與漢化程度", detail: "服從清廷統治、納稅服勞役者稱為熟番（多為平埔族），反之為生番。" },
+            { id: 12, unit: "3.2 原住民族", type: "MC", q: "平埔族群主要分布在臺灣的哪些地區？", options: ["高山峻嶺", "西部平原與丘陵", "東部海岸", "離島地區"], ans: "西部平原與丘陵", detail: "平埔族群早期多居住在臺灣西部的平原或丘陵地帶。" },
+            { id: 13, unit: "3.2 原住民族", type: "TF", q: "原住民族的傳統命名方式每一族都完全相同，都是「子名＋父名」。", ans: "X", detail: "各族命名方式不同，如泰雅族是親子連名，排灣族重視家屋名，布農族有氏族名等。" },
+            { id: 14, unit: "3.2 原住民族", type: "MC", q: "達悟族主要分布在哪一個島嶼，發展出獨特的飛魚文化？", options: ["綠島", "蘭嶼", "澎湖", "金門"], ans: "蘭嶼", detail: "達悟族居住在蘭嶼，飛魚祭是其最重要的歲時祭儀。" },
+            { id: 15, unit: "3.2 原住民族", type: "MC", q: "哪一個原住民族傳統上居住在「石板屋」，且有嚴格的階級制度（貴族、平民）？", options: ["阿美族", "排灣族", "泰雅族", "賽夏族"], ans: "排灣族", detail: "排灣族與魯凱族多居住石板屋，且社會階級分明，有頭目貴族制度。" },
+            { id: 16, unit: "3.2 原住民族", type: "TF", q: "阿美族是臺灣原住民中人口最多的一族，傳統社會屬於母系社會。", ans: "O", detail: "阿美族主要分布在花東，為母系社會，家產由長女繼承。" },
+            { id: 17, unit: "3.2 原住民族", type: "MC", q: "下列哪一個祭典是賽夏族為了安撫矮靈而舉辦的？", options: ["豐年祭", "飛魚祭", "巴斯達隘 (矮靈祭)", "打耳祭"], ans: "巴斯達隘 (矮靈祭)", detail: "巴斯達隘（Pas-ta'ai）即矮靈祭，是賽夏族特有的祭典，每兩年一小祭，十年一大祭。" },
+            { id: 18, unit: "3.2 原住民族", type: "MC", q: "凱達格蘭族主要分布在現今臺灣的哪一個地區？", options: ["臺北盆地一帶", "臺南平原", "屏東山區", "花東縱谷"], ans: "臺北盆地一帶", detail: "凱達格蘭族早期主要活動於臺北盆地、北投、淡水一帶。" },
+            { id: 19, unit: "3.2 原住民族", type: "TF", q: "百步蛇紋是泰雅族最神聖的圖騰，象徵祖靈的守護。", ans: "X", detail: "百步蛇紋是排灣族與魯凱族的重要圖騰，泰雅族以祖靈之眼（菱形紋）和紋面著稱。" },
+            { id: 20, unit: "3.2 原住民族", type: "MC", q: "布農族的「八部合音」祈禱小米豐收，這顯示了原住民生活與什麼息息相關？", options: ["戰爭", "商業", "大自然與農耕", "航海"], ans: "大自然與農耕", detail: "原住民的祭儀多與自然環境、農耕收成（如小米）有關。" },
+
+            // 單元 4.1 大航海時代臺灣如何登上世界舞台
+            { id: 21, unit: "4.1 大航海時代", type: "MC", q: "大航海時代，歐洲國家來到亞洲主要是為了尋找什麼資源？", options: ["石油", "香料與黃金", "電腦晶片", "橡膠"], ans: "香料與黃金", detail: "當時歐洲人極需東方的香料（保存食物）與傳說中的黃金。" },
+            { id: 22, unit: "4.1 大航海時代", type: "TF", q: "因為臺灣位於東亞航運的樞紐位置，所以在大航海時代引起了外國人的注意。", ans: "O", detail: "臺灣位於中國、日本、東南亞的交界點，地理位置極具戰略與商業價值。" },
+            { id: 23, unit: "4.1 大航海時代", type: "MC", q: "16世紀中葉，葡萄牙水手經過臺灣時，發出了什麼讚嘆，成為臺灣別稱的由來？", options: ["Ilha Formosa (福爾摩沙)", "Solis (太陽之島)", "Zeelandia (熱蘭遮)", "Pekang (北港)"], ans: "Ilha Formosa (福爾摩沙)", detail: "葡萄牙人驚嘆「Ilha Formosa」，意為「美麗之島」。" },
+            { id: 24, unit: "4.1 大航海時代", type: "MC", q: "17世紀初，哪一個國家的人先占領了澎湖，後來被明朝軍隊驅逐而轉往臺灣？", options: ["西班牙", "荷蘭", "英國", "法國"], ans: "荷蘭", detail: "荷蘭人原占領澎湖，經明朝沈有容交涉（石碑：沈有容諭退紅毛番韋麻郎等）後，轉而占領臺灣南部。" },
+            { id: 25, unit: "4.1 大航海時代", type: "TF", q: "西班牙人來到臺灣的主要根據地是在臺灣南部。", ans: "X", detail: "西班牙人主要占領臺灣北部（雞籠、淡水），荷蘭人則是在南部。" },
+
+            // 單元 4.2 大海時代有哪些人經營臺灣
+            { id: 26, unit: "4.2 經營臺灣", type: "MC", q: "荷蘭人在臺南安平興建了哪一座城堡，作為統治臺灣的行政中心？", options: ["紅毛城", "熱蘭遮城", "普羅民遮城", "億載金城"], ans: "熱蘭遮城", detail: "熱蘭遮城（今安平古堡）是荷蘭人的統治中心；普羅民遮城（今赤崁樓）是商業中心。" },
+            { id: 27, unit: "4.2 經營臺灣", type: "MC", q: "西班牙人在淡水興建了什麼城堡？", options: ["聖多明哥城", "聖薩爾瓦多城", "熱蘭遮城", "赤崁樓"], ans: "聖多明哥城", detail: "淡水的是聖多明哥城（紅毛城前身），基隆和平島的是聖薩爾瓦多城。" },
+            { id: 28, unit: "4.2 經營臺灣", type: "MC", q: "荷蘭人統治臺灣期間，主要將臺灣的什麼特產出口到日本與中國？", options: ["茶葉", "樟腦", "蔗糖與鹿皮", "香蕉"], ans: "蔗糖與鹿皮", detail: "鹿皮外銷日本（做武士戰袍），蔗糖外銷波斯與日本，是當時的高經濟價值商品。" },
+            { id: 29, unit: "4.2 經營臺灣", type: "TF", q: "鄭芝龍（鄭成功的父親）是當時著名的海商集團首領，曾招募漢人來臺開墾。", ans: "O", detail: "鄭芝龍勢力龐大，曾招募福建饑民來臺開墾，奠定漢人移民基礎。" },
+            { id: 30, unit: "4.2 經營臺灣", type: "MC", q: "哪一位歷史人物成功驅逐了荷蘭人，在臺灣建立了第一個漢人政權？", options: ["鄭芝龍", "陳永華", "鄭成功", "施琅"], ans: "鄭成功", detail: "鄭成功於1661年攻臺，1662年荷蘭投降，建立明鄭政權。" },
+            { id: 31, unit: "4.2 經營臺灣", type: "MC", q: "荷蘭人為了增加農業生產，從哪裡引進了黃牛來協助耕作？", options: ["日本", "印尼", "印度", "中國"], ans: "印度", detail: "荷蘭人引進印度黃牛，改善了臺灣的耕作效率。" },
+            { id: 32, unit: "4.2 經營臺灣", type: "TF", q: "西班牙人占領臺灣北部後，因為遭受原住民反抗且貿易利益不如預期，最後自行摧毀城堡撤離。", ans: "X", detail: "西班牙人後來是遭到荷蘭人揮軍北上擊敗而離開的，雖然他們確實也面臨經營困難。" },
+            { id: 33, unit: "4.2 經營臺灣", type: "MC", q: "荷蘭傳教士為了向原住民傳教，使用了羅馬拼音將哪一族的語言拼寫出來，稱為「新港文」？", options: ["西拉雅族", "阿美族", "泰雅族", "布農族"], ans: "西拉雅族", detail: "荷蘭傳教士在臺南地區（新港社）傳教，使用羅馬字拼寫西拉雅語，留下新港文書。" },
+            { id: 34, unit: "4.2 經營臺灣", type: "MC", q: "郭懷一事件是針對哪一個政權的反抗行動？", options: ["西班牙人", "明鄭", "清朝", "荷蘭人"], ans: "荷蘭人", detail: "郭懷一事件是漢人農民因不滿荷蘭人苛捐重稅而爆發的最大規模抗爭。" },
+            { id: 35, unit: "4.2 經營臺灣", type: "TF", q: "荷蘭聯合東印度公司(VOC)是一個單純的軍事組織，不負責商業貿易。", ans: "X", detail: "VOC是特許公司，集商業貿易、軍事、行政權力於一身。" },
+
+            // 單元 4.3 影響
+            { id: 36, unit: "4.3 大航海影響", type: "MC", q: "下列哪一種農作物是荷蘭人引進臺灣的？", options: ["水稻", "小米", "番茄、豌豆、芒果", "香蕉"], ans: "番茄、豌豆、芒果", detail: "荷蘭人引進了許多物種，如番茄（臭柿子）、豌豆（荷蘭豆）、芒果（檨仔）、釋迦等。雖然芒果本格化是後來，但這選項是考古題常考組合。" },
+            { id: 37, unit: "4.3 大航海影響", type: "TF", q: "「紅毛土」是指水泥，這個名稱與荷蘭人或西方人被稱為紅毛番有關。", ans: "O", detail: "臺灣民間習稱西方人為紅毛番，他們帶來的水泥因此被稱為紅毛土。" },
+            { id: 38, unit: "4.3 大航海影響", type: "MC", q: "大航海時代後，臺灣在國際地圖上的輪廓越來越精確，這主要歸功於誰的測繪？", options: ["原住民", "漢人移民", "歐洲航海家與傳教士", "日本海盜"], ans: "歐洲航海家與傳教士", detail: "歐洲人帶來了測繪技術，使臺灣地圖從原本的模糊變為精確。" },
+            { id: 39, unit: "4.3 大航海影響", type: "MC", q: "今日我們稱的「荷蘭豆」，反映了哪一段歷史淵源？", options: ["鄭成功時期", "荷蘭統治時期", "清朝時期", "日治時期"], ans: "荷蘭統治時期", detail: "豌豆由荷蘭人引進，故閩南語俗稱荷蘭豆。" },
+            { id: 40, unit: "4.3 大航海影響", type: "TF", q: "天主教與基督教是在大航海時代由西班牙人與荷蘭人傳入臺灣的。", ans: "O", detail: "西班牙人傳播天主教（北部），荷蘭人傳播基督教（新教，南部）。" },
+
+            // 配合題型改編 (Grouped Choice)
+            { id: 41, unit: "3.1 配合題", type: "MA", q: "【配合題】請選出「長濱文化」對應的特色：", options: ["A. 使用打製石器，已知用火", "B. 使用磨製石器，有繩紋陶", "C. 使用鐵器，與外地交易", "D. 住石板屋"], ans: "A. 使用打製石器，已知用火", detail: "長濱文化是舊石器時代，特徵是打製石器。" },
+            { id: 42, unit: "3.1 配合題", type: "MA", q: "【配合題】請選出「十三行文化」對應的特色：", options: ["A. 住在洞穴中", "B. 用玉器陪葬", "C. 煉鐵，發現玻璃珠與銅錢", "D. 燒製繩紋陶"], ans: "C. 煉鐵，發現玻璃珠與銅錢", detail: "十三行文化是金屬器時代，特徵是煉鐵工坊。" },
+            { id: 43, unit: "3.1 配合題", type: "MA", q: "【配合題】請選出「卑南文化」對應的特色：", options: ["A. 舊石器時代代表", "B. 製作精美玉器，有石板棺", "C. 使用新港文書", "D. 最早種植水稻"], ans: "B. 製作精美玉器，有石板棺", detail: "卑南文化以大量玉器和排列整齊的石板棺聞名。" },
+
+            // 配合題型改編 - 城堡與地點
+            { id: 44, unit: "4.2 配合題", type: "MA", q: "【配合題】請選出「熱蘭遮城」所在位置與建造者：", options: ["A. 基隆-西班牙人", "B. 淡水-西班牙人", "C. 臺南安平-荷蘭人", "D. 臺南赤崁-荷蘭人"], ans: "C. 臺南安平-荷蘭人", detail: "熱蘭遮城位於臺南安平（一鯤鯓），由荷蘭人建造。" },
+            { id: 45, unit: "4.2 配合題", type: "MA", q: "【配合題】請選出「聖薩爾瓦多城」所在位置與建造者：", options: ["A. 基隆和平島-西班牙人", "B. 淡水-西班牙人", "C. 臺南-荷蘭人", "D. 澎湖-法軍"], ans: "A. 基隆和平島-西班牙人", detail: "聖薩爾瓦多城位於基隆和平島，西班牙人所建。" },
+
+            // 配合題型改編 - 原住民特色
+            { id: 46, unit: "3.2 配合題", type: "MA", q: "【配合題】請選出「百步蛇圖騰」主要對應的原住民族：", options: ["A. 泰雅族", "B. 排灣族與魯凱族", "C. 阿美族", "D. 達悟族"], ans: "B. 排灣族與魯凱族", detail: "百步蛇是排灣族與魯凱族的祖靈象徵。" },
+            { id: 47, unit: "3.2 配合題", type: "MA", q: "【配合題】請選出「拼板舟」主要對應的原住民族：", options: ["A. 達悟族", "B. 卑南族", "C. 邵族", "D. 鄒族"], ans: "A. 達悟族", detail: "蘭嶼達悟族使用拼板舟捕捉飛魚。" },
+
+            // 綜合題
+            { id: 48, unit: "4.1 綜合", type: "MC", q: "大航海時代，西班牙人曾開闢一條從菲律賓馬尼拉到哪裡的航線，途中經過臺灣？", options: ["日本", "墨西哥 (美洲)", "印度", "澳洲"], ans: "墨西哥 (美洲)", detail: "西班牙經營跨太平洋貿易（馬尼拉帆船貿易），連結中國、馬尼拉與美洲墨西哥。" },
+            { id: 49, unit: "4.3 綜合", type: "TF", q: "荷蘭人留下的「王田」制度，對後來臺灣的土地制度產生了深遠影響。", ans: "O", detail: "王田（荷蘭東印度公司所有田地）制度，後被明鄭改為官田，影響深遠。" },
+            { id: 50, unit: "3.1 綜合", type: "MC", q: "考古學家要判斷一個史前遺址屬於哪一個時代，主要依據什麼？", options: ["使用的工具與器物材質", "遺址的面積大小", "發現的屍體數量", "附近的風景"], ans: "使用的工具與器物材質", detail: "依據工具材質（石器vs金屬器）及製作方式（打製vs磨製）來劃分時代。" }
+        ];
+
+        // --- State ---
+        let questions = [];
+        let userAnswers = {};
+        let reviewMarks = {};
+        let examActive = false;
+        let timerInterval;
+        let timeRemaining = 2400; // 40 mins
+
+        // --- Teacher Zone Logic (FIXED) ---
+        function toggleTeacherZone() {
+            const zone = document.getElementById('teacher-zone');
+
+            if (zone.classList.contains('hidden')) {
+                zone.classList.remove('hidden');
+                setTimeout(() => {
+                    zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            } else {
+                zone.classList.add('hidden');
+            }
+        }
+
+        // New function to handle Enter key in password field
+        function handlePwdEnter(event) {
+            if (event.key === 'Enter') {
+                verifyPwd();
+            }
+        }
+
+        function downloadQuestions() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions.length > 0 ? questions : defaultQuestions));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "social_exam_questions.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function uploadQuestions(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (Array.isArray(json) && json.length > 0) {
+                        questions = json;
+                        showModal("上傳成功", "考題已更新。<br>請按「開始作答」以使用新題庫。");
+                    } else {
+                        throw new Error("格式不符");
+                    }
+                } catch (err) {
+                    showModal("錯誤", "無法讀取 JSON 檔案，請確認格式。");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Init Logic ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startQuiz() {
+            // Load default if no upload
+            if (questions.length === 0) {
+                questions = JSON.parse(JSON.stringify(defaultQuestions));
+            }
+
+            // Randomize
+            shuffleArray(questions);
+
+            // Render
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = '';
+            questions.forEach((q, index) => {
+                const card = createQuestionCard(q, index + 1);
+                container.appendChild(card);
+            });
+
+            // Switch UI
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('timer-display').classList.remove('hidden');
+            document.getElementById('status-bar').classList.remove('hidden');
+            document.getElementById('status-bar').classList.add('flex');
+
+            // Start Timer
+            examActive = true;
+            timeRemaining = 2400; // 40 mins
+            updateTimerDisplay();
+            timerInterval = setInterval(timerTick, 1000);
+            updateStats();
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function createQuestionCard(q, displayNum) {
+            const div = document.createElement('div');
+            div.className = "question-card bg-white p-6 rounded-lg shadow border-l-4 border-secondary relative";
+            div.id = `q-${q.id}`;
+
+            let html = `
+                <div class="flex justify-between items-start mb-4">
+                    <span class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded font-mono">${q.unit}</span>
+                    <label class="flex items-center space-x-2 cursor-pointer text-sm text-yellow-600 select-none">
+                        <input type="checkbox" onchange="toggleReview(${q.id}, this.checked)" class="form-checkbox h-4 w-4 text-yellow-500 rounded focus:ring-yellow-500 border-gray-300">
+                        <span>稍後作答</span>
+                    </label>
+                </div>
+                <h3 class="text-lg font-bold text-dark mb-4">
+                    <span class="text-secondary mr-1">${displayNum}.</span> ${q.q}
+                </h3>
+                <div class="space-y-3 options-container">
+            `;
+
+            if (q.type === 'TF') {
+                html += createOptionHtml(q.id, 'O', 'O (是)');
+                html += createOptionHtml(q.id, 'X', 'X (否)');
+            } else {
+                q.options.forEach(opt => {
+                    html += createOptionHtml(q.id, opt, opt);
+                });
+            }
+
+            html += `</div>
+                <div id="feedback-${q.id}" class="hidden mt-4 p-3 bg-red-50 text-red-800 rounded border border-red-200 text-sm"></div>
+            `;
+
+            div.innerHTML = html;
+            return div;
+        }
+
+        function createOptionHtml(qId, value, label) {
+            return `
+                <label class="flex items-center p-3 border rounded cursor-pointer hover:bg-gray-50 transition">
+                    <input type="radio" name="q-${qId}" value="${value}" onchange="recordAnswer(${qId}, '${value}')" class="h-4 w-4 text-primary focus:ring-primary border-gray-300">
+                    <span class="ml-3 text-dark">${label}</span>
+                </label>
+            `;
+        }
+
+        // --- Interaction ---
+        function recordAnswer(qId, value) {
+            if (!examActive) return;
+            userAnswers[qId] = value;
+            const card = document.getElementById(`q-${qId}`);
+            if (card) card.classList.remove('unanswered-highlight');
+            updateStats();
+        }
+
+        function toggleReview(qId, isChecked) {
+            if (isChecked) {
+                reviewMarks[qId] = true;
+            } else {
+                delete reviewMarks[qId];
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            const answeredCount = Object.keys(userAnswers).length;
+            const reviewCount = Object.keys(reviewMarks).length;
+            const total = questions.length;
+
+            document.getElementById('answered-count').innerText = answeredCount;
+            document.getElementById('unanswered-count').innerText = total - answeredCount;
+            document.getElementById('review-count').innerText = reviewCount;
+        }
+
+        function scrollToFirstUnanswered() {
+            for (let q of questions) {
+                if (!userAnswers[q.id]) {
+                    const el = document.getElementById(`q-${q.id}`);
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('unanswered-highlight');
+                    setTimeout(() => el.classList.remove('unanswered-highlight'), 2000);
+                    showModal("提示", `第 ${questions.indexOf(q) + 1} 題尚未作答！`);
+                    return;
+                }
+            }
+            showModal("提示", "恭喜，所有題目皆已作答！");
+        }
+
+        // --- Timer ---
+        function timerTick() {
+            timeRemaining--;
+            updateTimerDisplay();
+
+            if (timeRemaining === 1500) showModal("提醒", "考試時間剩下 25 分鐘！");
+            if (timeRemaining === 600) showModal("提醒", "考試時間剩下 10 分鐘！");
+            if (timeRemaining === 300) showModal("提醒", "注意！考試時間剩下 5 分鐘！");
+
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                finishExam(true);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timeRemaining / 60);
+            const s = timeRemaining % 60;
+            const text = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            const el = document.getElementById('timer-display');
+            el.innerText = text;
+
+            if (timeRemaining < 300) {
+                el.classList.add('text-red-600');
+            }
+        }
+
+        // --- Submission ---
+        function attemptSubmit() {
+            const answeredCount = Object.keys(userAnswers).length;
+            if (answeredCount < questions.length) {
+                scrollToFirstUnanswered();
+                return;
+            }
+
+            if (Object.keys(reviewMarks).length > 0) {
+                showModal("確認", "您還有標記「稍後作答」的題目，確定要繳卷嗎？", true);
+            } else {
+                showModal("確認", "確定要繳交考卷嗎？", true);
+            }
+        }
+
+        function finishExam(force = false) {
+            clearInterval(timerInterval);
+            examActive = false;
+
+            document.querySelectorAll('input').forEach(i => i.disabled = true);
+            document.getElementById('status-bar').classList.add('hidden');
+
+            let score = 0;
+            const pointPerQ = 100 / questions.length;
+
+            questions.forEach(q => {
+                const userAns = userAnswers[q.id];
+                const feedbackEl = document.getElementById(`feedback-${q.id}`);
+
+                if (userAns === q.ans) {
+                    score += pointPerQ;
+                    feedbackEl.innerHTML = `<span class="text-green-600 font-bold"><i class="fa-solid fa-check"></i> 答對了！</span>`;
+                    feedbackEl.className = "mt-4 p-3 bg-green-50 rounded border border-green-200 text-sm";
+                } else {
+                    feedbackEl.innerHTML = `
+                        <div class="font-bold mb-1"><i class="fa-solid fa-xmark"></i> 答錯了</div>
+                        <div>正確答案：<span class="font-bold">${q.ans}</span></div>
+                        <div class="text-gray-600 mt-1">詳解：${q.detail}</div>
+                    `;
+                    feedbackEl.className = "mt-4 p-3 bg-red-50 text-red-800 rounded border border-red-200 text-sm";
+                    document.getElementById(`q-${q.id}`).classList.add('border-red-400');
+                }
+                feedbackEl.classList.remove('hidden');
+            });
+
+            const finalScore = Math.round(score);
+            showModal("測驗結束", `您的成績是：<span class="text-4xl font-bold text-primary">${finalScore}</span> 分<br>請檢視下方錯題詳解。`);
+
+            document.getElementById('result-controls').classList.remove('hidden');
+            document.getElementById('result-controls').classList.add('flex');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- Excel Export ---
+        function downloadWrongAnswers() {
+            const headers = ["單元", "題目", "您的答案", "正確答案", "詳解"];
+            const dataRows = [];
+
+            questions.forEach(q => {
+                const userAns = userAnswers[q.id] || "未作答";
+                if (userAns !== q.ans) {
+                    dataRows.push([
+                        q.unit,
+                        q.q,
+                        userAns,
+                        q.ans,
+                        q.detail
+                    ]);
+                }
+            });
+
+            if (dataRows.length === 0) {
+                showModal("恭喜", "您全對，沒有錯題需要下載！");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws_data = [headers, ...dataRows];
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+            ws['!cols'] = [{ wch: 15 }, { wch: 50 }, { wch: 20 }, { wch: 20 }, { wch: 50 }];
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cell_address = { c: C, r: R };
+                    const cell_ref = XLSX.utils.encode_cell(cell_address);
+
+                    if (!ws[cell_ref]) continue;
+
+                    ws[cell_ref].s = { font: { name: "Microsoft JhengHei" } };
+
+                    if (R === 0) {
+                        ws[cell_ref].s = {
+                            font: { bold: true, color: { rgb: "FFFFFF" } },
+                            fill: { fgColor: { rgb: "5A7863" } },
+                            alignment: { horizontal: "center" }
+                        };
+                    }
+                    else {
+                        if (C === 2) {
+                            ws[cell_ref].s.font = { color: { rgb: "FF0000" }, bold: true };
+                        }
+                    }
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, "錯題整理");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
+
+        // --- Modal Logic ---
+        function showModal(title, contentHtml, isConfirm = false) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-content').innerHTML = contentHtml;
+            const actions = document.getElementById('modal-actions');
+
+            if (isConfirm) {
+                actions.innerHTML = `
+                    <button onclick="closeModal()" class="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500 mr-4">取消</button>
+                    <button onclick="confirmAction()" class="bg-primary text-white px-6 py-2 rounded hover:bg-secondary">確定繳卷</button>
+                `;
+            } else {
+                actions.innerHTML = `<button onclick="closeModal()" class="bg-primary text-white px-6 py-2 rounded hover:bg-secondary">確定</button>`;
+            }
+
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+        }
+
+        function confirmAction() {
+            closeModal();
+            finishExam();
+        }
+
+        // --- Password Modal Logic ---
+        let pwdCallback = null;
+
+        function showPwdModal(callback) {
+            pwdCallback = callback;
+            document.getElementById('pwd-modal').classList.remove('hidden');
+            document.getElementById('pwd-modal').classList.add('flex');
+            const input = document.getElementById('pwd-input');
+            input.value = '';
+            setTimeout(() => input.focus(), 100); // Ensure focus
+        }
+
+        function closePwdModal() {
+            document.getElementById('pwd-modal').classList.add('hidden');
+            document.getElementById('pwd-modal').classList.remove('flex');
+            pwdCallback = null;
+        }
+
+        function verifyPwd() {
+            const pwd = document.getElementById('pwd-input').value;
+            closePwdModal();
+            if (pwdCallback) pwdCallback(pwd);
+        }
+
+    </script>
+</body>
+
+</html>
