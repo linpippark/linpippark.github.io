@@ -87,7 +87,7 @@
     <header class="bg-secondary text-white p-4 shadow-lg fixed w-full top-0 z-40">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl md:text-2xl font-bold tracking-wide">
-                <i class="fa-solid fa-book-open mr-2"></i>113學年-康軒(五上)社會線上期末測驗系統_1.13.16.20
+                <i class="fa-solid fa-book-open mr-2"></i>113學年-康軒(五上)社會線上期末測驗系統_1.12.17.15
             </h1>
             <div id="timer-display"
                 class="text-2xl font-mono font-bold bg-white text-dark px-4 py-1 rounded hidden shadow-inner">
@@ -549,7 +549,15 @@
             });
 
             const finalScore = Math.round(score);
-            showModal("測驗結束", `您的成績是：<span class="text-4xl font-bold text-primary">${finalScore}</span> 分<br>請檢視下方錯題詳解。`);
+            showModal("測驗結束", `
+                您的成績是：<span class="text-4xl font-bold text-primary">${finalScore}</span> 分<br>
+                <div class="mt-4">
+                    <button onclick="downloadWrongAnswers()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow transition">
+                        <i class="fa-solid fa-file-excel mr-2"></i> 下載作答結果(Excel)
+                    </button>
+                </div>
+                <div class="mt-2 text-sm text-gray-500">請檢視下方錯題詳解。</div>
+            `);
 
             document.getElementById('result-controls').classList.remove('hidden');
             document.getElementById('result-controls').classList.add('flex');
@@ -576,8 +584,17 @@
             });
 
             if (dataRows.length === 0) {
-                showModal("恭喜", "您全對，沒有錯題需要下載！");
-                return;
+                // If perfect score, download all questions as a record
+                showModal("恭喜", "您全對！將下載完整作答記錄。");
+                questions.forEach(q => {
+                    dataRows.push([
+                        q.unit,
+                        q.q,
+                        userAnswers[q.id],
+                        q.ans,
+                        q.detail
+                    ]);
+                });
             }
 
             const wb = XLSX.utils.book_new();
@@ -602,9 +619,14 @@
                             fill: { fgColor: { rgb: "5A7863" } },
                             alignment: { horizontal: "center" }
                         };
-                    }
-                    else {
-                        if (C === 2) {
+                    } else if (C === 2) { // User Answer Column
+                        // Highlight wrong answers in red
+                        const unit = dataRows[R - 1][0];
+                        const qText = dataRows[R - 1][1];
+                        const userVal = dataRows[R - 1][2];
+                        const ansVal = dataRows[R - 1][3];
+
+                        if (userVal !== ansVal) {
                             ws[cell_ref].s.font = { color: { rgb: "FF0000" }, bold: true };
                         }
                     }
