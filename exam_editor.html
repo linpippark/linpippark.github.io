@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考題編輯系統 (Beta)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#222831',
+                        grey: '#393E46',
+                        teal: '#00ADB5',
+                        light: '#EEEEEE',
+                        danger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #222831; color: #EEEEEE; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #222831; }
+        ::-webkit-scrollbar-thumb { background: #393E46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ADB5; }
+        
+        .modal-backdrop {
+            background-color: rgba(34, 40, 49, 0.85);
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <header class="bg-grey border-b border-gray-700 h-16 flex items-center justify-between px-6 shadow-md flex-shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-teal"><i class="fa-solid fa-code mr-2"></i>考題編輯系統 <span class="text-xs text-gray-400 font-normal">(Beta)</span></h1>
+        </div>
+        <div class="text-sm text-gray-400" id="headerDate"></div>
+    </header>
+
+    <main class="flex flex-1 overflow-hidden">
+        
+        <aside class="w-7/12 p-6 overflow-y-auto border-r border-gray-700 relative">
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-dark z-10 py-2 border-b border-gray-700">
+                <h2 class="text-lg font-semibold border-l-4 border-teal pl-3">題庫列表 <span id="questionCount" class="text-xs bg-teal text-dark px-2 py-0.5 rounded-full ml-2">0</span></h2>
+                <div class="flex gap-2">
+                    <label for="fileUpload" class="cursor-pointer bg-grey hover:bg-gray-600 text-light px-4 py-2 rounded text-sm transition border border-gray-600">
+                        <i class="fa-solid fa-upload mr-2"></i>上傳 JSON
+                    </label>
+                    <input type="file" id="fileUpload" accept=".json" class="hidden">
+                    
+                    <button onclick="createNewQuestion()" class="bg-teal hover:bg-teal-600 text-dark font-bold px-4 py-2 rounded text-sm transition">
+                        <i class="fa-solid fa-plus mr-2"></i>新增題目
+                    </button>
+                </div>
+            </div>
+
+            <div id="questionListContainer" class="space-y-4">
+                <div class="text-center text-gray-500 mt-20">
+                    <i class="fa-regular fa-folder-open text-4xl mb-4"></i>
+                    <p>目前沒有題目，請上傳 JSON 檔案或點擊新增。</p>
+                </div>
+            </div>
+        </aside>
+
+        <section class="w-5/12 bg-grey p-6 overflow-y-auto shadow-2xl z-20 flex flex-col">
+            <h2 class="text-lg font-semibold mb-6 border-l-4 border-teal pl-3 flex justify-between items-center">
+                編輯區
+                <span id="editStatus" class="text-xs font-normal text-gray-400">新增模式</span>
+            </h2>
+
+            <form id="examForm" class="space-y-4 flex-1">
+                <input type="hidden" id="q_id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-teal mb-1">科目 (Subject)</label>
+                        <select id="q_subject" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none">
+                            <option value="">(未選擇)</option>
+                            <option value="ch">國語</option>
+                            <option value="en">英文</option>
+                            <option value="na">自然</option>
+                            <option value="ma">數學</option>
+                            <option value="so">社會</option>
+                            <option value="ot">其他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-teal mb-1">課程單元 (Unit)</label>
+                        <select id="q_unit" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none">
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-teal mb-1">題型類別 (Type)</label>
+                    <select id="q_type" onchange="toggleOptionType()" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none">
+                        <option value="mc">選擇題 (Multiple Choice)</option>
+                        <option value="tf">是非題 (True/False)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-teal mb-1">題目內容 (Question)</label>
+                    <textarea id="q_text" rows="4" maxlength="255" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none resize-none" placeholder="請輸入題目內容..."></textarea>
+                    <div class="text-right text-xs text-gray-500 mt-1"><span id="charCount">0</span>/255</div>
+                </div>
+
+                <div id="optionsArea" class="bg-dark p-4 rounded border border-gray-700">
+                    <label class="block text-xs text-teal mb-2">選項設定</label>
+                    
+                    <div id="mcOptions" class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs w-4">1.</span>
+                            <input type="text" id="opt_1" class="flex-1 bg-grey border border-gray-600 rounded px-2 py-1 text-sm focus:border-teal focus:outline-none" placeholder="選項 1">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs w-4">2.</span>
+                            <input type="text" id="opt_2" class="flex-1 bg-grey border border-gray-600 rounded px-2 py-1 text-sm focus:border-teal focus:outline-none" placeholder="選項 2">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs w-4">3.</span>
+                            <input type="text" id="opt_3" class="flex-1 bg-grey border border-gray-600 rounded px-2 py-1 text-sm focus:border-teal focus:outline-none" placeholder="選項 3">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs w-4">4.</span>
+                            <input type="text" id="opt_4" class="flex-1 bg-grey border border-gray-600 rounded px-2 py-1 text-sm focus:border-teal focus:outline-none" placeholder="選項 4">
+                        </div>
+                    </div>
+
+                    <div id="tfOptions" class="hidden text-center text-sm text-gray-400 py-2">
+                        是非題無須設定選項內容，請直接設定正確答案。
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-teal mb-1">正確答案 (Answer)</label>
+                    <select id="q_answer" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none font-bold text-teal">
+                        </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-teal mb-1">詳解 (Explanation)</label>
+                    <textarea id="q_exp" rows="2" class="w-full bg-dark border border-gray-600 rounded p-2 text-sm focus:border-teal focus:outline-none" placeholder="輸入詳解..."></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-gray-600 mt-2">
+                    <button type="button" onclick="saveQuestion()" class="flex-1 bg-teal hover:bg-teal-600 text-dark font-bold py-2 rounded transition shadow-lg">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i>儲存題目
+                    </button>
+                    <button type="button" onclick="downloadJson()" class="flex-1 bg-dark border border-teal text-teal hover:bg-teal hover:text-dark font-bold py-2 rounded transition">
+                        <i class="fa-solid fa-download mr-2"></i>下載 JSON
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <footer class="bg-dark border-t border-gray-700 h-8 flex items-center justify-between px-6 text-xs text-gray-500 flex-shrink-0">
+        <div>版本編號：0.0.1 (Beta)</div>
+        <div id="lastUpdate">更新時間：--</div>
+    </footer>
+
+    <div id="alertModal" class="fixed inset-0 modal-backdrop hidden flex items-center justify-center z-50">
+        <div class="bg-grey border border-gray-600 rounded-lg shadow-2xl p-6 w-80 text-center transform scale-100 transition-transform">
+            <div class="text-teal text-4xl mb-4"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <h3 class="text-lg font-bold mb-2">系統提示</h3>
+            <p id="alertMessage" class="text-sm text-gray-300 mb-6">內容錯誤</p>
+            <button onclick="closeModal()" class="bg-teal text-dark font-bold px-6 py-2 rounded hover:bg-teal-600 transition w-full">確定</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Global State ---
+        let questions = [];
+        let currentEditingId = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDates();
+            populateUnitSelect();
+            toggleOptionType(); // Init state
+            
+            // File Upload Listener
+            document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
+            
+            // Char Counter
+            document.getElementById('q_text').addEventListener('input', function() {
+                document.getElementById('charCount').textContent = this.value.length;
+            });
+        });
+
+        function updateDates() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+            
+            document.getElementById('headerDate').textContent = dateStr;
+            document.getElementById('lastUpdate').textContent = `更新時間：${dateStr} ${timeStr}`;
+        }
+
+        function populateUnitSelect() {
+            const select = document.getElementById('q_unit');
+            // Clear existing except "Other"
+            select.innerHTML = '';
+            
+            // Add Units 1-15
+            for(let i=1; i<=15; i++) {
+                const opt = document.createElement('option');
+                opt.value = `單元${i}`;
+                opt.textContent = `單元${i}`;
+                select.appendChild(opt);
+            }
+            // Add Other
+            const other = document.createElement('option');
+            other.value = '其他';
+            other.textContent = '其他';
+            select.appendChild(other);
+        }
+
+        // --- Core Logic ---
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if (Array.isArray(json)) {
+                        questions = json;
+                        renderList();
+                        showAlert(`成功載入 ${questions.length} 題考題！`);
+                        if(questions.length > 0) {
+                            loadToForm(questions[0].id);
+                        }
+                    } else {
+                        showAlert("JSON 格式錯誤：根目錄必須是陣列");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showAlert("檔案讀取失敗，請確認是否為有效的 JSON 格式");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        function renderList() {
+            const container = document.getElementById('questionListContainer');
+            const countLabel = document.getElementById('questionCount');
+            container.innerHTML = '';
+            countLabel.textContent = questions.length;
+
+            if (questions.length === 0) {
+                container.innerHTML = `
+                <div class="text-center text-gray-500 mt-20">
+                    <i class="fa-regular fa-folder-open text-4xl mb-4"></i>
+                    <p>目前沒有題目</p>
+                </div>`;
+                return;
+            }
+
+            questions.forEach(q => {
+                const isMC = q.type === 'mc';
+                const typeLabel = isMC ? '選擇題' : '是非題';
+                const typeColor = isMC ? 'bg-blue-600' : 'bg-green-600';
+                
+                // Subject mapping (fallback if missing)
+                const subjectMap = {
+                    'ch': '國語', 'en': '英文', 'na': '自然', 'ma': '數學', 'so': '社會', 'ot': '其他'
+                };
+                const subText = subjectMap[q.subject] || '未分類';
+
+                const card = document.createElement('div');
+                card.className = `bg-grey border border-gray-600 rounded p-4 cursor-pointer hover:border-teal transition relative group ${currentEditingId === q.id ? 'border-teal ring-1 ring-teal' : ''}`;
+                card.onclick = () => loadToForm(q.id);
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs ${typeColor} text-white px-2 py-1 rounded">${typeLabel}</span>
+                            <span class="text-xs bg-gray-700 px-2 py-1 rounded border border-gray-600">${q.unit || '無單元'}</span>
+                            <span class="text-xs text-gray-400">#${q.id}</span>
+                        </div>
+                        <span class="text-xs text-teal border border-teal px-1 rounded">${subText}</span>
+                    </div>
+                    <p class="text-sm text-gray-200 line-clamp-2 mb-2">${escapeHtml(q.q)}</p>
+                    <div class="text-xs text-gray-500 truncate">答案: ${formatAnswerDisplay(q)}</div>
+                    
+                    <button onclick="deleteQuestion(event, ${q.id})" class="absolute top-2 right-2 text-gray-500 hover:text-danger opacity-0 group-hover:opacity-100 transition p-1">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function formatAnswerDisplay(q) {
+            if (q.type === 'mc') {
+                // MC stored as 0-index in file, display as 1-based
+                // Check if options exist
+                if (q.options && q.options.length > q.a) {
+                   return `(${parseInt(q.a) + 1}) ${q.options[q.a]}`;
+                }
+                return (parseInt(q.a) + 1);
+            } else {
+                return q.a === 'O' ? 'O (正確)' : 'X (錯誤)';
+            }
+        }
+
+        function loadToForm(id) {
+            const q = questions.find(x => x.id === id);
+            if (!q) return;
+
+            currentEditingId = id;
+            document.getElementById('editStatus').textContent = `正在編輯 #${id}`;
+            document.getElementById('editStatus').className = "text-xs font-bold text-teal";
+
+            // Fill Fields
+            document.getElementById('q_id').value = q.id;
+            document.getElementById('q_subject').value = q.subject || '';
+            
+            // Handle Unit (If unit is not in 1-15, set to Other or add it?)
+            // For simplicity, if it matches standard units select it, else check logic
+            const unitSelect = document.getElementById('q_unit');
+            let unitFound = false;
+            for(let opt of unitSelect.options){
+                if(opt.value === q.unit) {
+                    unitSelect.value = q.unit;
+                    unitFound = true;
+                    break;
+                }
+            }
+            if(!unitFound) unitSelect.value = '其他'; // Fallback
+
+            document.getElementById('q_type').value = q.type;
+            document.getElementById('q_text').value = q.q;
+            document.getElementById('q_exp').value = q.exp || '';
+            document.getElementById('charCount').textContent = q.q.length;
+
+            toggleOptionType(); // Reset UI for Type
+
+            // Fill Options & Answer
+            if (q.type === 'mc') {
+                for(let i=0; i<4; i++) {
+                    document.getElementById(`opt_${i+1}`).value = q.options[i] || '';
+                }
+                document.getElementById('q_answer').value = q.a; // 0,1,2,3
+            } else {
+                // TF
+                document.getElementById('q_answer').value = q.a; // "O" or "X"
+            }
+
+            // Highlight in list
+            renderList(); 
+        }
+
+        function createNewQuestion() {
+            currentEditingId = null;
+            document.getElementById('editStatus').textContent = "新增模式";
+            document.getElementById('editStatus').className = "text-xs font-normal text-gray-400";
+            
+            document.getElementById('examForm').reset();
+            document.getElementById('q_id').value = '';
+            document.getElementById('charCount').textContent = '0';
+            toggleOptionType();
+            
+            // Set default answer to first available
+            const ansSelect = document.getElementById('q_answer');
+            if(ansSelect.options.length > 0) ansSelect.selectedIndex = 0;
+        }
+
+        function toggleOptionType() {
+            const type = document.getElementById('q_type').value;
+            const mcArea = document.getElementById('mcOptions');
+            const tfArea = document.getElementById('tfOptions');
+            const ansSelect = document.getElementById('q_answer');
+
+            ansSelect.innerHTML = '';
+
+            if (type === 'mc') {
+                mcArea.classList.remove('hidden');
+                tfArea.classList.add('hidden');
+                
+                // Create Answer Options 1-4
+                for(let i=1; i<=4; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i-1; // Save as 0-index
+                    opt.textContent = `選項 ${i}`;
+                    ansSelect.appendChild(opt);
+                }
+            } else {
+                mcArea.classList.add('hidden');
+                tfArea.classList.remove('hidden');
+
+                // Create Answer Options O/X
+                const optO = document.createElement('option');
+                optO.value = 'O';
+                optO.textContent = 'O (正確)';
+                ansSelect.appendChild(optO);
+                
+                const optX = document.createElement('option');
+                optX.value = 'X';
+                optX.textContent = 'X (錯誤)';
+                ansSelect.appendChild(optX);
+            }
+        }
+
+        function saveQuestion() {
+            // Get values
+            const type = document.getElementById('q_type').value;
+            const unit = document.getElementById('q_unit').value;
+            const qText = document.getElementById('q_text').value.trim();
+            const subject = document.getElementById('q_subject').value; // Can be empty
+            const ans = document.getElementById('q_answer').value;
+            const exp = document.getElementById('q_exp').value;
+            
+            // Validation
+            if (!unit || !qText || !ans) {
+                showAlert("請填寫所有必要欄位（單元、題目、答案）！\n科目可為空白。");
+                return;
+            }
+
+            let options = [];
+            if (type === 'mc') {
+                for(let i=1; i<=4; i++) {
+                    const val = document.getElementById(`opt_${i}`).value.trim();
+                    if(!val) {
+                        showAlert(`選擇題必須填寫完整 4 個選項！(選項 ${i} 空白)`);
+                        return;
+                    }
+                    options.push(val);
+                }
+            } else {
+                options = ["O", "X"]; // Standard for TF
+            }
+
+            // Construct Object
+            const newQ = {
+                id: currentEditingId ? parseInt(currentEditingId) : Date.now(), // Auto ID if new
+                type: type,
+                unit: unit,
+                subject: subject,
+                q: qText,
+                options: options,
+                a: type === 'mc' ? parseInt(ans) : ans,
+                exp: exp
+            };
+
+            // Save
+            if (currentEditingId) {
+                // Update
+                const index = questions.findIndex(x => x.id === parseInt(currentEditingId));
+                if(index !== -1) {
+                    questions[index] = newQ;
+                }
+            } else {
+                // Add
+                questions.push(newQ);
+            }
+
+            renderList();
+            
+            // If it was new, set it as editing now
+            if (!currentEditingId) {
+                loadToForm(newQ.id);
+            }
+            
+            // Update time
+            updateDates();
+            
+            // Visual feedback
+            const saveBtn = document.querySelector('button[onclick="saveQuestion()"]');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fa-solid fa-check mr-2"></i>已儲存';
+            setTimeout(() => { saveBtn.innerHTML = originalText; }, 1000);
+        }
+
+        function deleteQuestion(e, id) {
+            e.stopPropagation(); // Prevent card click
+            if(confirm('確定要刪除這題嗎？')) {
+                questions = questions.filter(q => q.id !== id);
+                if(currentEditingId === id) {
+                    createNewQuestion();
+                }
+                renderList();
+            }
+        }
+
+        function downloadJson() {
+            if(questions.length === 0) {
+                showAlert("目前沒有考題可以下載！");
+                return;
+            }
+
+            const dataStr = JSON.stringify(questions, null, 2); // Pretty print
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `exam_questions_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- Utils ---
+        function showAlert(msg) {
+            document.getElementById('alertMessage').innerText = msg;
+            document.getElementById('alertModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('alertModal').classList.add('hidden');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
