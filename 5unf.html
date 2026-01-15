@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -25,28 +26,81 @@
         }
     </script>
     <style>
-        body { font-family: "Microsoft JhengHei", "Heiti TC", sans-serif; background-color: #FFF8E1; }
-        .sticky-header { position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .sticky-footer { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 50; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .question-card { transition: all 0.3s ease; border-left: 5px solid transparent; }
-        .question-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .question-card.marked { border-left-color: #FFA240; background-color: #FFF3E0; }
-        .question-card.error { border: 2px solid #D73535; background-color: #FEE2E2; }
-        .teacher-zone { display: none; }
+        body {
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background-color: #FFF8E1;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .sticky-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 50;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .question-card {
+            transition: all 0.3s ease;
+            border-left: 5px solid transparent;
+        }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .question-card.marked {
+            border-left-color: #FFA240;
+            background-color: #FFF3E0;
+        }
+
+        .question-card.error {
+            border: 2px solid #D73535;
+            background-color: #FEE2E2;
+        }
+
+        .teacher-zone {
+            display: none;
+        }
+
         /* 隱藏 Radio 預設樣式，改用自定義樣式 */
-        .option-input:checked + label { background-color: #FFD41D; font-weight: bold; border-color: #D73535; }
-        
+        .option-input:checked+label {
+            background-color: #FFD41D;
+            font-weight: bold;
+            border-color: #D73535;
+        }
+
         /* 錯題檢視樣式 */
-        .correct-answer-show { color: green; font-weight: bold; }
-        .wrong-answer-show { color: red; text-decoration: line-through; }
+        .correct-answer-show {
+            color: green;
+            font-weight: bold;
+        }
+
+        .wrong-answer-show {
+            color: red;
+            text-decoration: line-through;
+        }
     </style>
 </head>
+
 <body class="pb-32">
 
     <header class="sticky-header bg-main text-dark p-4 flex justify-between items-center">
         <h1 class="text-xl md:text-2xl font-bold truncate">113學年-康軒(五上)自然線上期末測驗系統_1.11.21.35</h1>
-        <div id="timerDisplay" class="text-2xl font-mono font-bold text-danger bg-white px-4 py-1 rounded-lg shadow hidden">
-            40:00
+        <div class="flex items-center gap-4">
+            <div id="headerStudentName" class="text-lg md:text-xl font-bold text-dark hidden"></div>
+            <div id="timerDisplay"
+                class="text-2xl font-mono font-bold text-danger bg-white px-4 py-1 rounded-lg shadow hidden">
+                40:00
+            </div>
         </div>
     </header>
 
@@ -54,26 +108,39 @@
         <div class="bg-white p-8 rounded-2xl shadow-xl max-w-2xl w-full text-center border-t-8 border-accent">
             <h2 class="text-3xl font-bold mb-6 text-dark">準備好開始考試了嗎？</h2>
             <div class="text-left bg-gray-50 p-6 rounded-lg mb-8 text-gray-700">
-                <p class="mb-2"><i class="fas fa-book-open mr-2 text-accent"></i><strong>範圍：</strong>康軒五上 單元3 (空氣的組成) ~ 單元4 (神秘的天空)</p>
-                <p class="mb-2"><i class="fas fa-flask mr-2 text-accent"></i><strong>重點：</strong>實驗設計(變因)、燃燒三要素、鐵生鏽、太陽運行、星座四季。</p>
+                <p class="mb-2"><i class="fas fa-book-open mr-2 text-accent"></i><strong>範圍：</strong>康軒五上 單元3 (空氣的組成) ~
+                    單元4 (神秘的天空)</p>
+                <p class="mb-2"><i
+                        class="fas fa-flask mr-2 text-accent"></i><strong>重點：</strong>實驗設計(變因)、燃燒三要素、鐵生鏽、太陽運行、星座四季。</p>
                 <p class="mb-2"><i class="fas fa-clock mr-2 text-accent"></i><strong>時間：</strong>40 分鐘</p>
                 <p class="mb-2"><i class="fas fa-list-ol mr-2 text-accent"></i><strong>題數：</strong>50 題 (每題2分，共100分)</p>
                 <p class="text-sm text-gray-500 mt-4 border-t pt-2">資料來源：歷年臺灣地區國小五年級自然科康軒版考古題資料庫 / 康軒教學指引</p>
             </div>
-            
-            <button onclick="startQuiz()" class="bg-gradient-to-r from-accent to-light hover:from-main hover:to-accent text-white font-bold py-4 px-12 rounded-full text-xl shadow-lg transform transition hover:scale-105 active:scale-95">
+
+            <div class="mb-6 w-full max-w-sm mx-auto">
+                <input type="text" id="studentName" placeholder="請輸入姓名 (例如:王小明)"
+                    class="w-full px-6 py-3 text-lg border-2 border-gray-300 rounded-full focus:outline-none focus:border-accent text-center shadow-sm placeholder-gray-400 transition-colors">
+            </div>
+
+            <button onclick="startQuiz()"
+                class="bg-gradient-to-r from-accent to-light hover:from-main hover:to-accent text-white font-bold py-4 px-12 rounded-full text-xl shadow-lg transform transition hover:scale-105 active:scale-95">
                 <i class="fas fa-play mr-2"></i> 開始作答
             </button>
-            
+
             <div class="mt-12">
                 <button onclick="toggleTeacherZone()" class="text-gray-400 hover:text-gray-600 text-sm underline">
                     家長/老師專區 (設定與下載)
                 </button>
-                <div id="teacherZone" class="teacher-zone mt-4 p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50">
+                <div id="teacherZone"
+                    class="teacher-zone mt-4 p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50">
                     <h3 class="font-bold mb-3">考題管理</h3>
                     <div class="flex gap-4 justify-center">
-                        <button onclick="downloadQuestions()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"><i class="fas fa-download"></i> 下載考題 (JSON)</button>
-                        <button onclick="uploadQuestions()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"><i class="fas fa-upload"></i> 上傳考題 (JSON)</button>
+                        <button onclick="downloadQuestions()"
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"><i
+                                class="fas fa-download"></i> 下載考題 (JSON)</button>
+                        <button onclick="uploadQuestions()"
+                            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"><i
+                                class="fas fa-upload"></i> 上傳考題 (JSON)</button>
                     </div>
                 </div>
             </div>
@@ -84,22 +151,31 @@
         <div id="questionsList" class="space-y-6"></div>
     </div>
 
-    <footer id="quizFooter" class="sticky-footer bg-dark text-white p-3 hidden grid grid-cols-1 md:grid-cols-3 items-center gap-4">
+    <footer id="quizFooter"
+        class="sticky-footer bg-dark text-white p-3 hidden grid grid-cols-1 md:grid-cols-3 items-center gap-4">
         <div class="flex gap-4 text-sm md:text-base justify-center md:justify-start pl-0 md:pl-8">
             <span class="text-green-400"><i class="fas fa-check-circle"></i> 已答: <span id="statAnswered">0</span></span>
-            <span class="text-red-400 cursor-pointer hover:underline" onclick="scrollToFirstUnanswered()"><i class="fas fa-times-circle"></i> 未答: <span id="statUnanswered">50</span></span>
-            <span class="text-accent cursor-pointer hover:underline" onclick="scrollToFirstMarked()"><i class="fas fa-flag"></i> 待檢查: <span id="statMarked">0</span></span>
+            <span class="text-red-400 cursor-pointer hover:underline" onclick="scrollToFirstUnanswered()"><i
+                    class="fas fa-times-circle"></i> 未答: <span id="statUnanswered">50</span></span>
+            <span class="text-accent cursor-pointer hover:underline" onclick="scrollToFirstMarked()"><i
+                    class="fas fa-flag"></i> 待檢查: <span id="statMarked">0</span></span>
         </div>
 
         <div class="flex justify-center">
-            <button onclick="preSubmitCheck()" class="bg-gradient-to-r from-danger to-light hover:brightness-110 text-white font-bold py-3 px-10 rounded-full shadow-lg text-lg transform transition active:scale-95 border-2 border-white">
+            <button onclick="preSubmitCheck()"
+                class="bg-gradient-to-r from-danger to-light hover:brightness-110 text-white font-bold py-3 px-10 rounded-full shadow-lg text-lg transform transition active:scale-95 border-2 border-white">
                 <i class="fas fa-paper-plane mr-2"></i> 繳卷送出
+            </button>
+            <button onclick="autoFillAnswers()"
+                class="ml-2 bg-gray-600 hover:bg-gray-500 text-white text-xs py-1 px-3 rounded opacity-70 hover:opacity-100">
+                測試填答
             </button>
         </div>
 
         <div id="scoreArea" class="hidden justify-center md:justify-end pr-0 md:pr-8">
             <span class="text-2xl font-bold text-main">得分: <span id="finalScore">0</span>/100</span>
-            <button onclick="showAnswersWithPassword()" class="ml-4 bg-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-500">詳解</button>
+            <button onclick="showAnswersWithPassword()"
+                class="ml-4 bg-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-500">詳解</button>
         </div>
     </footer>
 
@@ -107,7 +183,7 @@
         // --- Data: 模擬考古題庫 (50題，依照康軒五上單元3, 4) ---
         // 為了節省空間與展示，這裡我會生成核心題型，並透過程式邏輯擴充到50題。
         // 包含：是非(True/False), 選擇(Multiple Choice), 配合(Matching -> 改為選對應選項)
-        
+
         const coreQuestions = [
             // 單元 3：空氣的組成
             { id: 1, type: 'tf', unit: '單元3', q: '燃燒的三要素包括：可燃物、助燃物（氧氣）和達到燃點。', options: ['O', 'X'], a: 'O', exp: '燃燒必須同時具備可燃物、助燃物(氧氣)及達到燃點三個條件，缺一不可。' },
@@ -117,7 +193,7 @@
             { id: 5, type: 'mc', unit: '單元3', q: '下列哪一種方法無法有效防止鐵製品生鏽？', options: ['塗油漆', '保持乾燥', '電鍍', '經常用清水沖洗'], a: 3, exp: '水是生鏽的必要條件之一，經常用清水沖洗反而容易造成生鏽。' },
             { id: 6, type: 'mc', unit: '單元3', q: '二氧化碳的特性不包含下列哪一項？', options: ['可以使澄清石灰水變混濁', '比空氣重', '可以幫助燃燒', '無色無味'], a: 2, exp: '二氧化碳不助燃，甚至可以用來滅火。' },
             { id: 7, type: 'match', unit: '單元3', q: '請配合下列滅火原理：\n(1) 酒精燈使用完用燈蓋蓋熄\n(2) 消防隊用水滅火\n(3) 森林大火開闢防火巷', options: ['(1)隔絕助燃物 (2)降低溫度 (3)移除可燃物', '(1)降低溫度 (2)隔絕助燃物 (3)移除可燃物', '(1)移除可燃物 (2)降低溫度 (3)隔絕助燃物', '(1)隔絕助燃物 (2)移除可燃物 (3)降低溫度'], a: 0, exp: '蓋熄=隔絕氧氣；水=降溫；防火巷=移除樹木(燃料)。' },
-            
+
             // 單元 4：神秘的天空
             { id: 8, type: 'tf', unit: '單元4', q: '太陽在天空中的位置變化，主要是因為太陽繞著地球旋轉造成的。', options: ['O', 'X'], a: 'X', exp: '是地球自轉造成的視運動。' },
             { id: 9, type: 'tf', unit: '單元4', q: '在台灣，一年之中中午太陽高度角最大（影子最短）的日子是夏至。', options: ['O', 'X'], a: 'O', exp: '夏至時太陽直射北回歸線附近，對台灣來說高度角最大，影子最短。' },
@@ -126,7 +202,7 @@
             { id: 12, type: 'mc', unit: '單元4', q: '觀測星星移動的實驗中，如果你面朝「南方」觀測，星星的移動路徑是？', options: ['由左向右移動 (東->西)', '由右向左移動 (西->東)', '由下向上移動', '繞著圓心逆時針旋轉'], a: 0, exp: '面南時，左手是東，右手是西。星星東升西落，所以是由左(東)向右(西)。' },
             { id: 13, type: 'mc', unit: '單元4', q: '不同季節的夜晚，在同一時刻看到的星座會不同，這是因為？', options: ['地球自轉', '地球公轉', '月球公轉', '太陽自轉'], a: 1, exp: '四季星空變化是因為地球繞太陽公轉，導致夜晚面向的宇宙方向不同。' },
             { id: 14, type: 'match', unit: '單元4', q: '請配合星座與季節：\n(1) 獵戶座\n(2) 天蠍座\n(3) 天鵝座 (夏季大三角)', options: ['(1)冬季 (2)夏季 (3)夏季', '(1)夏季 (2)冬季 (3)秋季', '(1)秋季 (2)春季 (3)冬季', '(1)冬季 (2)秋季 (3)春季'], a: 0, exp: '獵戶座是冬季星座之王；天蠍座與夏季大三角(天鵝、天琴、天鷹)屬於夏季。' },
-            
+
             // 補充更多實驗變因題 (使用者強調)
             { id: 15, type: 'mc', unit: '單元3', q: '小明想研究「線香數量是否影響燃燒時間」，請問此實驗的「操作變因」是什麼？', options: ['廣口瓶的大小', '線香的長短', '線香的數量', '燃燒的時間'], a: 2, exp: '要研究什麼，那個因素就是操作變因(只能有一個)。' },
             { id: 16, type: 'mc', unit: '單元3', q: '承上題，此實驗的「應變變因」(結果) 是什麼？', options: ['廣口瓶的溫度', '線香的數量', '瓶蓋蓋上的速度', '燃燒的時間長短'], a: 3, exp: '應變變因是因為操作變因改變而產生的結果。' },
@@ -138,12 +214,12 @@
 
         // 為了達到50題，我們將題目進行變體擴充 (真實開發會用資料庫，這邊模擬產生)
         let fullQuestionBank = [];
-        
+
         function generateFullBank() {
             fullQuestionBank = JSON.parse(JSON.stringify(coreQuestions)); // Copy core
             // 產生變體題目直到50題
             let counter = 21;
-            while(fullQuestionBank.length < 50) {
+            while (fullQuestionBank.length < 50) {
                 // 隨機抽取核心題目改寫 (模擬)
                 const template = coreQuestions[Math.floor(Math.random() * coreQuestions.length)];
                 const newQ = { ...template };
@@ -163,6 +239,7 @@
         let userAnswers = {};
         let markedQuestions = new Set();
         let isSubmitted = false;
+        let examStartTime = ''; // Store formatted start time
 
         // --- Logic ---
 
@@ -186,20 +263,12 @@
                     const zone = document.getElementById('teacherZone');
                     zone.style.display = zone.style.display === 'block' ? 'none' : 'block';
                 } else if (result.value) {
-                    Swal.fire({icon: 'error', title: '密碼錯誤'});
+                    Swal.fire({ icon: 'error', title: '密碼錯誤' });
                 }
             });
         }
 
-        function downloadQuestions() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullQuestionBank));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "nature_exam_g5.json");
-            document.body.appendChild(downloadAnchorNode);
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
-        }
+
 
         function uploadQuestions() {
             // 模擬上傳功能
@@ -207,12 +276,37 @@
         }
 
         function startQuiz() {
+            // Check Name
+            const sName = document.getElementById('studentName').value.trim();
+            if (!sName) {
+                Swal.fire({
+                    title: '請輸入姓名',
+                    text: '請先輸入您的姓名才能開始作答！',
+                    icon: 'warning',
+                    confirmButtonColor: '#FFA240'
+                });
+                return;
+            }
+
+            // Capture Start Time
+            const now = new Date();
+            examStartTime = now.getFullYear() + '/' +
+                (now.getMonth() + 1).toString().padStart(2, '0') + '/' +
+                now.getDate().toString().padStart(2, '0') + ' ' +
+                now.getHours().toString().padStart(2, '0') + ':' +
+                now.getMinutes().toString().padStart(2, '0');
+
             // Shuffle Questions
             currentQuestions = fullQuestionBank.sort(() => 0.5 - Math.random());
-            
+
+            // Set Name in Header
+            const nameDisplay = document.getElementById('headerStudentName');
+            nameDisplay.textContent = sName + ' ' + '你好!';
+            nameDisplay.classList.remove('hidden');
+
             // Render
             renderQuestions();
-            
+
             // UI Switch
             document.getElementById('startScreen').classList.add('hidden');
             document.getElementById('quizContainer').classList.remove('hidden');
@@ -252,7 +346,7 @@
                             <div class="mt-2">
                                 <input type="radio" name="q_${q.id}" id="q_${q.id}_${i}" value="${i}" class="option-input hidden" onchange="saveAnswer(${q.id}, '${i}')">
                                 <label for="q_${q.id}_${i}" class="block cursor-pointer px-4 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition">
-                                    <span class="font-bold text-accent mr-2">(${i+1})</span> ${opt}
+                                    <span class="font-bold text-accent mr-2">(${i + 1})</span> ${opt}
                                 </label>
                             </div>
                         `;
@@ -286,7 +380,7 @@
         }
 
         function saveAnswer(qId, value) {
-            if(isSubmitted) return;
+            if (isSubmitted) return;
             userAnswers[qId] = value;
             document.getElementById(`card_${qId}`).classList.remove('error');
             updateStats();
@@ -315,11 +409,11 @@
         function scrollToFirstUnanswered() {
             for (let q of currentQuestions) {
                 if (!userAnswers[q.id]) {
-                    document.getElementById(`card_${q.id}`).scrollIntoView({behavior: 'smooth', block: 'center'});
+                    document.getElementById(`card_${q.id}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
                     document.getElementById(`card_${q.id}`).classList.add('error');
                     Swal.fire({
                         title: '未作答',
-                        text: `第 ${currentQuestions.indexOf(q)+1} 題尚未作答`,
+                        text: `第 ${currentQuestions.indexOf(q) + 1} 題尚未作答`,
                         icon: 'warning',
                         timer: 1500,
                         showConfirmButton: false,
@@ -331,9 +425,9 @@
         }
 
         function scrollToFirstMarked() {
-            if(markedQuestions.size === 0) return;
+            if (markedQuestions.size === 0) return;
             const firstMarkId = Array.from(markedQuestions)[0];
-            document.getElementById(`card_${firstMarkId}`).scrollIntoView({behavior: 'smooth', block: 'center'});
+            document.getElementById(`card_${firstMarkId}`).scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function startTimer() {
@@ -342,7 +436,7 @@
                 timeLeft--;
                 const m = Math.floor(timeLeft / 60);
                 const s = timeLeft % 60;
-                display.innerText = `${m}:${s < 10 ? '0'+s : s}`;
+                display.innerText = `${m}:${s < 10 ? '0' + s : s}`;
 
                 // Alerts
                 if (timeLeft === 25 * 60 || timeLeft === 10 * 60 || timeLeft === 5 * 60) {
@@ -368,7 +462,7 @@
         function preSubmitCheck() {
             const total = currentQuestions.length;
             const answered = Object.keys(userAnswers).length;
-            
+
             if (answered < total) {
                 Swal.fire({
                     title: '還有題目沒寫喔！',
@@ -404,11 +498,11 @@
         function submitExam(force = false) {
             clearInterval(timerInterval);
             isSubmitted = true;
-            
+
             // Calculate Score & Generate Report
             let score = 0;
             let wrongQuestions = [];
-            
+
             currentQuestions.forEach((q) => {
                 const userAns = userAnswers[q.id];
                 // Check answer (simple comparison for TF and MC)
@@ -430,13 +524,14 @@
                         question: q.q,
                         userAns: formatAnswerText(q, userAns),
                         correctAns: formatAnswerText(q, q.a),
+                        explanation: q.exp,
                         unit: q.unit
                     });
-                    
+
                     // Visual Feedback for Error
                     const card = document.getElementById(`card_${q.id}`);
                     card.classList.add('error');
-                    
+
                     // Show correct answer visually in card
                     const correctText = formatAnswerText(q, q.a);
                     const wrongMsg = document.createElement('div');
@@ -450,22 +545,31 @@
             document.getElementById('finalScore').innerText = score;
             document.getElementById('scoreArea').classList.remove('hidden');
             document.getElementById('scoreArea').classList.add('flex');
-            
+
             // Disable inputs
             document.querySelectorAll('input').forEach(i => i.disabled = true);
 
-            // Create Excel
-            if (wrongQuestions.length > 0) {
-                generateExcel(wrongQuestions, score);
-            }
+            const wrongCount = wrongQuestions.length;
 
             Swal.fire({
-                title: force ? '時間到！已自動交卷' : '測驗完成！',
-                html: `你的得分是：<strong style="font-size: 2em; color: #D73535;">${score}</strong> 分<br>錯題已整理為 Excel 下載。`,
+                title: '測驗完成',
+                html: `
+                    <div style="text-align: left; font-size: 1.1em; line-height: 1.6;">
+                        <p><strong>得分：</strong><span style="color: #D73535; font-size: 1.5em;">${score}</span> / 100</p>
+                        <p><strong>答錯題數：</strong>${wrongCount} 題</p>
+                    </div>
+                `,
                 icon: score >= 80 ? 'success' : 'info',
-                confirmButtonText: '查看錯題',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fas fa-file-pdf"></i> 下載成績單 (PDF)',
+                cancelButtonText: '關閉',
                 confirmButtonColor: '#FFD41D',
-                backdrop: `rgba(0,0,0,0.5)`
+                cancelButtonColor: '#333',
+                allowOutsideClick: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    generatePDF(wrongQuestions, score);
+                }
             });
         }
 
@@ -473,42 +577,86 @@
             if (val === undefined || val === null) return "未作答";
             if (q.type === 'tf') return val === 'O' ? 'O (是)' : 'X (否)';
             // For MC/Match
-            return `(${parseInt(val)+1}) ${q.options[val]}`;
+            return `(${parseInt(val) + 1}) ${q.options[val]}`;
         }
 
-        function generateExcel(wrongList, score) {
-            // Define Header
-            const data = [
-                [{ v: "題號", t: "s", s: { font: { bold: true } } }, 
-                 { v: "單元", t: "s", s: { font: { bold: true } } }, 
-                 { v: "題目", t: "s", s: { font: { bold: true } } }, 
-                 { v: "你的答案", t: "s", s: { font: { bold: true, color: { rgb: "FF0000" } } } }, 
-                 { v: "正確答案", t: "s", s: { font: { bold: true, color: { rgb: "008000" } } } }]
-            ];
+        function generatePDF(wrongList, score) {
+            const sName = document.getElementById('studentName').value.trim() || '考生';
 
-            // Add Rows
-            wrongList.forEach(item => {
-                data.push([
-                    { v: item.qNum, t: "n" },
-                    { v: item.unit, t: "s" },
-                    { v: item.question, t: "s" },
-                    { v: item.userAns, t: "s", s: { font: { bold: true, color: { rgb: "FF0000" } } } }, // Red & Bold
-                    { v: item.correctAns, t: "s" }
-                ]);
+            // Format Filename: Name_Date_SubjectCode.pdf (N for Nature)
+            // Date format YYYYMMDD
+            const now = new Date();
+            const dateStr = now.getFullYear() +
+                (now.getMonth() + 1).toString().padStart(2, '0') +
+                now.getDate().toString().padStart(2, '0');
+            const fileName = `${sName}_${dateStr}_N.pdf`;
+
+            // Create temporary element for PDF content
+            const element = document.createElement('div');
+            element.style.padding = '20px';
+            element.style.fontFamily = '"Microsoft JhengHei", sans-serif';
+            element.style.color = '#333';
+
+            let wrongHtml = '';
+            wrongList.forEach((item, index) => {
+                wrongHtml += `
+                    <div style="margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 10px;">
+                        <p style="margin: 5px 0; font-weight: bold;">${index + 1}. [${item.unit}] ${item.question}</p>
+                        <p style="margin: 5px 0; color: red;">你的答案：${item.userAns}</p>
+                        <p style="margin: 5px 0; color: green;">正確答案：${item.correctAns}</p>
+                        <p style="margin: 5px 0; color: #555; font-size: 0.9em; background-color: #f9f9f9; padding: 5px;"><strong>詳解：</strong>${item.explanation}</p>
+                    </div>
+                `;
             });
 
-            // Summary Row
-            data.push([]);
-            data.push([{ v: `總分：${score} / 100`, t: "s", s: { font: { bold: true, sz: 14 } } }]);
+            if (wrongList.length === 0) {
+                wrongHtml = '<p>恭喜！全對！沒有錯題。</p>';
+            }
 
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            
-            // Column widths
-            ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 50 }, { wch: 20 }, { wch: 20 }];
+            element.innerHTML = `
+                <h1 style="text-align: center; color: #333; margin-bottom: 20px;">測驗成績單</h1>
+                <div style="border: 2px solid #FFD41D; padding: 15px; border-radius: 10px; margin-bottom: 20px; background-color: #FFF8E1;">
+                    <p><strong>姓名：</strong>${sName}</p>
+                    <p><strong>測驗時間：</strong>${examStartTime}</p>
+                    <p><strong>科目代號：</strong>N (自然)</p>
+                    <p style="font-size: 1.2em; border-top: 1px solid #ddd; margin-top: 10px; padding-top: 10px;">
+                        <strong>總分：</strong><span style="color: #D73535; font-size: 1.5em; font-weight: bold;">${score}</span> / 100
+                    </p>
+                </div>
+                <h3 style="border-bottom: 2px solid #333; padding-bottom: 5px; margin-bottom: 15px;">錯題檢討</h3>
+                ${wrongHtml}
+                <div style="margin-top: 30px; text-align: center; font-size: 0.8em; color: #888;">
+                    測驗系統自動生成
+                </div>
+            `;
 
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "錯題檢討");
-            XLSX.writeFile(wb, "exam_result.xlsx");
+            // Use html2pdf
+            const opt = {
+                margin: 10,
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Show loading
+            Swal.fire({
+                title: '產生 PDF 中...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                Swal.close();
+                Swal.fire({
+                    title: '下載完成',
+                    text: `已下載檔案: ${fileName}`,
+                    icon: 'success',
+                    timer: 2000
+                });
+            });
         }
 
         function showAnswersWithPassword() {
@@ -530,9 +678,44 @@
             });
         }
 
+        function autoFillAnswers() {
+            if (isSubmitted) return;
+            currentQuestions.forEach(q => {
+                let val;
+                if (q.type === 'tf') {
+                    val = Math.random() > 0.5 ? 'O' : 'X';
+                } else {
+                    const optLen = q.options ? q.options.length : 4;
+                    val = Math.floor(Math.random() * optLen).toString();
+                }
+
+                // Save logic
+                saveAnswer(q.id, val);
+
+                // Update UI
+                let inputId;
+                if (q.type === 'tf') {
+                    inputId = `q_${q.id}_${val.toLowerCase()}`;
+                } else {
+                    inputId = `q_${q.id}_${val}`;
+                }
+                const radio = document.getElementById(inputId);
+                if (radio) radio.checked = true;
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: '測試填答完成',
+                text: '已隨機填寫所有題目',
+                timer: 1000,
+                showConfirmButton: false
+            });
+        }
+
         // Initialize
         window.onload = init;
 
     </script>
 </body>
+
 </html>
