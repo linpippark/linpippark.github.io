@@ -94,7 +94,7 @@
 <body class="pb-32">
 
     <header class="sticky-header bg-main text-dark p-4 flex justify-between items-center">
-        <h1 class="text-xl md:text-2xl font-bold truncate">113學年-康軒(五上)自然線上期末測驗系統_1.11.21.35</h1>
+        <h1 class="text-xl md:text-2xl font-bold truncate">113學年-康軒(五上)自然線上期末測驗系統_2.1.17.1234</h1>
         <div class="flex items-center gap-4">
             <div id="headerStudentName" class="text-lg md:text-xl font-bold text-dark hidden"></div>
             <div id="timerDisplay"
@@ -131,6 +131,12 @@
                 <button onclick="toggleTeacherZone()" class="text-gray-400 hover:text-gray-600 text-sm underline">
                     家長/老師專區 (設定與下載)
                 </button>
+                <div class="mt-2">
+                    <button onclick="toggleQuestionManager()"
+                        class="text-accent hover:text-main text-sm underline font-bold">
+                        <i class="fas fa-edit"></i> 題庫與試卷管理 (需密碼)
+                    </button>
+                </div>
                 <div id="teacherZone"
                     class="teacher-zone mt-4 p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50">
                     <h3 class="font-bold mb-3">考題管理</h3>
@@ -179,6 +185,90 @@
         </div>
     </footer>
 
+    <!-- Question Management UI (Overlay) -->
+    <div id="managerUI" class="fixed inset-0 bg-gray-100 z-[60] hidden overflow-y-auto">
+        <div class="container mx-auto px-4 py-8 max-w-5xl">
+            <div class="flex justify-between items-center mb-8 bg-white p-4 rounded-lg shadow sticky top-0 z-10">
+                <h2 class="text-2xl font-bold text-dark"><i class="fas fa-database text-accent"></i> 題庫管理系統</h2>
+                <div class="flex gap-4">
+                    <button onclick="addNewQuestion()"
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                        <i class="fas fa-plus"></i> 新增題目
+                    </button>
+                    <button onclick="saveAndCloseManager()"
+                        class="bg-accent text-white px-4 py-2 rounded hover:bg-main font-bold shadow">
+                        <i class="fas fa-save"></i> 儲存並關閉
+                    </button>
+                </div>
+            </div>
+
+            <div id="managerList" class="space-y-4">
+                <!-- Questions will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Question Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 z-[70] hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+            <h3 id="editModalTitle" class="text-xl font-bold mb-4 border-b pb-2">編輯題目</h3>
+            <input type="hidden" id="editQId">
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold mb-1">單元名稱</label>
+                    <input type="text" id="editUnit" class="w-full border p-2 rounded" placeholder="例如：單元3">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold mb-1">題型</label>
+                    <select id="editType" class="w-full border p-2 rounded" onchange="toggleEditOptions()">
+                        <option value="tf">是非題 (True/False)</option>
+                        <option value="mc">選擇題 (Multiple Choice)</option>
+                        <option value="match">配合題/其他 (Matching)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold mb-1">題目敘述</label>
+                    <textarea id="editQuestionText" class="w-full border p-2 rounded h-24"
+                        placeholder="請輸入題目..."></textarea>
+                </div>
+
+                <div id="editOptionsArea">
+                    <label class="block text-sm font-bold mb-1">選項 (每行一個)</label>
+                    <textarea id="editOptions" class="w-full border p-2 rounded h-32"
+                        placeholder="選項1&#10;選項2&#10;選項3&#10;選項4"></textarea>
+                    <p class="text-xs text-gray-500">※ 是非題不需要填寫此欄位</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold mb-1">正確答案</label>
+                    <div id="editAnswerContainer">
+                        <!-- Dynamic Input -->
+                        <input type="text" id="editAnswer" class="w-full border p-2 rounded"
+                            placeholder="是非題填 O 或 X，選擇題填選項編號(0, 1, 2...)">
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        如果是非題：請填 <b>O</b> 或 <b>X</b><br>
+                        如果選擇題：請填數字索引 (0 代表第一個選項, 1 代表第二個...)
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold mb-1">詳解/解析</label>
+                    <textarea id="editExp" class="w-full border p-2 rounded h-24" placeholder="請輸入詳解說明..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button onclick="closeEditModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">取消</button>
+                <button onclick="saveQuestionEdit()"
+                    class="px-6 py-2 bg-accent text-white font-bold rounded hover:bg-main">儲存變更</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Data: 模擬考古題庫 (50題，依照康軒五上單元3, 4) ---
         // 為了節省空間與展示，這裡我會生成核心題型，並透過程式邏輯擴充到50題。
@@ -216,6 +306,15 @@
         let fullQuestionBank = [];
 
         function generateFullBank() {
+            // Check if we already have questions loaded from storage
+            // This check ensures that if questions are loaded from local storage,
+            // the coreQuestions are not used to overwrite them or generate new ones.
+            if (fullQuestionBank.length > 0 && localStorage.getItem('fullQuestionBank_v1')) {
+                return; // Don't overwrite saved questions with generated ones
+            }
+
+            // If no questions are loaded from storage, or storage is empty,
+            // then populate fullQuestionBank from coreQuestions and generate variants.
             fullQuestionBank = JSON.parse(JSON.stringify(coreQuestions)); // Copy core
             // 產生變體題目直到50題
             let counter = 21;
@@ -223,10 +322,8 @@
                 // 隨機抽取核心題目改寫 (模擬)
                 const template = coreQuestions[Math.floor(Math.random() * coreQuestions.length)];
                 const newQ = { ...template };
-                newQ.id = counter;
+                newQ.id = Date.now() + counter; // Unique ID
                 newQ.q = `(模擬變體題 ${counter}) ${template.q}`; // 標示為變體
-                // 微調內容確保不完全重複（在此範例中僅做標記，實際可連線後端AI生成）
-                // 為了讓家長看得到50題效果，我複製邏輯但加上編號
                 fullQuestionBank.push(newQ);
                 counter++;
             }
@@ -244,7 +341,8 @@
         // --- Logic ---
 
         function init() {
-            generateFullBank();
+            loadFromLocalStorage(); // Load questions first
+            generateFullBank(); // Then generate if needed (will skip if loaded)
             updateStats();
         }
 
@@ -270,9 +368,61 @@
 
 
 
+        function downloadQuestions() {
+            // Ensure data exists
+            if (fullQuestionBank.length === 0) {
+                // Try loading or generating
+                loadFromLocalStorage();
+                if (fullQuestionBank.length === 0) generateFullBank();
+            }
+
+            const dataStr = JSON.stringify(fullQuestionBank, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `exam_questions_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         function uploadQuestions() {
-            // 模擬上傳功能
-            Swal.fire('提示', '此為單機版演示，實際功能需搭配後端或讀取本地檔案 API', 'info');
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const json = JSON.parse(event.target.result);
+                        if (Array.isArray(json)) {
+                            fullQuestionBank = json;
+                            saveToLocalStorage();
+                            Swal.fire({
+                                icon: 'success',
+                                title: '匯入成功',
+                                text: `已成功載入 ${json.length} 題考題`,
+                                timer: 2000
+                            });
+                        } else {
+                            throw new Error('Format invalid');
+                        }
+                    } catch (err) {
+                        Swal.fire('匯入失敗', '檔案格式錯誤，請確保是有效的 JSON 題庫檔案', 'error');
+                        console.error(err);
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            input.click();
         }
 
         function startQuiz() {
@@ -280,10 +430,16 @@
             const sName = document.getElementById('studentName').value.trim();
             if (!sName) {
                 Swal.fire({
-                    title: '請輸入姓名',
-                    text: '請先輸入您的姓名才能開始作答！',
+                    title: '記得寫名字喔！',
+                    text: '請填寫姓名，這樣才能紀錄成績。',
                     icon: 'warning',
-                    confirmButtonColor: '#FFA240'
+                    confirmButtonColor: '#FFA240',
+                    didClose: () => {
+                        const input = document.getElementById('studentName');
+                        input.focus();
+                        input.classList.add('border-danger', 'animate-pulse');
+                        setTimeout(() => input.classList.remove('border-danger', 'animate-pulse'), 2000);
+                    }
                 });
                 return;
             }
@@ -614,19 +770,23 @@
             }
 
             element.innerHTML = `
-                <h1 style="text-align: center; color: #333; margin-bottom: 20px;">測驗成績單</h1>
+                <h1 style="text-align: center; color: #333; margin-bottom: 20px;font-size:1.5em">測驗成績單</h1>
                 <div style="border: 2px solid #FFD41D; padding: 15px; border-radius: 10px; margin-bottom: 20px; background-color: #FFF8E1;">
                     <p><strong>姓名：</strong>${sName}</p>
                     <p><strong>測驗時間：</strong>${examStartTime}</p>
                     <p><strong>科目代號：</strong>N (自然)</p>
                     <p style="font-size: 1.2em; border-top: 1px solid #ddd; margin-top: 10px; padding-top: 10px;">
                         <strong>總分：</strong><span style="color: #D73535; font-size: 1.5em; font-weight: bold;">${score}</span> / 100
+                        <span style="margin-left: 30px; font-size: 0.9em; color: #333; vertical-align: bottom;">
+                            <span style="display: inline-block; width: 14px; height: 14px; border: 1px solid #333; margin-right: 5px; vertical-align: middle;"></span>已訂正
+                            <span style="display: inline-block; border-bottom: 1px solid #333; width: 120px; margin-left: 10px;"></span>
+                        </span>
                     </p>
                 </div>
                 <h3 style="border-bottom: 2px solid #333; padding-bottom: 5px; margin-bottom: 15px;">錯題檢討</h3>
                 ${wrongHtml}
                 <div style="margin-top: 30px; text-align: center; font-size: 0.8em; color: #888;">
-                    測驗系統自動生成
+                    溫興提醒：錯誤的地方請再仔細閱讀課本，不要再錯同樣的題目。
                 </div>
             `;
 
@@ -714,6 +874,266 @@
 
         // Initialize
         window.onload = init;
+
+        // --- Question Management System Logic ---
+
+        function toggleQuestionManager() {
+            Swal.fire({
+                title: '請輸入管理密碼',
+                input: 'password',
+                inputAttributes: { autocapitalize: 'off' },
+                showCancelButton: true,
+                confirmButtonText: '登入管理',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#FFA240',
+                backdrop: `rgba(0,0,0,0.8)`
+            }).then((result) => {
+                if (result.value === '1234') {
+                    openManager();
+                } else if (result.value) {
+                    Swal.fire({ icon: 'error', title: '密碼錯誤' });
+                }
+            });
+        }
+
+        function openManager() {
+            // Ensure full bank is populated
+            if (fullQuestionBank.length === 0) {
+                generateFullBank();
+            }
+            renderManagerList();
+            document.getElementById('managerUI').classList.remove('hidden');
+        }
+
+        function saveAndCloseManager() {
+            saveToLocalStorage();
+            document.getElementById('managerUI').classList.add('hidden');
+
+            Swal.fire({
+                icon: 'success',
+                title: '設定已儲存',
+                text: `題庫已更新 (共 ${fullQuestionBank.length} 題)。`,
+                timer: 1500
+            });
+        }
+
+        // Deprecated simple close, pointing to saveAndClose
+        function closeManager() {
+            saveAndCloseManager();
+        }
+
+        function renderManagerList() {
+            const list = document.getElementById('managerList');
+            list.innerHTML = '';
+
+            fullQuestionBank.forEach((q, index) => {
+                const item = document.createElement('div');
+                item.className = 'bg-white p-4 rounded shadow border-l-4 border-gray-300 hover:border-accent transition flex justify-between items-start';
+
+                let typeLabel = q.type === 'tf' ? '是非' : (q.type === 'mc' ? '選擇' : '配合');
+                let answerText = q.type === 'tf' ? (q.a === 'O' ? 'O (是)' : 'X (否)') : `選項 ${parseInt(q.a) + 1}`;
+
+                item.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-gray-200 text-xs px-2 py-1 rounded">${q.unit}</span>
+                            <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${typeLabel}</span>
+                            <span class="text-xs text-gray-500 font-mono">#${index + 1}</span>
+                        </div>
+                        <p class="font-bold text-dark mb-1">${q.q}</p>
+                        <p class="text-xs text-green-600">正確答案: ${answerText}</p>
+                    </div>
+                    <div class="flex gap-2 ml-4">
+                        <button onclick="editQuestion(${index})" class="text-blue-500 hover:text-blue-700 p-2" title="編輯">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="deleteQuestion(${index})" class="text-red-500 hover:text-red-700 p-2" title="刪除">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        let currentEditIndex = -1;
+
+        function addNewQuestion() {
+            currentEditIndex = -1; // New
+            document.getElementById('editModalTitle').innerText = '新增題目';
+            document.getElementById('editQId').value = Date.now(); // Temp ID
+
+            // Reset Form
+            document.getElementById('editUnit').value = '';
+            document.getElementById('editType').value = 'mc';
+            document.getElementById('editQuestionText').value = '';
+            document.getElementById('editOptions').value = '';
+            document.getElementById('editAnswer').value = '';
+            document.getElementById('editExp').value = '';
+
+            toggleEditOptions();
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function editQuestion(index) {
+            currentEditIndex = index;
+            const q = fullQuestionBank[index];
+
+            document.getElementById('editModalTitle').innerText = '編輯題目';
+            document.getElementById('editQId').value = q.id;
+
+            document.getElementById('editUnit').value = q.unit;
+            document.getElementById('editType').value = q.type;
+            document.getElementById('editQuestionText').value = q.q;
+            document.getElementById('editExp').value = q.exp;
+
+            // Options
+            if (q.options) {
+                if (q.type === 'tf') {
+                    document.getElementById('editOptions').value = '';
+                } else {
+                    document.getElementById('editOptions').value = q.options.join('\n');
+                }
+            } else {
+                document.getElementById('editOptions').value = '';
+            }
+
+            // Answer
+            document.getElementById('editAnswer').value = q.a;
+
+            toggleEditOptions();
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        function toggleEditOptions() {
+            const type = document.getElementById('editType').value;
+            const optArea = document.getElementById('editOptionsArea');
+            if (type === 'tf') {
+                optArea.classList.add('opacity-50', 'pointer-events-none');
+                document.getElementById('editAnswerContainer').innerHTML = '<select id="editAnswer" class="w-full border p-2 rounded"><option value="O">O (是)</option><option value="X">X (否)</option></select>';
+            } else {
+                optArea.classList.remove('opacity-50', 'pointer-events-none');
+                // Restore text input if it was select
+                const currentVal = document.getElementById('editAnswer').value;
+                if (document.getElementById('editAnswer').tagName === 'SELECT') {
+                    document.getElementById('editAnswerContainer').innerHTML = '<input type="text" id="editAnswer" class="w-full border p-2 rounded" placeholder="填選項編號(0, 1, 2...)">';
+                }
+            }
+        }
+
+        function saveQuestionEdit() {
+            const unit = document.getElementById('editUnit').value;
+            const type = document.getElementById('editType').value;
+            const qText = document.getElementById('editQuestionText').value;
+            const exp = document.getElementById('editExp').value;
+            let ans = document.getElementById('editAnswer').value;
+
+            if (!qText || !unit) {
+                Swal.fire('欄位未填', '請填寫完整題目資訊', 'warning');
+                return;
+            }
+
+            let options = [];
+            if (type !== 'tf') {
+                const optStr = document.getElementById('editOptions').value;
+                options = optStr.split('\n').map(s => s.trim()).filter(s => s);
+                if (options.length < 2) {
+                    Swal.fire('選項不足', '選擇題至少需要兩個選項', 'warning');
+                    return;
+                }
+            } else {
+                options = ['O', 'X'];
+            }
+
+            if (type === 'mc' || type === 'match') {
+                // Ensure ans is a number
+                if (isNaN(ans) || ans < 0 || ans >= options.length) {
+                    Swal.fire('答案格式錯誤', `請輸入有效的選項索引 0 ~ ${options.length - 1}`, 'error');
+                    return;
+                }
+                ans = parseInt(ans);
+            }
+
+            const newQ = {
+                id: currentEditIndex === -1 ? Date.now() : fullQuestionBank[currentEditIndex].id,
+                type: type,
+                unit: unit,
+                q: qText,
+                options: options,
+                a: ans,
+                exp: exp
+            };
+
+            if (currentEditIndex === -1) {
+                fullQuestionBank.push(newQ);
+            } else {
+                fullQuestionBank[currentEditIndex] = newQ;
+            }
+
+            // Auto save to storage during edit? The user said "Click Save to save back".
+            // So maybe we shouldn't save to LS immediately? 
+            // Better to save immediately to avoid data loss, the "Save" button is just for confirmation/closing.
+            // But strict interpreted: "After finished... click Save".
+            // I'll stick to 'Save on Edit' for safety, and the Save button just closes.
+            // Or I can just update the array in memory, and only save to LS on the big Save button.
+            // Let's safe to LS on every edit for safety.
+
+            // saveToLocalStorage(); // Let's wait for the big save button to be strictly compliant? 
+            // Ideally "Save" button commits. Unsaved changes should be in memory.
+            // I will update memory here (fullQuestionBank), but NOT call saveToLocalStorage().
+            // saveToLocalStorage() will be called in saveAndCloseManager().
+
+            closeEditModal();
+            renderManagerList();
+            Swal.fire({ icon: 'success', title: '暫存成功', text: '請記得按「儲存並關閉」以永久保存', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false });
+        }
+
+        function deleteQuestion(index) {
+            Swal.fire({
+                title: '確定刪除?',
+                text: "刪除後無法復原！",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: '刪除'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fullQuestionBank.splice(index, 1);
+                    renderManagerList();
+                    Swal.fire('已刪除', '記得按儲存以生效', 'success');
+                }
+            });
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('fullQuestionBank_v1', JSON.stringify(fullQuestionBank));
+        }
+
+        function loadFromLocalStorage() {
+            const stored = localStorage.getItem('fullQuestionBank_v1');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        fullQuestionBank = parsed;
+                        console.log('Loaded full question bank from LocalStorage');
+                    }
+                } catch (e) {
+                    console.error('Failed to load questions', e);
+                }
+            }
+        }
+
+        // Load on init (override the init function logic slightly)
+        const originalInit = init;
+        init = function () {
+            loadFromLocalStorage();
+            originalInit();
+        }
 
     </script>
 </body>
