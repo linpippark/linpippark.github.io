@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>意見輔助工具 V4.0</title>
+    <style>
+        /* 基礎配色與排版 */
+        body { 
+            font-family: "微軟正黑體", sans-serif; 
+            display: flex; 
+            height: 100vh; 
+            margin: 0; 
+            background-color: #F5EEDC; 
+            color: #183B4E; 
+        }
+        .panel { 
+            padding: 10px; 
+            box-sizing: border-box; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        /* 版面寬度分配 (左20%、中71%、右9%) */
+        .left-panel { 
+            width: 18%; 
+            border-right: 2px solid #183B4E; 
+        }
+        .center-panel { 
+            width: 71%; 
+        }
+        .right-panel { 
+            width: 9%; 
+            border-left: 1px solid #183B4E; 
+        }
+        
+        /* 工具列與元件設定 */
+        .toolbar { 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #183B4E; 
+            margin-bottom: 10px; 
+            display: flex; 
+            gap: 5px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+            justify-content: space-between;
+        }
+        
+        textarea { 
+            flex-grow: 1; 
+            width: 100%; 
+            font-size: 16px; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            resize: none; 
+            background-color: #fff; 
+            color: #183B4E; 
+            border: 1px solid #183B4E; 
+            outline: none; 
+            line-height: 1.5;
+        }
+        textarea:focus { 
+            border: 2px solid #DDA853; 
+        }
+        
+        /* TAB 頁籤設定 */
+        .tabs {
+            display: flex;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #183B4E;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px 5px;
+            cursor: pointer;
+            background-color: #F5EEDC;
+            color: #183B4E;
+            border: none;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .tab-btn.active {
+            background-color: #183B4E;
+            color: #F5EEDC;
+        }
+        .tab-btn:hover:not(.active) {
+            background-color: #DDA853;
+        }
+
+        /* 字庫列表設定 */
+        .word-list { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            list-style-type: none; 
+            padding: 0; 
+            margin: 0; 
+        }
+        .word-item { 
+            padding: 10px 8px; 
+            border-bottom: 1px dashed #183B4E; 
+            cursor: pointer; 
+            display: flex; 
+            transition: background-color 0.2s, color 0.2s; 
+            font-size: 14px; 
+            font-weight: bold; 
+            line-height: 1.4;
+        }
+        .word-item:hover { 
+            background-color: #DDA853; 
+            color: #183B4E; 
+        }
+        
+        /* 按鈕設定 */
+        .action-btn { 
+            cursor: pointer; 
+            padding: 5px 10px; 
+            background-color: #183B4E; 
+            color: #F5EEDC; 
+            border: none; 
+            font-weight: bold; 
+            border-radius: 3px; 
+            transition: background-color 0.2s, color 0.2s; 
+        }
+        .action-btn:hover { 
+            background-color: #DDA853; 
+            color: #183B4E; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="panel left-panel">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('tab1')" id="btn-tab1">基本</button>
+            <button class="tab-btn" onclick="switchTab('tab2')" id="btn-tab2">進階</button>
+        </div>
+        <ul id="leftList" class="word-list"></ul>
+    </div>
+
+    <div class="panel center-panel">
+        <div class="toolbar">
+            <button class="action-btn" onclick="downloadText()">另存成文字檔下載</button>
+            <button class="action-btn" onclick="document.getElementById('editor').value = ''">清空編輯區</button>
+        </div>
+        <textarea id="editor" placeholder="請點擊左右兩側字庫輸入，或在此直接打字..."></textarea>
+    </div>
+
+    <div class="panel right-panel">
+        <div class="toolbar" style="justify-content: center;">
+            <b>字庫B</b>
+        </div>
+        <ul id="rightList" class="word-list"></ul>
+    </div>
+
+    <script>
+        // 資料庫 
+        let currentLeftTab = 'tab1';
+        const data = {
+            leftList: {
+                tab1: [
+                   "(一)本案「★」，依申請人申請時所送資料內容審查， 申請專利範圍共★項，其中第★~★項為獨立項，其餘為附屬項。",
+                    "(一)本案「★」，申請人於113年★月★日提出修正到局，經查修正內容未超出申請時說明書、申請專利範圍或圖式所揭露之範圍，本案依該修正未超出申請時說明書、申請專利範圍或圖式所揭露之範圍；修正後申請專利範圍共★項，其中第★項為獨立項，其餘為附屬項。",
+                    "雖引證★未揭示「★」，惟引證★已揭露★",
+                    "依據引證★揭示內容，本案請求項★不符專利法第22條第2項之規定。",
+                    "依據引證★揭示內容，本案請求項★不符專利法第22條第1項第1款之規定。",
+                    "【說明書第000★段】",
+                    "【說明書第★欄第★行】",
+                    "【申請專利範圍第★項-第★行】",
+                    "【圖★】",
+                    "【圖★，★】",
+                    "經查引證★揭露",
+                    "引證文件：１、★。２、★。"
+                ],
+                tab2: [
+                    "雖引證★未直接揭示「★」，本項與引證1差異在於本項揭露「★」，惟引證1已揭露★，修飾★之(物/結構、元件、成分；方法/條件、步驟)即可完成本項之發明，屬於引證1技術內容之簡單變更，且未產生無法預期的功效，不具進步性。",
+                    "雖引證★未直接揭示「★」，惟引證★已揭露★【說明書第00★★段】，故簡單變更引證★之「★」即可得該差異內容，故請求項★所請發明係所屬技術領域中具有通常知識者依申請前之先前技術能輕易完成的，不具進步性。",
+                    "雖引證★未直接揭示「★」，惟引證 ★ 已揭示★【說明書第★ 段】，本項僅是引證 ★ 為★，為引證★之簡單變更，不具進步性。",
+                    "雖引證★未直接揭示「★」，惟 USB 輸入電壓惟５Ｖ，將閾值設 為4.75V，為引證★之簡單變更，不具進步性。",
+                    "雖引證★未直接揭示「★」，惟和引證★、★差異僅在★，惟此差異僅是★領域習知技術之簡單變更，不具進步性。",
+                    "例如常見於習知記憶體節省日誌手段的應用，係以合併日誌方式做為節省記憶體日誌資訊儲存空間之操作，屬於申請時之通常知識，為引證1之簡單變更，故不具進步性。",
+                    "雖引證★未直接揭示「★」，惟引證★已揭露★，發明所屬技術領域中具有通常知識者，利用申請時之通常知識，可將引證★之★簡單變更為★，不具進步性。",
+                    "雖引證★未直接揭示「★」，惟此等技術已為該領域之習知技術，例如常見於習知之★，屬於申請時之通常知識，為引證1之簡單變更，故不具進步性。",
+                    "雖引證★未直接揭示「★」，惟★為已知之★，發明所屬技術領域中具有通常知識者，利用申請時之通常知識，可將引證1之★簡單變更為★，故不具進步性。",
+                    "雖引證1未直接揭示「★」，惟此等技術僅是★之界定，屬於申請時之通常知識，為(1)發明所屬技術領域中具有通常知識者藉由引證1揭露之「★」所能輕易完成；(2)引證1「★」之簡單變更，故不具進步性。",
+                    "雖引證★未直接揭示「★」，惟此等技術僅是★之簡單選擇，且未能產生無法預期之功效，故不具進步性。"
+                ]
+            },
+            rightList: [
+                "【★】",
+                "另引證★揭露",
+                "故不具新穎性。",
+                "故不具進步性。",
+                "(一)",
+                "(二)",
+                "(三)",
+                "(四)",
+                "(五)",
+                "１、",
+                "２、",
+                "３、",
+                "４、",
+                "５、",
+                "６、"
+
+
+
+            ]
+        };
+
+        // 渲染左側字庫列表
+        function renderLeftList() {
+            const ul = document.getElementById('leftList');
+            ul.innerHTML = "";
+            const currentData = data.leftList[currentLeftTab];
+            
+            currentData.forEach((text) => {
+                const li = document.createElement("li");
+                li.className = "word-item";
+                li.textContent = text.length > 20 ? text.substring(0, 20) + "..." : text; 
+                li.title = text; 
+                li.onclick = () => insertText(text);
+                ul.appendChild(li);
+            });
+        }
+
+        // 渲染右側字庫列表
+        function renderRightList() {
+            const ul = document.getElementById('rightList');
+            ul.innerHTML = "";
+            data.rightList.forEach((text) => {
+                const li = document.createElement("li");
+                li.className = "word-item";
+                li.textContent = text; 
+                li.title = text; // 加上 hover 提示以防螢幕太小折行
+                li.onclick = () => insertText(text);
+                ul.appendChild(li);
+            });
+        }
+
+        // 切換左側 Tab
+        function switchTab(tabId) {
+            currentLeftTab = tabId;
+            
+            // 更新按鈕外觀狀態
+            document.getElementById('btn-tab1').classList.remove('active');
+            document.getElementById('btn-tab2').classList.remove('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+            
+            // 重新渲染左側列表
+            renderLeftList();
+        }
+
+        // 插入文字到游標位置
+        function insertText(text) {
+            const editor = document.getElementById("editor");
+            const startPos = editor.selectionStart;
+            const endPos = editor.selectionEnd;
+            editor.value = editor.value.substring(0, startPos) + text + editor.value.substring(endPos, editor.value.length);
+            editor.focus();
+            // 移動游標到插入後的文字末端
+            editor.selectionStart = editor.selectionEnd = startPos + text.length;
+        }
+
+        // 下載存檔功能
+        function downloadText() {
+            const textToSave = document.getElementById("editor").value;
+            if (!textToSave.trim()) {
+                alert("編輯區是空的，沒有內容可儲存喔！");
+                return;
+            }
+            const blob = new Blob([textToSave], { type: "text/plain;charset=utf-8" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "審查意見編輯_" + new Date().getTime() + ".txt";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 初始載入
+        renderLeftList();
+        renderRightList();
+    </script>
+</body>
+</html>
