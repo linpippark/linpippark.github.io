@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>意見輔助工具 V4.0</title>
+    <title>意見輔助工具 V8.0 (終極防跳動版)</title>
     <style>
         /* 基礎配色與排版 */
         body { 
@@ -22,7 +22,7 @@
         
         /* 版面寬度分配 (左20%、中71%、右9%) */
         .left-panel { 
-            width: 18%; 
+            width: 20%; 
             border-right: 2px solid #183B4E; 
         }
         .center-panel { 
@@ -30,7 +30,7 @@
         }
         .right-panel { 
             width: 9%; 
-            border-left: 1px solid #183B4E; 
+            border-left: 2px solid #183B4E; 
         }
         
         /* 工具列與元件設定 */
@@ -141,9 +141,9 @@
     <div class="panel center-panel">
         <div class="toolbar">
             <button class="action-btn" onclick="downloadText()">另存成文字檔下載</button>
-            <button class="action-btn" onclick="document.getElementById('editor').value = ''">清空編輯區</button>
+            <button class="action-btn" onclick="clearEditor()">清空編輯區</button>
         </div>
-        <textarea id="editor" placeholder="請點擊左右兩側字庫輸入，或在此直接打字..."></textarea>
+        <textarea id="editor" placeholder="請點擊左右兩側字庫輸入，或在此直接打字..." oninput="saveContent()"></textarea>
     </div>
 
     <div class="panel right-panel">
@@ -159,7 +159,7 @@
         const data = {
             leftList: {
                 tab1: [
-                   "(一)本案「★」，依申請人申請時所送資料內容審查， 申請專利範圍共★項，其中第★~★項為獨立項，其餘為附屬項。",
+                    "(一)本案「★」，依申請人申請時所送資料內容審查， 申請專利範圍共★項，其中第★~★項為獨立項，其餘為附屬項。",
                     "(一)本案「★」，申請人於113年★月★日提出修正到局，經查修正內容未超出申請時說明書、申請專利範圍或圖式所揭露之範圍，本案依該修正未超出申請時說明書、申請專利範圍或圖式所揭露之範圍；修正後申請專利範圍共★項，其中第★項為獨立項，其餘為附屬項。",
                     "雖引證★未揭示「★」，惟引證★已揭露★",
                     "依據引證★揭示內容，本案請求項★不符專利法第22條第2項之規定。",
@@ -173,7 +173,7 @@
                     "引證文件：１、★。２、★。"
                 ],
                 tab2: [
-                    "雖引證★未直接揭示「★」，本項與引證1差異在於本項揭露「★」，惟引證1已揭露★，修飾★之(物/結構、元件、成分；方法/條件、步驟)即可完成本項之發明，屬於引證1技術內容之簡單變更，且未產生無法預期的功效，不具進步性。",
+                   "雖引證★未直接揭示「★」，本項與引證1差異在於本項揭露「★」，惟引證1已揭露★，修飾★之(物/結構、元件、成分；方法/條件、步驟)即可完成本項之發明，屬於引證1技術內容之簡單變更，且未產生無法預期的功效，不具進步性。",
                     "雖引證★未直接揭示「★」，惟引證★已揭露★【說明書第00★★段】，故簡單變更引證★之「★」即可得該差異內容，故請求項★所請發明係所屬技術領域中具有通常知識者依申請前之先前技術能輕易完成的，不具進步性。",
                     "雖引證★未直接揭示「★」，惟引證 ★ 已揭示★【說明書第★ 段】，本項僅是引證 ★ 為★，為引證★之簡單變更，不具進步性。",
                     "雖引證★未直接揭示「★」，惟 USB 輸入電壓惟５Ｖ，將閾值設 為4.75V，為引證★之簡單變更，不具進步性。",
@@ -187,7 +187,7 @@
                 ]
             },
             rightList: [
-                "【★】",
+                 "【★】",
                 "另引證★揭露",
                 "故不具新穎性。",
                 "故不具進步性。",
@@ -202,11 +202,30 @@
                 "４、",
                 "５、",
                 "６、"
-
-
-
             ]
         };
+
+        // 儲存內容到 localStorage
+        function saveContent() {
+            const currentText = document.getElementById("editor").value;
+            localStorage.setItem("editorDraft", currentText);
+        }
+
+        // 讀取 localStorage 的內容
+        function loadContent() {
+            const savedText = localStorage.getItem("editorDraft");
+            if (savedText) {
+                document.getElementById("editor").value = savedText;
+            }
+        }
+
+        // 清空編輯區與 localStorage
+        function clearEditor() {
+            if (confirm("確定要清空編輯區嗎？這也會同時刪除暫存的紀錄喔！")) {
+                document.getElementById('editor').value = '';
+                localStorage.removeItem("editorDraft");
+            }
+        }
 
         // 渲染左側字庫列表
         function renderLeftList() {
@@ -219,7 +238,11 @@
                 li.className = "word-item";
                 li.textContent = text.length > 20 ? text.substring(0, 20) + "..." : text; 
                 li.title = text; 
+                
+                // 💡 關鍵防跳動技術 1：防止點擊時編輯區失去焦點
+                li.onmousedown = (e) => e.preventDefault(); 
                 li.onclick = () => insertText(text);
+                
                 ul.appendChild(li);
             });
         }
@@ -232,8 +255,12 @@
                 const li = document.createElement("li");
                 li.className = "word-item";
                 li.textContent = text; 
-                li.title = text; // 加上 hover 提示以防螢幕太小折行
+                li.title = text; 
+                
+                // 💡 關鍵防跳動技術 1：防止點擊時編輯區失去焦點
+                li.onmousedown = (e) => e.preventDefault(); 
                 li.onclick = () => insertText(text);
+                
                 ul.appendChild(li);
             });
         }
@@ -241,25 +268,28 @@
         // 切換左側 Tab
         function switchTab(tabId) {
             currentLeftTab = tabId;
-            
-            // 更新按鈕外觀狀態
             document.getElementById('btn-tab1').classList.remove('active');
             document.getElementById('btn-tab2').classList.remove('active');
             document.getElementById('btn-' + tabId).classList.add('active');
-            
-            // 重新渲染左側列表
             renderLeftList();
         }
 
-        // 插入文字到游標位置
+        // 💡 關鍵防跳動技術 2：使用 setRangeText 替換字串，不觸發整個畫面重繪
         function insertText(text) {
             const editor = document.getElementById("editor");
-            const startPos = editor.selectionStart;
-            const endPos = editor.selectionEnd;
-            editor.value = editor.value.substring(0, startPos) + text + editor.value.substring(endPos, editor.value.length);
+            
+            // 紀錄當前捲軸高度
+            const currentScrollTop = editor.scrollTop;
+            
+            // 使用瀏覽器原生 API 插入文字，'start' 表示插入後游標停在插入文字的最前方
+            editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, "start");
+            
+            // 確保焦點與捲軸位置如釘子般固定
             editor.focus();
-            // 移動游標到插入後的文字末端
-            editor.selectionStart = editor.selectionEnd = startPos + text.length;
+            editor.scrollTop = currentScrollTop;
+            
+            // 觸發自動儲存
+            saveContent();
         }
 
         // 下載存檔功能
@@ -281,6 +311,7 @@
         // 初始載入
         renderLeftList();
         renderRightList();
+        loadContent(); 
     </script>
 </body>
 </html>
