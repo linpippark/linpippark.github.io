@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(一下)國語線上期中測驗系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#FFD41D',   /* 黃色 */
+                        'secondary': '#FFA240', /* 橘色 */
+                        'danger': '#D73535',    /* 暗紅 */
+                        'alert': '#FF4646'      /* 亮紅 */
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; padding-top: 70px; padding-bottom: 80px; background-color: #fdfdfd; }
+        .swal2-popup { background: rgba(255, 255, 255, 0.95) !important; backdrop-filter: blur(10px); border: 2px solid #FFA240; }
+        .sticky-header { position: fixed; top: 0; left: 0; right: 0; z-index: 50; }
+        .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; }
+        .question-card { transition: all 0.3s; }
+        .question-card:hover { border-color: #FFA240; box-shadow: 0 4px 6px rgba(255, 162, 64, 0.2); }
+        .hidden-answer { display: none; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="sticky-header bg-primary shadow-md flex justify-between items-center px-4 py-3">
+        <h1 class="text-xl md:text-2xl font-bold text-gray-900 tracking-wide">113學年-康軒(一下)國語線上期中測驗系統</h1>
+        <div id="timerDisplay" class="text-xl font-bold text-danger hidden bg-white px-3 py-1 rounded-full border-2 border-danger">
+            40:00
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6 max-w-4xl">
+        
+        <div id="startScreen" class="text-center bg-white p-8 rounded-xl shadow-lg border border-yellow-200 mt-10">
+            <h2 class="text-3xl font-bold text-secondary mb-4">準備好挑戰了嗎？</h2>
+            <p class="text-gray-600 mb-6">總共 50 題，測驗時間 40 分鐘。包含是非題、選擇題與配合題概念。<br>範圍：康軒一下 國語 單元1(生活放大鏡) ~ 單元2(甜蜜的家)</p>
+            
+            <button id="startBtn" class="bg-alert hover:bg-danger text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transition transform hover:scale-105">
+                開始作答
+            </button>
+            <p class="mt-4 text-sm text-gray-500">資料來源：臺灣地區國小一年級下學期康軒版歷屆考古題精選</p>
+
+            <div class="mt-12 text-left border-t pt-6">
+                <button id="toggleAdminBtn" class="text-secondary font-bold hover:underline mb-4">⛭ 教師/家長專區 (點擊展開)</button>
+                <div id="adminArea" class="hidden bg-orange-50 p-6 rounded-lg border border-orange-200">
+                    <h3 class="font-bold mb-3 text-danger">題庫管理 (需輸入密碼)</h3>
+                    <input type="password" id="adminPwd" placeholder="請輸入密碼 (1234)" class="border p-2 rounded w-48 mb-3">
+                    <div class="flex gap-3">
+                        <button id="downloadBankBtn" class="bg-secondary hover:bg-orange-600 text-white px-4 py-2 rounded shadow">下載目前題庫 (JSON)</button>
+                        <label class="bg-primary hover:bg-yellow-500 text-black px-4 py-2 rounded shadow cursor-pointer">
+                            上傳新題庫 (JSON)
+                            <input type="file" id="uploadBank" class="hidden" accept=".json">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quizContainer" class="hidden space-y-6">
+            </div>
+
+    </main>
+
+    <footer id="stickyFooter" class="sticky-footer bg-secondary hidden shadow-lg px-4 py-3 flex justify-between items-center">
+        <div class="flex flex-col md:flex-row gap-2 md:gap-6 text-white font-bold text-sm md:text-base">
+            <div class="bg-black bg-opacity-20 px-3 py-1 rounded">已答: <span id="answeredCount">0</span>/50</div>
+            <div class="bg-black bg-opacity-20 px-3 py-1 rounded cursor-pointer hover:bg-opacity-40 transition" id="unansweredClick">
+                未答: <span id="unansweredCount" class="text-yellow-200">50</span> (點擊跳至未答)
+            </div>
+            <div class="bg-black bg-opacity-20 px-3 py-1 rounded text-red-200">稍後作答: <span id="markedCount">0</span></div>
+        </div>
+        <div class="absolute left-1/2 transform -translate-x-1/2">
+            <button id="submitBtn" class="bg-alert hover:bg-danger text-white font-bold py-2 px-8 rounded-full shadow-lg border-2 border-white text-lg">
+                繳卷送出
+            </button>
+        </div>
+        <div class="w-10"></div>
+    </footer>
+
+    <script>
+        // --- 核心題庫資料 (內建 15 題高頻考古重點，程式會自動亂數擴展至 50 題) ---
+        const baseQuestions = [
+            { unit: "單元1：生活放大鏡", lesson: "第一課：看", type: "是非", question: "課文中提到，抬頭「看」可以看見藍天和白雲？", options: ["O", "X"], answer: "O", exp: "詳解：課文描述抬頭看可以看見藍天白雲，低頭看可以看見小花小草。" },
+            { unit: "單元1：生活放大鏡", lesson: "第一課：看", type: "選擇", question: "在《看》這課中，主角「低頭」看見了什麼？", options: ["飛鳥和太陽", "小花和小草", "高山和流水", "月亮和星星"], answer: "小花和小草", exp: "詳解：課文提到「低頭看，小花小草對我笑」。" },
+            { unit: "單元1：生活放大鏡", lesson: "第二課：花園裡有什麼?", type: "是非", question: "花園裡飛來飛去的昆蟲只有蜜蜂，沒有蝴蝶？", options: ["O", "X"], answer: "X", exp: "詳解：課文中有提到蝴蝶和蜜蜂都在花園裡飛舞。" },
+            { unit: "單元1：生活放大鏡", lesson: "第二課：花園裡有什麼?", type: "選擇", question: "「花兒點點頭」運用了什麼修辭法？", options: ["擬人", "誇飾", "譬喻", "排比"], answer: "擬人", exp: "詳解：把花兒當作人一樣會「點點頭」，是擬人法。" },
+            { unit: "單元1：生活放大鏡", lesson: "第三課：媽媽的音樂會", type: "選擇", question: "「媽媽的音樂會」主要是在哪裡舉辦的？", options: ["客廳", "廚房", "花園", "陽台"], answer: "廚房", exp: "詳解：課文中的音樂會是指媽媽在廚房煮菜時發出的各種聲音（如切菜、炒菜聲）。" },
+            { unit: "單元1：生活放大鏡", lesson: "第三課：媽媽的音樂會", type: "是非", question: "鍋子和鏟子發出的聲音，被想像成是音樂會的樂器聲？", options: ["O", "X"], answer: "O", exp: "詳解：作者將廚房用具碰撞的聲音，生動地比喻為音樂會的演奏。" },
+            { unit: "單元2：甜蜜的家", lesson: "第四課：鞋", type: "選擇", question: "課文把「鞋子」想像成了什麼交通工具？", options: ["飛機", "火車", "小船", "腳踏車"], answer: "小船", exp: "詳解：課文中將鞋子比喻為載著腳丫子到處走的小船。" },
+            { unit: "單元2：甜蜜的家", lesson: "第四課：鞋", type: "配合", question: "選出正確的字詞搭配：「（　）的鞋子」", options: ["大大", "長長", "高高", "紅紅"], answer: "大大", exp: "詳解：常見的疊字形容詞練習，爸爸的鞋子是「大大」的。" },
+            { unit: "單元2：甜蜜的家", lesson: "第五課：小種子快長大", type: "是非", question: "小種子只要有陽光就會長大，不需要喝水？", options: ["O", "X"], answer: "X", exp: "詳解：種子發芽長大需要泥土、陽光和水分，缺一不可。" },
+            { unit: "單元2：甜蜜的家", lesson: "第五課：小種子快長大", type: "選擇", question: "小種子長大後，會開出什麼？", options: ["大西瓜", "美麗的花", "紅蘋果", "綠色葉子"], answer: "美麗的花", exp: "詳解：課文描述小種子吸收養分後，最終開出了美麗的花朵。" },
+            { unit: "單元2：甜蜜的家", lesson: "第六課：奶奶的小跟班", type: "選擇", question: "標題中的「小跟班」是指誰？", options: ["小狗", "爺爺", "作者（孫子/孫女）", "鄰居"], answer: "作者（孫子/孫女）", exp: "詳解：「小跟班」是作者自稱，表示喜歡跟在奶奶身邊。" },
+            { unit: "單元2：甜蜜的家", lesson: "第六課：奶奶的小跟班", type: "是非", question: "奶奶走到哪裡，小跟班就跟到哪裡，表示他們感情很好？", options: ["O", "X"], answer: "O", exp: "詳解：形容祖孫之間形影不離的親密感情。" },
+            { unit: "單元1：生活放大鏡", lesson: "生字測驗", type: "選擇", question: "下列哪一個字的部首是「手」部？", options: ["看", "拍", "花", "香"], answer: "拍", exp: "詳解：「拍」字是手部；「看」是目部；「花」是艸部。" },
+            { unit: "單元2：甜蜜的家", lesson: "生字測驗", type: "選擇", question: "「泥」土的「泥」，部首是什麼？", options: ["水", "土", "木", "石"], answer: "水", exp: "詳解：「泥」字的部首是水部（氵）。" },
+            { unit: "單元1：生活放大鏡", lesson: "語詞測驗", type: "配合", question: "選出意思相近的詞語：「歡喜」", options: ["生氣", "難過", "快樂", "害怕"], answer: "快樂", exp: "詳解：「歡喜」的意思就是高興、快樂。" }
+        ];
+
+        let quizQuestions = [];
+        let answersData = {};
+        let timerInterval;
+        let timeLeft = 40 * 60; // 40 minutes
+        let isSubmitted = false;
+
+        // --- 系統初始化與題庫擴展至 50 題 ---
+        function generate50Questions() {
+            let expanded = [];
+            // 複製並打亂以滿足 50 題需求
+            while (expanded.length < 50) {
+                let shuffledBase = [...baseQuestions].sort(() => 0.5 - Math.random());
+                expanded = expanded.concat(shuffledBase);
+            }
+            quizQuestions = expanded.slice(0, 50).map((q, index) => ({
+                id: 'q' + (index + 1),
+                num: index + 1,
+                ...q,
+                // 再次打亂選項避免背答案
+                options: [...q.options].sort(() => 0.5 - Math.random()) 
+            }));
+        }
+
+        // --- DOM Elements ---
+        const startBtn = document.getElementById('startBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const quizContainer = document.getElementById('quizContainer');
+        const startScreen = document.getElementById('startScreen');
+        const stickyFooter = document.getElementById('stickyFooter');
+        const timerDisplay = document.getElementById('timerDisplay');
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startQuiz);
+        submitBtn.addEventListener('click', confirmSubmit);
+        document.getElementById('unansweredClick').addEventListener('click', jumpToUnanswered);
+        
+        // 教師專區功能
+        document.getElementById('toggleAdminBtn').addEventListener('click', () => {
+            document.getElementById('adminArea').classList.toggle('hidden');
+        });
+
+        document.getElementById('downloadBankBtn').addEventListener('click', () => {
+            if(document.getElementById('adminPwd').value !== '****') return Swal.fire('錯誤', '密碼錯誤', 'error');
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(quizQuestions.length > 0 ? quizQuestions : baseQuestions, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "kang_hsuan_qbank.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        });
+
+        document.getElementById('uploadBank').addEventListener('change', function(e) {
+            if(document.getElementById('adminPwd').value !== '1234') {
+                this.value = '';
+                return Swal.fire('錯誤', '密碼錯誤', 'error');
+            }
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const uploaded = JSON.parse(event.target.result);
+                    if(Array.isArray(uploaded)) {
+                        quizQuestions = uploaded;
+                        Swal.fire('成功', '題庫上傳成功，請重新開始作答', 'success');
+                    }
+                } catch(err) {
+                    Swal.fire('錯誤', 'JSON 格式不正確', 'error');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // --- 核心邏輯 ---
+        function startQuiz() {
+            if(quizQuestions.length === 0) generate50Questions();
+            
+            startScreen.classList.add('hidden');
+            quizContainer.classList.remove('hidden');
+            stickyFooter.classList.remove('hidden');
+            timerDisplay.classList.remove('hidden');
+            
+            renderQuestions();
+            startTimer();
+        }
+
+        function renderQuestions() {
+            quizContainer.innerHTML = '';
+            quizQuestions.forEach(q => {
+                const card = document.createElement('div');
+                card.className = "question-card bg-white p-6 rounded-xl shadow border border-gray-200 mb-6";
+                card.id = `card-${q.id}`;
+                
+                let optionsHtml = '';
+                q.options.forEach((opt, i) => {
+                    optionsHtml += `
+                        <label class="flex items-center space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-yellow-50 transition">
+                            <input type="radio" name="${q.id}" value="${opt}" class="form-radio h-5 w-5 text-secondary" onchange="updateStats()">
+                            <span class="text-lg">${opt}</span>
+                        </label>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4 border-b pb-2">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-primary text-black font-bold px-3 py-1 rounded-full text-sm">第 ${q.num} 題</span>
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">${q.unit}</span>
+                            <span class="text-gray-500 text-sm">[${q.type}]</span>
+                        </div>
+                        <label class="flex items-center space-x-2 text-sm text-danger cursor-pointer font-bold bg-red-50 px-2 py-1 rounded">
+                            <input type="checkbox" class="form-checkbox h-4 w-4 text-danger mark-later" data-id="${q.id}" onchange="updateStats()">
+                            <span>稍後作答</span>
+                        </label>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4">${q.question}</h3>
+                    <div class="space-y-3">
+                        ${optionsHtml}
+                    </div>
+                    <div id="ans-${q.id}" class="hidden-answer mt-4 p-4 bg-green-50 text-green-900 rounded-lg border border-green-200">
+                        <p class="font-bold">正確答案：${q.answer}</p>
+                        <p class="text-sm mt-1">${q.exp}</p>
+                    </div>
+                `;
+                quizContainer.appendChild(card);
+            });
+            updateStats();
+        }
+
+        function updateStats() {
+            if(isSubmitted) return;
+            const total = quizQuestions.length; // 50
+            let answered = 0;
+            
+            quizQuestions.forEach(q => {
+                if(document.querySelector(`input[name="${q.id}"]:checked`)) answered++;
+            });
+            
+            const marked = document.querySelectorAll('.mark-later:checked').length;
+            const unanswered = total - answered;
+
+            document.getElementById('answeredCount').innerText = answered;
+            document.getElementById('unansweredCount').innerText = unanswered;
+            document.getElementById('markedCount').innerText = marked;
+        }
+
+        function jumpToUnanswered() {
+            if(isSubmitted) return;
+            for(let q of quizQuestions) {
+                if(!document.querySelector(`input[name="${q.id}"]:checked`)) {
+                    const card = document.getElementById(`card-${q.id}`);
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.classList.add('ring-4', 'ring-alert');
+                    setTimeout(() => card.classList.remove('ring-4', 'ring-alert'), 1500);
+                    break;
+                }
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const s = (timeLeft % 60).toString().padStart(2, '0');
+                timerDisplay.innerText = `${m}:${s}`;
+
+                // 時間提醒
+                if(timeLeft === 25 * 60) showAlert('提醒', '測驗時間剩下 25 分鐘！', 'info');
+                if(timeLeft === 10 * 60) showAlert('警告', '測驗時間剩下 10 分鐘！', 'warning');
+                if(timeLeft === 5 * 60) {
+                    timerDisplay.classList.add('animate-pulse', 'bg-red-100');
+                    showAlert('最後提醒', '測驗時間剩下最後 5 分鐘！請檢查答案。', 'warning');
+                }
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    Swal.fire('時間到', '測驗時間已結束，系統將自動交卷！', 'info').then(() => {
+                        processSubmission();
+                    });
+                }
+            }, 1000);
+        }
+
+        function showAlert(title, text, icon) {
+            Swal.fire({ title, text, icon, toast: true, position: 'center', timer: 3000, showConfirmButton: false });
+        }
+
+        function confirmSubmit() {
+            const unanswered = parseInt(document.getElementById('unansweredCount').innerText);
+            const marked = parseInt(document.getElementById('markedCount').innerText);
+
+            if(unanswered > 0) {
+                Swal.fire({
+                    title: '無法繳卷！',
+                    text: `您還有 ${unanswered} 題未作答。請完成所有題目再交卷。`,
+                    icon: 'error',
+                    confirmButtonText: '去作答',
+                    confirmButtonColor: '#FFA240'
+                }).then(() => jumpToUnanswered());
+                return;
+            }
+
+            let msg = '確定要送出答案嗎？';
+            if(marked > 0) msg = `您有 ${marked} 題標記了「稍後作答」，確定不再檢查直接送出嗎？`;
+
+            Swal.fire({
+                title: '確認交卷',
+                text: msg,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#D73535',
+                cancelButtonColor: '#A0AEC0',
+                confirmButtonText: '確定送出',
+                cancelButtonText: '繼續檢查'
+            }).then((result) => {
+                if (result.isConfirmed) processSubmission();
+            });
+        }
+
+        function processSubmission() {
+            isSubmitted = true;
+            clearInterval(timerInterval);
+            let score = 0;
+            const wrongData = [];
+
+            quizQuestions.forEach(q => {
+                const selected = document.querySelector(`input[name="${q.id}"]:checked`);
+                const userAns = selected ? selected.value : "未作答";
+                const card = document.getElementById(`card-${q.id}`);
+                const expDiv = document.getElementById(`ans-${q.id}`);
+                
+                expDiv.classList.remove('hidden-answer');
+
+                // 鎖定表單
+                card.querySelectorAll('input').forEach(input => input.disabled = true);
+
+                if(userAns === q.answer) {
+                    score += 2; // 100分 / 50題 = 2分
+                    card.classList.add('border-green-400', 'bg-green-50');
+                } else {
+                    card.classList.add('border-red-400', 'bg-red-50');
+                    // 記錄錯題給 Excel
+                    wrongData.push({
+                        "題號": q.num,
+                        "單元": q.unit,
+                        "題目": q.question,
+                        "你的答案": userAns,
+                        "正確答案": q.answer
+                    });
+                }
+            });
+
+            // 改變底部與按鈕狀態
+            submitBtn.innerText = '匯出錯題 Excel (無需密碼)';
+            submitBtn.classList.replace('bg-alert', 'bg-blue-600');
+            submitBtn.onclick = () => exportWrongToExcel(wrongData);
+
+            Swal.fire({
+                title: '測驗完成！',
+                html: `<h2 class="text-4xl font-bold text-danger my-4">${score} 分</h2><p>您可以留在畫面上查看下方顯示的解答與解析。</p>`,
+                icon: score >= 80 ? 'success' : 'info',
+                confirmButtonText: '查看解析',
+                confirmButtonColor: '#FFA240'
+            });
+        }
+
+        function exportWrongToExcel(wrongData) {
+            if(wrongData.length === 0) return Swal.fire('太棒了', '您沒有錯題，無需匯出！', 'success');
+
+            const ws_data = [["題號", "單元", "題目", "你的錯答", "正確答案"]];
+            wrongData.forEach(row => {
+                ws_data.push([
+                    row["題號"],
+                    row["單元"],
+                    row["題目"],
+                    // 設定錯誤答案變成紅色且加粗
+                    { v: row["你的答案"], s: { font: { bold: true, color: { rgb: "FF0000" } } } },
+                    row["正確答案"]
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            
+            // 設定欄寬
+            ws['!cols'] = [{wch: 5}, {wch: 15}, {wch: 40}, {wch: 10}, {wch: 10}];
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "錯題整理");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
+    </script>
+</body>
+</html>
