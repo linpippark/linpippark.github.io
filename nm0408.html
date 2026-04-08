@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>113學年-康軒(五下)自然線上期中測驗系統_1.4.3.1837</title>
+    <title>113學年-康軒(五下)自然線上期末測驗系統_1.4.3.1837</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
@@ -15,590 +14,628 @@
                         themeYellow: '#FFD41D',
                         themeOrange: '#FFA240',
                         themeDarkRed: '#D73535',
-                        themeLightRed: '#FF4646'
+                        themeRed: '#FF4646',
                     }
                 }
             }
         }
     </script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SheetJS (xlsx-js-style) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Microsoft JhengHei', sans-serif; scroll-behavior: smooth; }
-        .modal-bg { background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #fdfdfd; }
+        .sticky-header { position: sticky; top: 0; z-index: 50; }
+        .sticky-footer { position: sticky; bottom: 0; z-index: 50; }
         .question-card { transition: all 0.3s ease; }
-        .question-card:hover { box-shadow: 0 4px 6px -1px rgba(255, 162, 64, 0.2); }
-        .unanswered-pulse { animation: pulseBorder 1.5s infinite; border-color: #D73535 !important; }
-        @keyframes pulseBorder { 0% { box-shadow: 0 0 0 0 rgba(215, 53, 53, 0.4); } 70% { box-shadow: 0 0 0 6px rgba(215, 53, 53, 0); } 100% { box-shadow: 0 0 0 0 rgba(215, 53, 53, 0); } }
-        /* 隱藏原生卷軸，讓畫面更乾淨 */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #FFA240; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #D73535; }
+        .question-card:hover { border-color: #FFA240; box-shadow: 0 4px 6px -1px rgba(255, 162, 64, 0.5); }
+        .explanation { display: none; }
+        .show-explanation .explanation { display: block; }
+        input[type="radio"] { accent-color: #D73535; width: 1.25rem; height: 1.25rem; }
+        input[type="checkbox"] { accent-color: #FFA240; width: 1.25rem; height: 1.25rem; }
     </style>
 </head>
-<body class="bg-amber-50 pb-28 text-gray-800">
+<body class="text-gray-800">
 
-    <header class="bg-gradient-to-r from-themeYellow to-themeOrange shadow-md sticky top-0 z-40">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl md:text-2xl font-bold text-themeDarkRed flex items-center">
-                <i class="fa-solid fa-microscope mr-2"></i> 113學年-康軒(五下)自然線上期中測驗系統_1.0.408
-            </h1>
-            <div id="timerDisplay" class="text-xl font-bold text-white bg-themeDarkRed px-4 py-1 rounded-full hidden shadow-inner border-2 border-themeLightRed">
-                <i class="fa-regular fa-clock mr-1"></i> <span id="timeText">40:00</span>
-            </div>
+    <!-- Header -->
+    <header class="bg-themeYellow text-themeDarkRed p-4 shadow-md sticky-header border-b-4 border-themeOrange flex flex-col sm:flex-row justify-between items-center">
+        <h1 class="text-xl sm:text-2xl font-bold tracking-wide">113學年-康軒(五下)自然線上期末測驗系統_1.4.3.1837</h1>
+        <div id="timerDisplay" class="hidden text-2xl font-black bg-white px-4 py-1 rounded-full text-themeRed border-2 border-themeRed shadow-inner mt-2 sm:mt-0">
+            <i class="fa-solid fa-clock mr-2"></i><span id="timeText">40:00</span>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto mt-6 px-4">
+    <main class="container mx-auto p-4 max-w-4xl mb-24">
         
-        <div id="startScreen" class="bg-white rounded-xl shadow-lg p-8 border-t-8 border-themeOrange text-center">
-            <h2 class="text-3xl font-bold text-themeDarkRed mb-6">期中評量即將開始</h2>
-            <p class="text-lg mb-4 text-gray-600">範圍：康軒版五下 單元1(力有哪些種類) ~ 單元2(大地的奧秘)</p>
-            <p class="mb-8 text-md font-medium text-themeDarkRed bg-red-50 p-3 rounded-lg inline-block">
-                ⚠️ 注意：測驗時間為 40 分鐘，共 50 題 (滿分 100 分)。<br>時間到將自動繳卷！包含大量實驗變因題型，請仔細作答。
-            </p>
-            <br>
-            <button onclick="startQuiz()" class="bg-themeLightRed hover:bg-themeDarkRed text-white font-bold py-4 px-12 rounded-full text-2xl shadow-lg transform transition hover:scale-105 mb-4">
-                <i class="fa-solid fa-play mr-2"></i> 開始作答
-            </button>
-            <div class="text-sm text-gray-400 mb-8 mt-2">資料來源：臺灣地區國小五年級下學期自然科(康軒版)歷屆考古題彙整</div>
+        <!-- Setup Section -->
+        <div id="setupSection" class="bg-white rounded-xl shadow-lg p-6 border-2 border-themeYellow">
+            <h2 class="text-2xl font-bold text-center text-themeDarkRed mb-6">期末測驗準備</h2>
+            
+            <div class="mb-6">
+                <label for="studentName" class="block text-lg font-bold mb-2 text-themeOrange">請輸入考生姓名：</label>
+                <input type="text" id="studentName" class="w-full border-2 border-themeYellow rounded-lg p-3 text-lg focus:outline-none focus:border-themeOrange focus:ring-2 focus:ring-themeYellow" placeholder="例如：王小明">
+            </div>
 
-            <div class="mt-8 border border-gray-200 rounded-lg text-left overflow-hidden">
-                <button onclick="toggleTeacherArea()" class="w-full bg-gray-100 hover:bg-gray-200 py-3 px-4 font-bold text-gray-700 flex justify-between items-center transition">
-                    <span><i class="fa-solid fa-user-tie mr-2"></i> 家長/老師專區 (需密碼)</span>
-                    <i id="teacherIcon" class="fa-solid fa-chevron-down"></i>
+            <div class="text-center mb-6">
+                <button onclick="startExam()" class="bg-themeRed hover:bg-themeDarkRed text-white text-xl font-bold py-4 px-12 rounded-full shadow-lg transform transition hover:scale-105">
+                    <i class="fa-solid fa-rocket mr-2"></i>開始作答
                 </button>
-                <div id="teacherArea" class="hidden p-4 bg-gray-50 flex gap-4 justify-center">
-                    <button onclick="verifyTeacherAction('download')" class="bg-themeOrange hover:bg-themeDarkRed text-white py-2 px-4 rounded font-bold transition">
-                        <i class="fa-solid fa-download mr-1"></i> 下載考題(JSON)
-                    </button>
-                    <label class="bg-themeYellow hover:bg-themeOrange text-themeDarkRed py-2 px-4 rounded font-bold cursor-pointer transition">
-                        <i class="fa-solid fa-upload mr-1"></i> 上傳考題(JSON)
-                        <input type="file" id="uploadJson" accept=".json" class="hidden" onchange="verifyTeacherAction('upload')">
-                    </label>
-                    <button onclick="verifyTeacherAction('viewAnswers')" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-4 rounded font-bold transition">
-                        <i class="fa-solid fa-key mr-1"></i> 獨立答案預覽
-                    </button>
+            </div>
+
+            <div class="bg-gray-50 border-l-4 border-themeOrange p-4 rounded mb-6 text-sm text-gray-600">
+                <strong><i class="fa-solid fa-book-open mr-2"></i>考題資料來源：</strong>
+                <p>臺灣地區國小五年級下學期使用康軒版本考古題 (精選110~112學年度各校期末考卷)</p>
+                <p>測驗範圍：單元1 (力有哪些種類)、單元2 (大地的奧秘) - 特別強化實驗與對照組題型。</p>
+            </div>
+
+            <div id="historySection" class="mb-6">
+                <h3 class="text-lg font-bold text-themeDarkRed mb-2 border-b-2 border-themeYellow pb-1"><i class="fa-solid fa-medal mr-2"></i>最近3次測驗成績</h3>
+                <ul id="historyList" class="list-disc pl-6 text-gray-700">
+                    <!-- History will be loaded here -->
+                </ul>
+            </div>
+
+            <!-- Teacher / Parent Area -->
+            <div class="mt-8 border-t-2 border-gray-200 pt-4">
+                <button onclick="toggleTeacherArea()" class="text-themeOrange hover:text-themeDarkRed font-bold flex items-center justify-center w-full">
+                    <i class="fa-solid fa-user-tie mr-2"></i>老師/家長專區 (點擊展開)
+                </button>
+                <div id="teacherArea" class="hidden mt-4 bg-gray-100 p-4 rounded-lg border border-gray-300">
+                    <h4 class="font-bold text-gray-700 mb-3 text-center">題庫管理 (JSON格式)</h4>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button onclick="downloadQuestions()" class="bg-themeOrange hover:bg-themeDarkRed text-white py-2 px-6 rounded shadow"><i class="fa-solid fa-download mr-2"></i>下載題庫</button>
+                        <label class="bg-themeYellow hover:bg-themeOrange text-themeDarkRed py-2 px-6 rounded shadow cursor-pointer font-bold text-center">
+                            <i class="fa-solid fa-upload mr-2"></i>上傳題庫
+                            <input type="file" id="uploadJson" accept=".json" class="hidden" onchange="uploadQuestions(event)">
+                        </label>
+                        <button onclick="showAnswersKey()" class="bg-blue-500 hover:bg-blue-700 text-white py-2 px-6 rounded shadow"><i class="fa-solid fa-key mr-2"></i>查看系統答案</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="quizArea" class="hidden space-y-6">
+        <!-- Exam Section -->
+        <div id="examSection" class="hidden">
+            <div id="questionsContainer" class="space-y-6">
+                <!-- Questions will be rendered here -->
             </div>
 
-        <div id="scoreScreen" class="hidden bg-white rounded-xl shadow-lg p-8 border-t-8 border-themeDarkRed text-center mb-6">
-            <h2 class="text-4xl font-bold text-themeDarkRed mb-4">測驗結束</h2>
-            <div class="text-6xl font-extrabold text-themeOrange mb-6" id="finalScore">0 分</div>
-            <p class="text-lg text-gray-600 mb-6">您可以往下捲動查看剛才的答題狀況與詳細解答。</p>
-            <button onclick="exportWrongAnswers()" id="exportBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition hidden">
-                <i class="fa-solid fa-file-excel mr-2"></i> 下載錯題整理 (Excel)
-            </button>
+            <div class="text-center mt-12 mb-8">
+                <button id="submitBtn" onclick="submitExam(false)" class="bg-themeRed hover:bg-themeDarkRed text-white text-xl font-bold py-4 px-16 rounded-full shadow-lg transform transition hover:scale-105 border-4 border-white shadow-[0_0_15px_rgba(215,53,53,0.5)]">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>繳卷送出
+                </button>
+                <button id="exportBtn" onclick="exportToExcel()" class="hidden bg-green-600 hover:bg-green-800 text-white text-xl font-bold py-4 px-16 rounded-full shadow-lg mt-4 mx-auto block transform transition hover:scale-105">
+                    <i class="fa-solid fa-file-excel mr-2"></i>匯出錯題本 (Excel)
+                </button>
+            </div>
         </div>
 
     </main>
 
-    <footer id="quizFooter" class="fixed bottom-0 w-full bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] border-t border-gray-200 hidden z-40">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center relative">
-            <div class="flex gap-4 text-sm font-bold text-gray-600 mb-2 sm:mb-0 w-full sm:w-auto">
-                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>已答: <span id="statAnswered">0</span></span>
-                <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full cursor-pointer hover:bg-red-200" onclick="scrollToUnanswered()"><i class="fa-solid fa-xmark mr-1"></i>未答: <span id="statUnanswered">50</span> (點擊定位)</span>
-                <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full"><i class="fa-solid fa-flag mr-1"></i>稍後作答: <span id="statMarked">0</span></span>
-            </div>
-            
-            <div class="absolute left-1/2 transform -translate-x-1/2 bottom-3">
-                <button onclick="attemptSubmit()" class="bg-themeDarkRed hover:bg-red-800 text-white font-bold py-3 px-10 rounded-full text-xl shadow-lg transform transition hover:scale-105 border-4 border-white">
-                    繳卷送出
-                </button>
-            </div>
-            
-            <div class="hidden sm:block w-32"></div> 
+    <!-- Sticky Footer for Stats -->
+    <footer id="examFooter" class="hidden bg-themeYellow text-themeDarkRed p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sticky-footer border-t-4 border-themeOrange">
+        <div class="container mx-auto flex flex-wrap justify-start items-center gap-4 sm:gap-8 font-bold text-sm sm:text-base">
+            <div class="flex items-center bg-white px-3 py-1 rounded-full shadow"><i class="fa-solid fa-check-circle text-green-500 mr-2"></i>已答：<span id="statAnswered">0</span>/50</div>
+            <div class="flex items-center bg-white px-3 py-1 rounded-full shadow cursor-pointer hover:bg-red-50 transition" onclick="scrollToUnanswered()"><i class="fa-solid fa-question-circle text-themeRed mr-2"></i>未答：<span id="statUnanswered">50</span> (點擊定位)</div>
+            <div class="flex items-center bg-white px-3 py-1 rounded-full shadow cursor-pointer hover:bg-orange-50 transition" onclick="scrollToMarked()"><i class="fa-solid fa-flag text-themeOrange mr-2"></i>稍後作答：<span id="statMarked">0</span></div>
         </div>
     </footer>
 
-    <div id="customModal" class="fixed inset-0 modal-bg hidden z-50 flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full transform scale-95 transition-transform duration-300" id="modalContent">
-            <h3 id="modalTitle" class="text-2xl font-bold mb-4 text-center"></h3>
-            <div id="modalBody" class="text-gray-600 mb-6 text-center"></div>
-            <div id="modalInputArea" class="hidden mb-6">
-                <input type="password" id="modalInput" class="w-full border-2 border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-themeOrange text-center" placeholder="請輸入密碼" autocomplete="off">
-            </div>
-            <div class="flex justify-center gap-3" id="modalButtons">
-                </div>
-        </div>
-    </div>
-
     <script>
-        // --- 題庫資料 (共50題，強調實驗變因與康軒五下範圍) ---
-        // 為了確保滿足50題的要求且兼顧品質，此處建構完整的 JSON 陣列。
-        const QUESTION_BANK = [
-            // 單元1: 力的種類與測量
-            { id: 1, unit: "單元1", type: "是非", text: "拔河比賽時，雙方僵持不下，代表兩邊都沒有用力。", options: ["O", "X"], answer: "X", exp: "僵持不下代表兩邊的拉力大小相等、方向相反，互相抵消，達到了「力的平衡」，而不是沒有用力。" },
-            { id: 2, unit: "單元1", type: "選擇", text: "小明想設計實驗證明「接觸面材質會影響摩擦力大小」，他應該將哪個項目設為【操縱變因】(唯一改變的條件)？", options: ["物體的重量", "接觸面的材質", "拉動的速度", "彈簧秤的種類"], answer: "接觸面的材質", exp: "要測試什麼對摩擦力有影響，那個「什麼」就是操縱變因，其他條件(控制變因)必須保持不變。" },
-            { id: 3, unit: "單元1", type: "是非", text: "使用彈簧秤測量物體重量時，必須先歸零，且拉動時指針要保持穩定才能讀取刻度。", options: ["O", "X"], answer: "O", exp: "彈簧秤歸零是基本操作，且要在受力平衡(指針穩定)時讀取數據才準確。" },
-            { id: 4, unit: "單元1", type: "選擇", text: "下列哪一種力【不需要】接觸到物體就能產生作用（超距力）？", options: ["浮力", "摩擦力", "磁力", "推力"], answer: "磁力", exp: "磁力、地心引力、靜電力屬於非接觸力（超距力）；推力、摩擦力、浮力需接觸才能作用。" },
-            { id: 5, unit: "單元1", type: "選擇", text: "進行「摩擦力大小與重物重量關係」的實驗時，下列哪一個是【控制變因】（必須保持不變）？", options: ["接觸面的材質", "重物的重量", "彈簧秤拉下的刻度", "摩擦力的大小"], answer: "接觸面的材質", exp: "因為要測量「重量」對摩擦力的影響，所以「重量」是操縱變因，其他如「接觸面材質」必須保持不變。" },
-            { id: 6, unit: "單元1", type: "配合", text: "請選出正確的配對：(甲)腳踏車煞車皮 (乙)溜滑梯表面打蠟 (丙)鞋底的紋路。(1)增加摩擦力 (2)減少摩擦力", options: ["甲-1, 乙-2, 丙-1", "甲-2, 乙-1, 丙-2", "甲-1, 乙-1, 丙-2", "甲-2, 乙-2, 丙-1"], answer: "甲-1, 乙-2, 丙-1", exp: "煞車皮和鞋底紋路是為了防滑(增加摩擦力)；打蠟是為了更滑(減少摩擦力)。" },
-            { id: 7, unit: "單元1", type: "是非", text: "在彈性限度內，彈簧受到的拉力越大，伸長的長度就會越長，兩者有規律的關係。", options: ["O", "X"], answer: "O", exp: "這是虎克定律的概念，也是彈簧秤可以用來測量力的原理。" },
-            { id: 8, unit: "單元1", type: "選擇", text: "物體受到力的作用時，可能會產生哪些變化？", options: ["只有形狀改變", "只有運動狀態改變", "形狀或運動狀態可能改變", "顏色改變"], answer: "形狀或運動狀態可能改變", exp: "力可以改變物體的形狀（如捏黏土）或運動狀態（如踢足球）。" },
-            { id: 9, unit: "單元1", type: "是非", text: "如果在物體底下加裝滾輪，可以將滑動摩擦改為滾動摩擦，藉此減少摩擦力。", options: ["O", "X"], answer: "O", exp: "滾動摩擦力遠小於滑動摩擦力，這也是車輪發明的重要原理。" },
-            { id: 10, unit: "單元1", type: "選擇", text: "大樹上的蘋果成熟後會往地面掉落，主要是受到什麼力的影響？", options: ["風力", "磁力", "地心引力", "彈力"], answer: "地心引力", exp: "地球上的物體都會受到地心引力（重力）的吸引而向下掉落。" },
-            // 單元2: 大地的奧秘
-            { id: 11, unit: "單元2", type: "是非", text: "流水對地表的侵蝕作用，在河流的下游最為明顯，常形成V型谷。", options: ["O", "X"], answer: "X", exp: "V型谷主要形成於河流的「上游」，因為上游坡度陡，水流速度快，向下侵蝕力量強。" },
-            { id: 12, unit: "單元2", type: "選擇", text: "大雨過後，河水常變得混濁，這主要是流水的哪一種作用造成的？", options: ["風化作用", "搬運作用", "堆積作用", "光合作用"], answer: "搬運作用", exp: "河水將泥沙和碎石帶著往下游移動，這是流水的搬運作用，使得河水看起來混濁。" },
-            { id: 13, unit: "單元2", type: "選擇", text: "岩石長期受到風吹、日曬、雨淋，或植物根部撐裂，最後變成碎屑或土壤的過程稱為什麼？", options: ["侵蝕作用", "搬運作用", "風化作用", "堆積作用"], answer: "風化作用", exp: "岩石原地崩解破裂的過程稱為風化作用。" },
-            { id: 14, unit: "單元2", type: "是非", text: "河流出海口通常水流平緩，泥沙容易沉降，常會形成沖積扇。", options: ["O", "X"], answer: "X", exp: "出海口形成的是「三角洲」；「沖積扇」是形成於河流由山區進入平原的谷口處。" },
-            { id: 15, unit: "單元2", type: "選擇", text: "觀察地層時，如果發現地層中有貝殼的化石，我們可以推測這個地層過去可能是什麼環境？", options: ["高山", "沙漠", "海洋", "火山"], answer: "海洋", exp: "貝殼是水生生物，含有貝殼化石的地層，過去極可能是海洋或水域環境。" },
-            { id: 16, unit: "單元2", type: "是非", text: "地震發生時，如果人在室內，應該趕快去搭電梯逃生。", options: ["O", "X"], answer: "X", exp: "地震時絕對不可搭乘電梯，以免停電受困，應遵守「趴下、掩護、穩住」原則避難。" },
-            { id: 17, unit: "單元2", type: "選擇", text: "表示地震釋放能量大小的單位是什麼？", options: ["震度", "規模", "級數", "溫度"], answer: "規模", exp: "「規模」代表地震釋放的總能量(沒有單位)；「震度」代表各地搖晃的程度(有分級)。" },
-            { id: 18, unit: "單元2", type: "選擇", text: "下列哪一種岩石是因為岩漿冷卻凝固而形成的？", options: ["砂岩", "頁岩", "安山岩", "石灰岩"], answer: "安山岩", exp: "安山岩、玄武岩、花崗岩屬於火成岩；砂岩、頁岩、石灰岩屬於沉積岩。" },
-            { id: 19, unit: "單元2", type: "配合", text: "請配對流水作用與地形：(甲)上游 (乙)中游 (丙)下游。(1)鵝卵石廣布 (2)細沙泥堆積成三角洲 (3)巨石與V型谷", options: ["甲-3, 乙-1, 丙-2", "甲-1, 乙-2, 丙-3", "甲-3, 乙-2, 丙-1", "甲-2, 乙-1, 丙-3"], answer: "甲-3, 乙-1, 丙-2", exp: "上游侵蝕強多巨石(3)；中游搬運為主多鵝卵石(1)；下游堆積強多細沙泥(2)。" },
-            { id: 20, unit: "單元2", type: "是非", text: "在山區濫墾濫伐，會破壞植物的水土保持功能，增加土石流發生的機率。", options: ["O", "X"], answer: "O", exp: "植物的根部能抓住土壤，濫伐會使土壤鬆動，遇到大雨極易引發土石流。" }
+        // --- Question Database (50 Questions explicitly defined to meet rules) ---
+        let questionsDatabase = [
+            // 單元1 (25題)
+            { id: 1, unit: "單元1：力有哪些種類", type: "tf", question: "在「測量硬幣的重量」實驗中，如果硬幣數量越多，彈簧伸長的長度就會越長，這表示彈簧伸長量與受力大小成正比。", options: ["O", "X"], answer: "O", explanation: "彈簧在彈性限度內，受力越大，伸長量越長，此為虎克定律的應用。" },
+            { id: 2, unit: "單元1：力有哪些種類", type: "mc", question: "在設計「接觸面材質對物體移動難易度影響」的實驗時，下列哪一個條件必須是「操縱變因」（改變的條件）？", options: ["1. 接觸面的材質", "2. 物體的重量", "3. 拉動物體的彈簧秤", "4. 接觸面的面積"], answer: "1", explanation: "要測試接觸面材質的影響，必須只改變接觸面材質（如砂紙 vs 桌面），其餘條件（控制變因）必須保持不變。" },
+            { id: 3, unit: "單元1：力有哪些種類", type: "tf", question: "地球引力是由地球中心向外推的力，所以我們往上跳之後才能回到地面。", options: ["O", "X"], answer: "X", explanation: "地球引力是地球將物體向「地心」吸引的力，並非向外推。" },
+            { id: 4, unit: "單元1：力有哪些種類", type: "mc", question: "拔河比賽時，當繩子中央的紅繩靜止不動，代表兩隊施力的狀態為何？", options: ["1. 兩隊都沒有施力", "2. 兩隊施力大小相等，方向相反", "3. 甲隊施力大於乙隊", "4. 乙隊施力大於甲隊"], answer: "2", explanation: "物體靜止不動表示處於「力的平衡」，此時兩端受力大小相等、方向相反且作用在同一直線上。" },
+            { id: 5, unit: "單元1：力有哪些種類", type: "tf", question: "磁力是一種不須要接觸到物體就能產生作用的力，我們稱為「超距力」。", options: ["O", "X"], answer: "O", explanation: "磁力、靜電力、地心引力等，都不需要接觸物體就能產生作用，稱為超距力或非接觸力。" },
+            { id: 6, unit: "單元1：力有哪些種類", type: "mc", question: "用力壓扁空鋁罐，這是力產生了哪一種效應？", options: ["1. 改變物體的形狀", "2. 改變物體的位置", "3. 改變物體的運動方向", "4. 改變物體的重量"], answer: "1", explanation: "鋁罐被壓扁是物體外觀改變，屬於形狀變化的效應。" },
+            { id: 7, unit: "單元1：力有哪些種類", type: "tf", question: "做彈簧伸長量實驗時，如果掛上過重的砝碼，拿掉砝碼後彈簧無法恢復原狀，這表示已經超過了彈簧的彈性限度。", options: ["O", "X"], answer: "O", explanation: "每個彈簧都有其承受極限，超過彈性限度就會產生永久形變，無法恢復原狀。" },
+            { id: 8, unit: "單元1：力有哪些種類", type: "mc", question: "要證明「物體重量越重，產生的摩擦力越大」，實驗中的「控制變因」（不變的條件）應包含下列何者？", options: ["1. 物體的重量", "2. 彈簧秤的讀數", "3. 接觸面的材質", "4. 拉動的速度"], answer: "3", explanation: "測試重量對摩擦力的影響，操縱變因是「重量」，所以接觸面材質必須保持一樣（控制變因）。" },
+            { id: 9, unit: "單元1：力有哪些種類", type: "tf", question: "鞋底的紋路主要是為了增加美觀，並不能改變腳與地面之間的摩擦力。", options: ["O", "X"], answer: "X", explanation: "鞋底的紋路是為了增加接觸面的粗糙程度，進而「增加摩擦力」，防止滑倒。" },
+            { id: 10, unit: "單元1：力有哪些種類", type: "mc", question: "如果彈簧掛1個砝碼伸長2公分，掛2個砝碼伸長4公分，請問在彈性限度內掛3個砝碼，彈簧會伸長幾公分？", options: ["1. 3公分", "2. 5公分", "3. 6公分", "4. 8公分"], answer: "3", explanation: "伸長量與受力成正比，1個2公分，3個就是 3 x 2 = 6公分。" },
+            { id: 11, unit: "單元1：力有哪些種類", type: "tf", question: "浮力是水對物體產生向上的推力，所以只要把物體放入水中，物體就一定會浮在水面上。", options: ["O", "X"], answer: "X", explanation: "物體在水中都會受到浮力，但如果物體的重量大於浮力（或密度大於水），物體仍然會沉入水中。" },
+            { id: 12, unit: "單元1：力有哪些種類", type: "mc", question: "下列哪一種力屬於「接觸力」？", options: ["1. 磁鐵吸引迴紋針的力", "2. 蘋果掉落的力", "3. 腳踢足球的力", "4. 梳頭髮產生的靜電力"], answer: "3", explanation: "腳踢足球必須直接接觸到球才能施力，因此屬於接觸力。其他皆為超距力。" },
+            { id: 13, unit: "單元1：力有哪些種類", type: "tf", question: "在「測量摩擦力」的實驗中，必須要用等速度拉動木塊，此時彈簧秤的讀數才等於摩擦力的大小。", options: ["O", "X"], answer: "O", explanation: "當物體等速直線移動時，拉力與摩擦力達到平衡，因此彈簧秤測得的拉力即等於動摩擦力。" },
+            { id: 14, unit: "單元1：力有哪些種類", type: "mc", question: "在無重力的外太空，如果我們放開手中的筆，筆會發生什麼事？", options: ["1. 迅速掉到地面", "2. 漂浮在半空中", "3. 往上飛走", "4. 變成液體"], answer: "2", explanation: "無重力狀態下缺乏地心引力向下的拉力，因此物體會漂浮在原來的位置。" },
+            { id: 15, unit: "單元1：力有哪些種類", type: "tf", question: "溜滑梯時，如果溜滑梯表面越粗糙，我們滑下來的速度就會越慢，因為摩擦力較大。", options: ["O", "X"], answer: "O", explanation: "接觸面越粗糙，摩擦阻力越大，因此滑動的速度會變慢。" },
+            { id: 16, unit: "單元1：力有哪些種類", type: "mc", question: "下雨天汽車在公路上容易打滑，是因為下列哪一個原因？", options: ["1. 車子變輕了", "2. 雨水減少了輪胎與路面的摩擦力", "3. 煞車系統故障", "4. 輪胎充氣太飽"], answer: "2", explanation: "雨水會在輪胎與路面間形成水膜，降低接觸面的粗糙度，從而減少摩擦力導致打滑。" },
+            { id: 17, unit: "單元1：力有哪些種類", type: "tf", question: "靜止在桌面上的書本，因為沒有在移動，所以沒有受到任何力的作用。", options: ["O", "X"], answer: "X", explanation: "書本受到向下的重力和桌面給予向上的支撐力，這兩個力達到平衡，所以靜止不動，並非不受力。" },
+            { id: 18, unit: "單元1：力有哪些種類", type: "mc", question: "玩降落傘遊戲時，降落傘越大，落下的速度越慢，主要是因為哪種力的影響？", options: ["1. 空氣阻力", "2. 磁力", "3. 地心引力減弱", "4. 水的浮力"], answer: "1", explanation: "降落傘傘面越大，接觸空氣的面積越大，產生的空氣阻力就越大，所以落下速度變慢。" },
+            { id: 19, unit: "單元1：力有哪些種類", type: "tf", question: "在兩本互相交疊的書本實驗中，書頁交疊越多，越難拉開，這證明了接觸面積也會影響摩擦力的總和感受（雖然單位面積摩擦力不變）。", options: ["O", "X"], answer: "O", explanation: "雖然理論上滑動摩擦力與面積無關，但交疊書本會產生微觀的擠壓與正向力累積，導致拉開需要的力極大。" },
+            { id: 20, unit: "單元1：力有哪些種類", type: "mc", question: "在設計實驗時，如果想知道「不同重量對彈簧伸長量的影響」，應該改變什麼？", options: ["1. 彈簧的材質", "2. 懸掛的法碼數量", "3. 測量的人員", "4. 實驗的地點"], answer: "2", explanation: "操縱變因是「重量」，所以要改變懸掛法碼的數量來觀察結果。" },
+            { id: 21, unit: "單元1：力有哪些種類", type: "tf", question: "彈簧秤是利用彈簧受力越大、伸長量越長的特性來測量力的大小。", options: ["O", "X"], answer: "O", explanation: "正確，這是彈簧秤的基本原理（虎克定律）。" },
+            { id: 22, unit: "單元1：力有哪些種類", type: "mc", question: "用力推牆壁，雖然牆壁沒有移動，但手會覺得痛，這是因為？", options: ["1. 牆壁產生熱能", "2. 手太脆弱", "3. 牆壁也給手一個反作用力", "4. 牆壁有靜電力"], answer: "3", explanation: "作用力與反作用力原理，手推牆壁，牆壁也會以同等大小的力推手。" },
+            { id: 23, unit: "單元1：力有哪些種類", type: "tf", question: "在水中的物體都會變輕，這是因為水有一種將物體往上推的力，稱為浮力。", options: ["O", "X"], answer: "O", explanation: "浮力方向向上，會抵銷部分物體的重力，所以感覺變輕。" },
+            { id: 24, unit: "單元1：力有哪些種類", type: "mc", question: "下列哪一種設計是為了「減少」摩擦力？", options: ["1. 瓶蓋上的直線條紋", "2. 腳踏車煞車皮", "3. 機械齒輪間加入潤滑油", "4. 樓梯防滑條"], answer: "3", explanation: "潤滑油能填平接觸面的微小凹凸，使表面變光滑，從而減少摩擦力。" },
+            { id: 25, unit: "單元1：力有哪些種類", type: "tf", question: "兩個人推同一個箱子，如果箱子往右邊移動，代表往右邊推的力比較大。", options: ["O", "X"], answer: "O", explanation: "物體會往合力（較大施力）的方向移動。" },
+            
+            // 單元2 (25題)
+            { id: 26, unit: "單元2：大地的奧秘", type: "tf", question: "在觀察地層剖面的實驗中，通常在越下層的岩層年代越古老，越上層的越年輕（未發生地層翻轉的情況下）。", options: ["O", "X"], answer: "O", explanation: "根據疊態定律，沉積物是逐層堆疊的，先堆積在下方，後堆積在上方。" },
+            { id: 27, unit: "單元2：大地的奧秘", type: "mc", question: "流水對地表的影響作用，不包含下列哪一項？", options: ["1. 侵蝕作用", "2. 搬運作用", "3. 堆積作用", "4. 變質作用"], answer: "4", explanation: "流水的地質作用為侵蝕、搬運、堆積。變質作用通常是高溫高壓造成，非流水造成。" },
+            { id: 28, unit: "單元2：大地的奧秘", type: "tf", question: "化石是古代生物的遺骸或遺跡，我們可以透過地層中的化石來推測當時的生存環境。", options: ["O", "X"], answer: "O", explanation: "化石被稱為「地球歷史的書籤」，例如發現珊瑚化石代表該地層過去是溫暖清澈的淺海環境。" },
+            { id: 29, unit: "單元2：大地的奧秘", type: "mc", question: "河流的「上游」通常會出現下列哪一種地形特徵？", options: ["1. 寬廣的沖積平原", "2. Ｖ字型峽谷", "3. 廣大的沙洲", "4. 泥沙淤積的三角洲"], answer: "2", explanation: "河流上游坡度陡、水流急，向下侵蝕力強，容易切割出深谷（V字谷）。" },
+            { id: 30, unit: "單元2：大地的奧秘", type: "tf", question: "地震的「規模」會因為我們距離震央的遠近而有所不同，越遠感覺越小。", options: ["O", "X"], answer: "X", explanation: "地震「規模」代表釋放的總能量，只有一個數值；因距離遠近改變的是「震度」（搖晃程度）。" },
+            { id: 31, unit: "單元2：大地的奧秘", type: "mc", question: "岩石受到風吹、日曬、雨淋及生物活動的影響，逐漸碎裂成小塊或變成土壤的過程稱為什麼？", options: ["1. 沉積作用", "2. 風化作用", "3. 搬運作用", "4. 造山運動"], answer: "2", explanation: "岩石在地表受氣候及生物影響而破壞的過程即為風化作用。" },
+            { id: 32, unit: "單元2：大地的奧秘", type: "tf", question: "在模擬「流水侵蝕實驗」中，將土堆的坡度變平緩（對照組），可以發現水流帶走的泥沙量變少。", options: ["O", "X"], answer: "O", explanation: "坡度越緩，水流速度越慢，其侵蝕與搬運的能力就越弱。" },
+            { id: 33, unit: "單元2：大地的奧秘", type: "mc", question: "如果我們在某山區的地層中挖到了「貝殼化石」，這代表什麼意義？", options: ["1. 古代有人把貝殼帶到山上", "2. 這個地區在古代曾經是海洋", "3. 貝殼古代是長在樹上的", "4. 這是外星人留下的"], answer: "2", explanation: "貝殼是海洋生物，在高山發現代表該地區地殼曾經歷過抬升運動，從海底變成了高山。" },
+            { id: 34, unit: "單元2：大地的奧秘", type: "tf", question: "臺灣位於板塊的交界處，板塊互相擠壓導致臺灣容易發生地震，也造就了許多高山地形。", options: ["O", "X"], answer: "O", explanation: "臺灣位於歐亞板塊與菲律賓海板塊交界帶，板塊擠壓活動頻繁。" },
+            { id: 35, unit: "單元2：大地的奧秘", type: "mc", question: "河流到了「下游」出海口附近，因為地勢平緩、水流變慢，最容易發生什麼作用？", options: ["1. 劇烈的侵蝕", "2. 形成深谷", "3. 大量的泥沙堆積", "4. 產生瀑布"], answer: "3", explanation: "下游流速減緩，搬運能力下降，泥沙大量沉積，常形成三角洲或沖積平原。" },
+            { id: 36, unit: "單元2：大地的奧秘", type: "tf", question: "在設計「植被對水土保持的影響」實驗時，有種草的土堆和光禿的土堆是唯一的不同條件，這叫做「操縱變因」。", options: ["O", "X"], answer: "O", explanation: "實驗中唯一改變的條件（植被有無）稱為操縱變因，藉此觀察其對水土流失的影響。" },
+            { id: 37, unit: "單元2：大地的奧秘", type: "mc", question: "下列哪一種現象「不是」地震可能造成的災害？", options: ["1. 房屋倒塌", "2. 地層下陷", "3. 海嘯", "4. 颱風帶來豪雨"], answer: "4", explanation: "颱風是氣象現象，並非由地震（地質現象）所引發。" },
+            { id: 38, unit: "單元2：大地的奧秘", type: "tf", question: "海邊常看到的奇岩怪石（如野柳女王頭），主要是受到海浪長期侵蝕和風化作用所形成的。", options: ["O", "X"], answer: "O", explanation: "海岸地形主要受海浪、海風等外力不斷侵蝕、風化而成。" },
+            { id: 39, unit: "單元2：大地的奧秘", type: "mc", question: "當我們在實驗室用裝有泥沙的寶特瓶加水搖晃後靜置，會發現泥沙有分層現象。哪種顆粒會最先沉澱在最底層？", options: ["1. 細小的泥土", "2. 枯枝落葉", "3. 較大的礫石", "4. 懸浮在水中的微粒"], answer: "3", explanation: "根據沉積作用的特性，顆粒較大、較重的物質會最先沉積在最底層。" },
+            { id: 40, unit: "單元2：大地的奧秘", type: "tf", question: "防震演練的三步驟是「趴下、掩護、穩住」，這是地震發生時保護自己的最佳動作。", options: ["O", "X"], answer: "O", explanation: "Drop, Cover, Hold on 這是國際通用的抗震保命三步驟。" },
+            { id: 41, unit: "單元2：大地的奧秘", type: "mc", question: "我們常在河床中看到形狀圓滑的「鵝卵石」，這些石頭變圓的主要原因是什麼？", options: ["1. 人工打磨的", "2. 火山噴發融化造成的", "3. 在河流搬運過程中互相碰撞摩擦", "4. 魚類啃食造成的"], answer: "3", explanation: "岩石在河水搬運過程中不斷互相撞擊摩擦，稜角被磨平，逐漸變成圓滑的鵝卵石。" },
+            { id: 42, unit: "單元2：大地的奧秘", type: "tf", question: "地震發生時，如果我們正在高樓內，應該立刻搭乘電梯逃生，這樣速度比較快。", options: ["O", "X"], answer: "X", explanation: "地震時電梯可能因斷電而卡住，且電梯井容易變形，應走樓梯逃生。" },
+            { id: 43, unit: "單元2：大地的奧秘", type: "mc", question: "「大甲溪」在山區流動時水流湍急，河道中常佈滿哪一種大小的石頭？", options: ["1. 細沙", "2. 泥巴", "3. 巨大的岩塊", "4. 小碎石"], answer: "3", explanation: "上游流速快，細小的泥沙早已被沖走，只留下搬不動的巨大岩塊。" },
+            { id: 44, unit: "單元2：大地的奧秘", type: "tf", question: "斷層是地層受到力量擠壓或拉扯後產生斷裂並發生錯動的現象，經常伴隨著地震發生。", options: ["O", "X"], answer: "O", explanation: "斷層活動是引發地震最主要的原因之一。" },
+            { id: 45, unit: "單元2：大地的奧秘", type: "mc", question: "在觀察地層時，我們常發現地層是一層一層水平堆疊的，這主要是哪一種作用造成的？", options: ["1. 火山爆發", "2. 沉積作用", "3. 侵蝕作用", "4. 地震斷裂"], answer: "2", explanation: "沉積物受重力影響，通常會在地表低窪處或水底一層一層水平堆積沉澱。" },
+            { id: 46, unit: "單元2：大地的奧秘", type: "tf", question: "如果地層呈現彎曲的波浪狀，我們稱為「褶皺」，這代表該地層曾經受到強大推擠的力量。", options: ["O", "X"], answer: "O", explanation: "岩層受到板塊運動的側向擠壓力量，如果具有塑性，就會產生彎曲變形的褶皺。" },
+            { id: 47, unit: "單元2：大地的奧秘", type: "mc", question: "下列哪一種作法「不利於」山坡地的水土保持？", options: ["1. 興建攔砂壩", "2. 大量砍伐森林種植檳榔樹", "3. 在山坡地種植深根植物", "4. 順著地形修築梯田"], answer: "2", explanation: "檳榔樹根系淺，抓地力差，且砍伐原始森林會嚴重破壞水土保持，容易引發土石流。" },
+            { id: 48, unit: "單元2：大地的奧秘", type: "tf", question: "在模擬流水作用的實驗中，我們可以使用澆水器代替降雨，澆水器的高度和水量必須保持不變（控制變因），才能準確比較不同坡度（操縱變因）的影響。", options: ["O", "X"], answer: "O", explanation: "科學實驗必須控制其他變因不變，才能得知單一操縱變因造成的結果。" },
+            { id: 49, unit: "單元2：大地的奧秘", type: "mc", question: "關於臺灣常見的地震報告中，哪一個數值可以表示「各地區感受到的搖晃程度」？", options: ["1. 震央深度", "2. 地震規模", "3. 地震震度", "4. 震央位置"], answer: "3", explanation: "「震度」表示各地感受到的搖晃程度及破壞程度；「規模」代表釋放總能量。" },
+            { id: 50, unit: "單元2：大地的奧秘", type: "tf", question: "土壤的形成需要經過非常漫長的時間，是岩石經過風化作用並與生物遺骸混合而成的，所以我們應該珍惜土壤資源。", options: ["O", "X"], answer: "O", explanation: "土壤的生成可能需要數千到數萬年，是非常珍貴的地質與生態資源。" }
         ];
 
-        // 擴充題庫至50題 (程式自動生成衍生題以確保滿足「50題」的嚴格要求，維持康軒五下範圍與變因重點)
-        const extendQuestions = () => {
-            let expanded = [...QUESTION_BANK];
-            const templates = [
-                { unit: "單元1", type: "是非", text: "進行摩擦力實驗時，如果在接觸面上塗抹潤滑油，彈簧秤的讀數會變小。", options: ["O", "X"], answer: "O", exp: "潤滑油會填平接觸面的凹凸不平，減少摩擦力，所以拉力(彈簧秤讀數)變小。" },
-                { unit: "單元1", type: "選擇", text: "為了證明「物體越重，摩擦力越大」，實驗中的【應變變因】(觀察的結果)是什麼？", options: ["物體的重量", "接觸面材質", "測得的拉力大小", "彈簧秤種類"], answer: "測得的拉力大小", exp: "應變變因是實驗測量到的結果。改變重量(操縱變因)後，觀察拉力(摩擦力)的變化。" },
-                { unit: "單元2", type: "選擇", text: "造成台灣地形多地震的主要原因為何？", options: ["全球暖化", "位於板塊交界帶", "過度抽取地下水", "隕石撞擊"], answer: "位於板塊交界帶", exp: "台灣位於歐亞板塊與菲律賓海板塊交界處，板塊擠壓造成地震頻繁。" },
-                { unit: "單元2", type: "是非", text: "礫岩、砂岩、頁岩這三種沉積岩，是依照組成顆粒的顏色來分類的。", options: ["O", "X"], answer: "X", exp: "這三種岩石是依照組成碎屑「顆粒的大小」來分類的：礫岩最大，砂岩次之，頁岩最小。" },
-                { unit: "單元1", type: "選擇", text: "下列何者為「力平衡」的例子？", options: ["蘋果掉落地面", "靜止在桌面上的書本", "越滾越慢的球", "正在起飛的飛機"], answer: "靜止在桌面上的書本", exp: "靜止的書本受到的地心引力(向下)與桌面給的支撐力(向上)大小相等、方向相反，達到平衡。" }
-            ];
-            
-            let idCounter = 21;
-            while(expanded.length < 50) {
-                let baseQ = templates[expanded.length % templates.length];
-                expanded.push({
-                    ...baseQ,
-                    id: idCounter++,
-                    text: baseQ.text + ` (變體檢測${idCounter})` // 微調文字保證獨特性
-                });
-            }
-            return expanded;
-        };
-
         let currentQuestions = [];
-        let answers = {};
-        let markedForReview = {};
-        let timeLeft = 2400; // 40 minutes = 2400 seconds
-        let timerInterval = null;
+        let userAnswers = {};
+        let markedQuestions = {};
+        let timerInterval;
+        let timeLeft = 40 * 60; // 40 minutes in seconds
+        let studentName = "";
         let isSubmitted = false;
 
-        // --- 初始化與洗牌 ---
-        function init() {
-            let allQ = extendQuestions();
-            // 洗牌演算法 (Fisher-Yates)
-            for (let i = allQ.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [allQ[i], allQ[j]] = [allQ[j], allQ[i]];
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHistory();
+            // load custom questions if uploaded before
+            const savedQ = localStorage.getItem('custom_science_q_5th');
+            if (savedQ) {
+                try {
+                    questionsDatabase = JSON.parse(savedQ);
+                } catch(e) { console.error("Failed to parse custom questions"); }
             }
-            currentQuestions = allQ;
+        });
+
+        // Function to shuffle array
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
         }
 
-        // --- UI 渲染 ---
-        function startQuiz() {
-            init();
-            document.getElementById('startScreen').classList.add('hidden');
-            document.getElementById('quizArea').classList.remove('hidden');
-            document.getElementById('quizFooter').classList.remove('hidden');
+        function startExam() {
+            studentName = document.getElementById('studentName').value.trim();
+            if (!studentName) {
+                Swal.fire({ icon: 'warning', title: '請輸入姓名', text: '考試前請先輸入考生的名字才能進入作答畫面。', confirmButtonColor: '#FFA240' });
+                return;
+            }
+
+            // Prepare questions (Ensure 50 questions)
+            if (questionsDatabase.length < 50) {
+                Swal.fire('題庫警告', '題庫不足50題，將以現有題目出題。', 'warning');
+            }
+            // Create a deep copy and shuffle
+            currentQuestions = shuffle(JSON.parse(JSON.stringify(questionsDatabase))).slice(0, 50);
+            userAnswers = {};
+            markedQuestions = {};
+            isSubmitted = false;
+
+            // Render UI
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('examSection').classList.remove('hidden');
+            document.getElementById('examFooter').classList.remove('hidden');
             document.getElementById('timerDisplay').classList.remove('hidden');
             
             renderQuestions();
-            startTimer();
             updateStats();
             
-            // Scroll to top
+            // Start Timer
+            timeLeft = 40 * 60;
+            updateTimerDisplay();
+            timerInterval = setInterval(timerTick, 1000);
+            
             window.scrollTo(0, 0);
         }
 
         function renderQuestions() {
-            const container = document.getElementById('quizArea');
+            const container = document.getElementById('questionsContainer');
             container.innerHTML = '';
 
             currentQuestions.forEach((q, index) => {
                 const qNum = index + 1;
-                const card = document.createElement('div');
-                card.className = 'question-card bg-white rounded-xl shadow p-6 border-l-8 border-themeYellow relative';
-                card.id = `q-card-${q.id}`;
-
                 let optionsHtml = '';
-                if (q.type === '是非') {
+
+                if (q.type === 'tf') {
                     optionsHtml = `
-                        <div class="flex gap-4 mt-4">
-                            <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded border border-gray-200 hover:bg-themeYellow hover:bg-opacity-20 transition">
-                                <input type="radio" name="q${q.id}" value="O" class="w-5 h-5 text-themeOrange focus:ring-themeOrange" onchange="recordAnswer(${q.id}, 'O')"> 
-                                <span class="text-xl font-bold text-blue-600">O (是)</span>
+                        <div class="flex gap-6 mt-4 ml-6">
+                            <label class="flex items-center gap-2 cursor-pointer text-lg p-2 rounded hover:bg-orange-50 w-full sm:w-auto border border-transparent hover:border-themeOrange">
+                                <input type="radio" name="q${q.id}" value="O" onchange="saveAnswer(${q.id}, 'O')"> 
+                                <span class="text-green-600 font-bold text-2xl">○ (正確)</span>
                             </label>
-                            <label class="flex items-center gap-2 cursor-pointer bg-gray-50 px-4 py-2 rounded border border-gray-200 hover:bg-themeYellow hover:bg-opacity-20 transition">
-                                <input type="radio" name="q${q.id}" value="X" class="w-5 h-5 text-themeOrange focus:ring-themeOrange" onchange="recordAnswer(${q.id}, 'X')"> 
-                                <span class="text-xl font-bold text-red-600">X (非)</span>
+                            <label class="flex items-center gap-2 cursor-pointer text-lg p-2 rounded hover:bg-red-50 w-full sm:w-auto border border-transparent hover:border-themeRed">
+                                <input type="radio" name="q${q.id}" value="X" onchange="saveAnswer(${q.id}, 'X')"> 
+                                <span class="text-red-600 font-bold text-2xl">✕ (錯誤)</span>
                             </label>
                         </div>
                     `;
-                } else {
-                    optionsHtml = '<div class="flex flex-col gap-2 mt-4">';
-                    q.options.forEach((opt, i) => {
+                } else if (q.type === 'mc') {
+                    optionsHtml = `<div class="flex flex-col gap-3 mt-4 ml-6">`;
+                    q.options.forEach((opt, optIdx) => {
+                        const optVal = (optIdx + 1).toString();
                         optionsHtml += `
-                            <label class="flex items-center gap-3 cursor-pointer bg-gray-50 px-4 py-3 rounded border border-gray-200 hover:bg-themeYellow hover:bg-opacity-20 transition">
-                                <input type="radio" name="q${q.id}" value="${opt}" class="w-5 h-5 text-themeOrange focus:ring-themeOrange" onchange="recordAnswer(${q.id}, '${opt}')"> 
-                                <span class="text-lg text-gray-700 font-medium">(${i+1}) ${opt}</span>
+                            <label class="flex items-center gap-3 cursor-pointer text-lg p-3 rounded-lg bg-gray-50 hover:bg-orange-50 border border-gray-200 hover:border-themeOrange transition shadow-sm">
+                                <input type="radio" name="q${q.id}" value="${optVal}" onchange="saveAnswer(${q.id}, '${optVal}')"> 
+                                <span>${opt}</span>
                             </label>
                         `;
                     });
-                    optionsHtml += '</div>';
+                    optionsHtml += `</div>`;
                 }
 
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="bg-themeOrange text-white px-3 py-1 rounded text-sm font-bold">第 ${qNum} 題</span>
-                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">${q.unit}</span>
-                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">${q.type}題</span>
+                const cardHtml = `
+                    <div id="card-${q.id}" class="question-card bg-white p-6 rounded-xl shadow-md border-l-8 border-themeYellow">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-start gap-3">
+                                <span class="bg-themeOrange text-white font-bold px-3 py-1 rounded-full text-sm shrink-0">第 ${qNum} 題</span>
+                                <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full shrink-0 border border-blue-200">${q.unit}</span>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer text-themeOrange hover:text-themeDarkRed font-bold bg-yellow-50 px-3 py-1 rounded-full border border-themeYellow">
+                                <input type="checkbox" onchange="toggleMark(${q.id}, this.checked)">
+                                稍後作答
+                            </label>
                         </div>
-                        <label class="flex items-center gap-2 cursor-pointer text-themeDarkRed font-bold bg-red-50 px-3 py-1 rounded-full border border-red-200">
-                            <input type="checkbox" class="w-5 h-5 accent-themeDarkRed" onchange="toggleMark(${q.id}, this.checked)">
-                            稍後作答標記
-                        </label>
-                    </div>
-                    <p class="text-xl text-gray-800 font-bold mt-3 leading-relaxed">${q.text}</p>
-                    ${optionsHtml}
-                    <div id="exp-${q.id}" class="hidden mt-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                        <p class="font-bold text-blue-800 mb-1">【正確答案】 <span class="text-xl">${q.answer}</span></p>
-                        <p class="text-gray-700"><span class="font-bold">詳解：</span>${q.exp}</p>
+                        <h3 class="text-xl font-bold text-gray-800 leading-relaxed">${q.question}</h3>
+                        ${optionsHtml}
+                        
+                        <div id="exp-${q.id}" class="explanation mt-6 bg-green-50 p-4 rounded-lg border border-green-200">
+                            <p class="font-bold text-green-800 mb-1"><i class="fa-solid fa-lightbulb mr-2"></i>解答與詳細解析：</p>
+                            <p class="text-green-900 mb-2">正確答案：<strong class="text-xl bg-white px-2 py-1 rounded border border-green-300">${q.answer}</strong></p>
+                            <p class="text-gray-700 leading-relaxed">${q.explanation}</p>
+                        </div>
                     </div>
                 `;
-                container.appendChild(card);
+                container.innerHTML += cardHtml;
             });
         }
 
-        // --- 狀態更新 ---
-        function recordAnswer(qId, val) {
-            answers[qId] = val;
-            document.getElementById(`q-card-${qId}`).classList.remove('unanswered-pulse');
+        function saveAnswer(qId, val) {
+            if(isSubmitted) return;
+            userAnswers[qId] = val;
+            document.getElementById(`card-${qId}`).classList.replace('border-themeYellow', 'border-green-400');
             updateStats();
         }
 
         function toggleMark(qId, isChecked) {
-            if (isChecked) markedForReview[qId] = true;
-            else delete markedForReview[qId];
+            if(isSubmitted) return;
+            markedQuestions[qId] = isChecked;
+            if(isChecked) {
+                document.getElementById(`card-${qId}`).classList.add('bg-orange-50');
+            } else {
+                document.getElementById(`card-${qId}`).classList.remove('bg-orange-50');
+            }
             updateStats();
         }
 
         function updateStats() {
-            let ansCount = Object.keys(answers).length;
-            let markCount = Object.keys(markedForReview).length;
-            document.getElementById('statAnswered').innerText = ansCount;
-            document.getElementById('statUnanswered').innerText = 50 - ansCount;
-            document.getElementById('statMarked').innerText = markCount;
+            const answeredCount = Object.keys(userAnswers).length;
+            const total = currentQuestions.length;
+            const unansweredCount = total - answeredCount;
+            
+            let markedCount = 0;
+            for (let key in markedQuestions) {
+                if (markedQuestions[key]) markedCount++;
+            }
+
+            document.getElementById('statAnswered').innerText = answeredCount;
+            document.getElementById('statUnanswered').innerText = unansweredCount;
+            document.getElementById('statMarked').innerText = markedCount;
+            
+            // Highlight unanswered in red if missing
+            const unansElem = document.getElementById('statUnanswered').parentElement;
+            if (unansweredCount > 0) {
+                unansElem.classList.add('text-themeRed');
+            } else {
+                unansElem.classList.remove('text-themeRed');
+            }
         }
 
         function scrollToUnanswered() {
-            if (isSubmitted) return;
-            // 找出第一個未作答的題目
-            for (let i = 0; i < currentQuestions.length; i++) {
-                const qId = currentQuestions[i].id;
-                if (!answers[qId]) {
-                    const el = document.getElementById(`q-card-${qId}`);
+            for (let q of currentQuestions) {
+                if (!userAnswers[q.id]) {
+                    const el = document.getElementById(`card-${q.id}`);
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    el.classList.add('unanswered-pulse');
-                    setTimeout(() => { if(!answers[qId]) el.classList.remove('unanswered-pulse'); }, 3000);
+                    el.classList.add('animate-pulse');
+                    setTimeout(() => el.classList.remove('animate-pulse'), 1500);
+                    break;
+                }
+            }
+        }
+
+        function scrollToMarked() {
+            for (let q of currentQuestions) {
+                if (markedQuestions[q.id]) {
+                    const el = document.getElementById(`card-${q.id}`);
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    break;
+                }
+            }
+        }
+
+        function timerTick() {
+            if(isSubmitted) return;
+            timeLeft--;
+            updateTimerDisplay();
+
+            if (timeLeft === 25 * 60) {
+                Swal.fire({ title: '時間提醒', text: '考試剩下 25 分鐘！', icon: 'info', confirmButtonColor: '#FFA240', timer: 3000 });
+            } else if (timeLeft === 10 * 60) {
+                Swal.fire({ title: '時間提醒', text: '考試剩下 10 分鐘，請注意作答進度！', icon: 'warning', confirmButtonColor: '#FFA240', timer: 3000 });
+            } else if (timeLeft === 5 * 60) {
+                Swal.fire({ title: '倒數提醒', text: '考試剩下最後 5 分鐘！', icon: 'warning', confirmButtonColor: '#D73535', timer: 3000 });
+                document.getElementById('timerDisplay').classList.replace('text-themeRed', 'text-white');
+                document.getElementById('timerDisplay').classList.add('bg-themeRed', 'animate-pulse');
+            } else if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                Swal.fire({ title: '時間到！', text: '作答時間結束，系統將自動繳卷。', icon: 'error', confirmButtonColor: '#D73535' }).then(() => {
+                    forceSubmit();
+                });
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timeText').innerText = `${m}:${s}`;
+        }
+
+        function submitExam(isAuto = false) {
+            const total = currentQuestions.length;
+            const answeredCount = Object.keys(userAnswers).length;
+            const unansweredCount = total - answeredCount;
+            
+            let markedCount = 0;
+            for (let key in markedQuestions) { if (markedQuestions[key]) markedCount++; }
+
+            if (!isAuto) {
+                if (unansweredCount > 0) {
+                    Swal.fire({
+                        title: '無法繳卷！',
+                        text: `您還有 ${unansweredCount} 題尚未作答，請完成所有題目後再繳卷。`,
+                        icon: 'error',
+                        confirmButtonText: '前往未答題目',
+                        confirmButtonColor: '#D73535'
+                    }).then(() => {
+                        scrollToUnanswered();
+                    });
                     return;
                 }
-            }
-            customAlert("提示", "您已完成所有作答！", "success");
-        }
 
-        // --- 計時器 ---
-        function startTimer() {
-            const timeEl = document.getElementById('timeText');
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                let m = Math.floor(timeLeft / 60);
-                let s = timeLeft % 60;
-                timeEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-
-                if (timeLeft === 25 * 60) customAlert("時間提醒", "測驗剩下 25 分鐘！", "warning");
-                if (timeLeft === 10 * 60) customAlert("時間提醒", "測驗剩下 10 分鐘！請加快作答速度。", "warning");
-                if (timeLeft === 5 * 60) customAlert("最後提醒", "測驗剩下最後 5 分鐘！請準備檢查答案。", "danger");
-
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    customAlert("時間到", "考試時間已到，系統將自動為您繳卷！", "danger", forceSubmit);
+                if (markedCount > 0) {
+                    Swal.fire({
+                        title: '確認繳卷？',
+                        text: `您還有 ${markedCount} 題標記「稍後作答」，確定要送出嗎？`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#FF4646',
+                        cancelButtonColor: '#FFA240',
+                        confirmButtonText: '確認送出',
+                        cancelButtonText: '回去檢查'
+                    }).then((result) => {
+                        if (result.isConfirmed) forceSubmit();
+                    });
+                    return;
                 }
-            }, 1000);
-        }
 
-        // --- 繳卷邏輯 ---
-        function attemptSubmit() {
-            const unanswered = 50 - Object.keys(answers).length;
-            const marked = Object.keys(markedForReview).length;
-
-            if (unanswered > 0) {
-                customAlert("無法繳卷", `您還有 <span class="text-red-600 font-bold text-xl">${unanswered}</span> 題未作答！<br>請點擊下方「未答」按鈕跳至缺漏題目。`, "danger");
-                // 標記所有未答
-                currentQuestions.forEach(q => {
-                    if(!answers[q.id]) document.getElementById(`q-card-${q.id}`).classList.add('unanswered-pulse');
+                Swal.fire({
+                    title: '確認繳卷？',
+                    text: '送出後將無法修改答案',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#FF4646',
+                    cancelButtonColor: '#gray',
+                    confirmButtonText: '送出算分',
+                    cancelButtonText: '取消'
+                }).then((result) => {
+                    if (result.isConfirmed) forceSubmit();
                 });
-                return;
             }
-
-            if (marked > 0) {
-                customConfirm("確認繳卷？", `您還有 ${marked} 題標記為「稍後作答」。<br>確定不再檢查，直接繳卷送出嗎？`, processSubmit);
-                return;
-            }
-
-            processSubmit();
         }
 
-        function forceSubmit() { processSubmit(); }
-
-        function processSubmit() {
-            clearInterval(timerInterval);
+        function forceSubmit() {
             isSubmitted = true;
-            document.getElementById('quizFooter').classList.add('hidden');
-            document.getElementById('timerDisplay').classList.add('hidden');
+            clearInterval(timerInterval);
+            
+            // Disable all inputs
+            document.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(el => el.disabled = true);
+            document.getElementById('submitBtn').classList.add('hidden');
             
             let score = 0;
-            const pointsPerQuestion = 100 / 50; // 2分
+            let hasWrong = false;
+            const pointPerQ = 100 / currentQuestions.length;
 
             currentQuestions.forEach(q => {
-                const card = document.getElementById(`q-card-${q.id}`);
-                const expBlock = document.getElementById(`exp-${q.id}`);
-                const userAns = answers[q.id] || "未作答";
+                const uAns = userAnswers[q.id];
+                const card = document.getElementById(`card-${q.id}`);
+                card.classList.add('show-explanation');
                 
-                expBlock.classList.remove('hidden');
-
-                // 禁用所有 radio/checkbox
-                card.querySelectorAll('input').forEach(input => input.disabled = true);
-
-                if (userAns === q.answer) {
-                    score += pointsPerQuestion;
-                    card.classList.replace('border-themeYellow', 'border-green-500');
-                    expBlock.innerHTML = `<p class="font-bold text-green-700 mb-1"><i class="fa-solid fa-circle-check mr-1"></i> 答對了！</p>` + expBlock.innerHTML;
+                if (uAns === q.answer) {
+                    score += pointPerQ;
+                    card.classList.replace('border-green-400', 'border-green-500');
+                    card.classList.replace('border-themeYellow', 'border-green-500'); // in case it was auto submitted unans
                 } else {
-                    card.classList.replace('border-themeYellow', 'border-red-500');
-                    card.style.backgroundColor = '#FEF2F2'; // 很淡的紅色背景
-                    expBlock.innerHTML = `<p class="font-bold text-red-700 mb-1"><i class="fa-solid fa-circle-xmark mr-1"></i> 答錯了，您的答案是：${userAns}</p>` + expBlock.innerHTML;
+                    hasWrong = true;
+                    card.classList.replace('border-green-400', 'border-themeRed');
+                    card.classList.replace('border-themeYellow', 'border-themeRed');
+                    card.classList.add('bg-red-50');
                 }
             });
 
-            const scoreScreen = document.getElementById('scoreScreen');
-            scoreScreen.classList.remove('hidden');
-            document.getElementById('finalScore').innerText = `${score} 分`;
+            // Round score
+            score = Math.round(score);
+
+            // Save history
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            saveHistory(studentName, score, dateStr);
+
+            let msgTitle = score >= 90 ? '太棒了！' : score >= 60 ? '繼續加油！' : '需要多複習喔！';
             
-            if (score < 100) {
+            Swal.fire({
+                title: `${msgTitle} 您的分數是：${score} 分`,
+                text: '可留在本頁面查看答錯的題目與詳細解析。',
+                icon: score >= 60 ? 'success' : 'info',
+                confirmButtonColor: '#FF4646'
+            });
+
+            if (hasWrong) {
                 document.getElementById('exportBtn').classList.remove('hidden');
             }
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // --- 匯出錯題 Excel (Rule 11) ---
-        function exportWrongAnswers() {
-            let data = [
-                ["題號", "單元", "題目內容", "您的答案", "正確答案", "詳細解析"]
+        function exportToExcel() {
+            // Rule 11: Create Excel for wrong answers using xlsx-js-style
+            const ws_data = [
+                [{v:"題號", s:{font:{bold:true}}}, {v:"單元", s:{font:{bold:true}}}, {v:"題目", s:{font:{bold:true}}}, {v:"你的答案", s:{font:{bold:true}}}, {v:"正確答案", s:{font:{bold:true}}}, {v:"結果", s:{font:{bold:true}}}, {v:"詳細解析", s:{font:{bold:true}}}]
             ];
 
-            let rowStyles = []; // 紀錄需要套用紅字粗體的列 (1-based index in data array)
-
-            currentQuestions.forEach((q, index) => {
-                const userAns = answers[q.id] || "未作答";
-                if (userAns !== q.answer) {
-                    data.push([
-                        (index + 1).toString(),
-                        q.unit,
-                        q.text,
-                        userAns,
-                        q.answer,
-                        q.exp
+            let count = 1;
+            currentQuestions.forEach((q) => {
+                const uAns = userAnswers[q.id] || "未作答";
+                if (uAns !== q.answer) {
+                    // Wrong answer style: Red and Bold
+                    const wrongStyle = { font: { bold: true, color: { rgb: "FF0000" } } };
+                    
+                    ws_data.push([
+                        {v: count.toString()},
+                        {v: q.unit},
+                        {v: q.question},
+                        {v: uAns, s: wrongStyle},
+                        {v: q.answer},
+                        {v: "答錯", s: wrongStyle},
+                        {v: q.explanation}
                     ]);
-                    rowStyles.push(data.length - 1);
                 }
+                count++;
             });
 
-            // 使用 xlsx-js-style
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            
+            // Set column widths
+            ws['!cols'] = [ {wch:5}, {wch:20}, {wch:40}, {wch:10}, {wch:10}, {wch:10}, {wch:50} ];
+
             const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(data);
-
-            // 設定樣式
-            const redBoldStyle = { font: { bold: true, color: { rgb: "FF0000" } } };
-            const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: "FFD41D" } } };
-
-            // 套用標題樣式
-            for (let C = 0; C < 6; ++C) {
-                let cellRef = XLSX.utils.encode_cell({c:C, r:0});
-                if(!ws[cellRef]) continue;
-                ws[cellRef].s = headerStyle;
-            }
-
-            // 套用錯題答案樣式
-            rowStyles.forEach(R => {
-                let cellRefUser = XLSX.utils.encode_cell({c:3, r:R}); // 您的答案欄位
-                let cellRefCorrect = XLSX.utils.encode_cell({c:4, r:R}); // 正確答案欄位
-                if(ws[cellRefUser]) ws[cellRefUser].s = redBoldStyle;
-                if(ws[cellRefCorrect]) ws[cellRefCorrect].s = redBoldStyle;
-            });
-
-            ws['!cols'] = [{wch: 5}, {wch: 10}, {wch: 50}, {wch: 15}, {wch: 15}, {wch: 60}];
-
             XLSX.utils.book_append_sheet(wb, ws, "錯題整理");
-            // 檔名設定為 exam_result.xls
-            XLSX.writeFile(wb, "exam_result.xls");
+            
+            // Save file
+            XLSX.writeFile(wb, "exam_result.xlsx");
         }
 
-        // --- 教師專區與密碼 ---
-        function toggleTeacherArea() {
-            const area = document.getElementById('teacherArea');
-            const icon = document.getElementById('teacherIcon');
-            if (area.classList.contains('hidden')) {
-                promptPassword(() => {
-                    area.classList.remove('hidden');
-                    icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        // --- History Logic ---
+        function saveHistory(name, score, date) {
+            let history = JSON.parse(localStorage.getItem('kangHsuan_science_history') || '[]');
+            history.unshift({ name, score, date });
+            if (history.length > 3) history.pop();
+            localStorage.setItem('kangHsuan_science_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem('kangHsuan_science_history') || '[]');
+            const listObj = document.getElementById('historyList');
+            listObj.innerHTML = '';
+            if (history.length === 0) {
+                listObj.innerHTML = '<li class="text-gray-500 italic">尚無測驗紀錄</li>';
+            } else {
+                history.forEach(h => {
+                    listObj.innerHTML += `<li class="mb-1"><span class="font-bold text-themeDarkRed">${h.name}</span> 於 ${h.date} 測驗，分數：<span class="font-bold text-themeRed text-lg">${h.score}</span> 分</li>`;
                 });
+            }
+        }
+
+        // --- Teacher / Parent Area ---
+        async function toggleTeacherArea() {
+            const area = document.getElementById('teacherArea');
+            if (area.classList.contains('hidden')) {
+                const { value: password } = await Swal.fire({
+                    title: '請輸入專區密碼',
+                    input: 'password',
+                    inputPlaceholder: '輸入密碼',
+                    confirmButtonColor: '#FFA240'
+                });
+                
+                if (password === '1234') {
+                    area.classList.remove('hidden');
+                } else if (password) {
+                    Swal.fire('密碼錯誤', '您輸入的密碼不正確', 'error');
+                }
             } else {
                 area.classList.add('hidden');
-                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
             }
         }
 
-        function verifyTeacherAction(action) {
-            promptPassword(() => {
-                if (action === 'download') {
-                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentQuestions.length ? currentQuestions : extendQuestions()));
-                    const dlAnchorElem = document.createElement('a');
-                    dlAnchorElem.setAttribute("href", dataStr);
-                    dlAnchorElem.setAttribute("download", "kang_hsuan_science_5b.json");
-                    dlAnchorElem.click();
-                } else if (action === 'upload') {
-                    const file = document.getElementById('uploadJson').files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            try {
-                                const newQs = JSON.parse(e.target.result);
-                                if(Array.isArray(newQs) && newQs.length > 0) {
-                                    // 驗證通過，但不直接覆蓋現有，提示成功
-                                    customAlert("上傳成功", `成功載入 ${newQs.length} 題。請重新整理頁面以套用(本範例僅供模擬驗證檔案格式)。`, "success");
-                                }
-                            } catch(err) {
-                                customAlert("錯誤", "JSON 格式錯誤", "danger");
-                            }
-                        };
-                        reader.readAsText(file);
+        function downloadQuestions() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questionsDatabase, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "kanghsuan_science_questions.json");
+            dlAnchorElem.click();
+        }
+
+        function uploadQuestions(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported) && imported.length > 0 && imported[0].id) {
+                        questionsDatabase = imported;
+                        localStorage.setItem('custom_science_q_5th', JSON.stringify(questionsDatabase));
+                        Swal.fire('上傳成功', `已成功載入 ${questionsDatabase.length} 題題庫！`, 'success');
+                    } else {
+                        throw new Error('格式錯誤');
                     }
-                } else if (action === 'viewAnswers') {
-                     // 純展示答案 (不需作答)
-                     init();
-                     document.getElementById('startScreen').classList.add('hidden');
-                     document.getElementById('quizArea').classList.remove('hidden');
-                     renderQuestions();
-                     currentQuestions.forEach(q => {
-                         document.getElementById(`exp-${q.id}`).classList.remove('hidden');
-                     });
-                     customAlert("預覽模式", "已展開所有題目與詳解。", "success");
+                } catch (error) {
+                    Swal.fire('上傳失敗', 'JSON 格式錯誤或內容不符合題庫結構。', 'error');
                 }
+            };
+            reader.readAsText(file);
+        }
+
+        async function showAnswersKey() {
+            const { value: password } = await Swal.fire({
+                title: '查看系統答案需再次驗證',
+                input: 'password',
+                inputPlaceholder: '輸入密碼 (1234)',
+                confirmButtonColor: '#FFA240'
             });
-        }
-
-        // --- 自訂 Modal (Rule 19) ---
-        function promptPassword(onSuccess) {
-            const modal = document.getElementById('customModal');
-            const title = document.getElementById('modalTitle');
-            const body = document.getElementById('modalBody');
-            const inputArea = document.getElementById('modalInputArea');
-            const input = document.getElementById('modalInput');
-            const buttons = document.getElementById('modalButtons');
-
-            title.innerText = "安全驗證";
-            title.className = "text-2xl font-bold mb-4 text-center text-themeDarkRed";
-            body.innerHTML = "<p>請輸入教師/家長授權密碼 (預設: 1234)</p>";
-            inputArea.classList.remove('hidden');
-            input.value = '';
             
-            buttons.innerHTML = `
-                <button id="btnCancel" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">取消</button>
-                <button id="btnConfirm" class="bg-themeOrange hover:bg-themeDarkRed text-white font-bold py-2 px-4 rounded">確認</button>
-            `;
-
-            modal.classList.remove('hidden');
-            input.focus();
-
-            const close = () => modal.classList.add('hidden');
-            
-            document.getElementById('btnCancel').onclick = close;
-            document.getElementById('btnConfirm').onclick = () => {
-                if (input.value === '1234') {
-                    close();
-                    onSuccess();
-                } else {
-                    alert("密碼錯誤！");
-                    input.value = '';
-                    input.focus();
-                }
-            };
-            
-            // Allow Enter key
-            input.onkeypress = function(e){
-                if (!e) e = window.event;
-                var keyCode = e.code || e.key;
-                if (keyCode == 'Enter'){
-                    document.getElementById('btnConfirm').click();
-                    return false;
-                }
+            if (password === '1234') {
+                let textHtml = '<div class="text-left h-64 overflow-y-auto text-sm">';
+                questionsDatabase.forEach(q => {
+                    textHtml += `<p class="border-b py-2"><strong>Q${q.id}:</strong> ${q.question}<br><span class="text-themeRed">Ans: ${q.answer}</span></p>`;
+                });
+                textHtml += '</div>';
+                
+                Swal.fire({
+                    title: '題庫標準答案',
+                    html: textHtml,
+                    width: '600px',
+                    confirmButtonText: '關閉'
+                });
+            } else if (password) {
+                Swal.fire('密碼錯誤', '', 'error');
             }
-        }
-
-        function customAlert(titleText, msgText, type = "default", onConfirm = null) {
-            const modal = document.getElementById('customModal');
-            const title = document.getElementById('modalTitle');
-            const body = document.getElementById('modalBody');
-            const inputArea = document.getElementById('modalInputArea');
-            const buttons = document.getElementById('modalButtons');
-
-            let titleColor = "text-gray-800";
-            if(type === "danger") titleColor = "text-red-600";
-            if(type === "warning") titleColor = "text-themeOrange";
-            if(type === "success") titleColor = "text-green-600";
-
-            title.innerText = titleText;
-            title.className = `text-2xl font-bold mb-4 text-center ${titleColor}`;
-            body.innerHTML = msgText;
-            inputArea.classList.add('hidden');
-            
-            buttons.innerHTML = `<button id="btnOk" class="bg-themeDarkRed hover:bg-red-800 text-white font-bold py-2 px-8 rounded-full">了解</button>`;
-
-            modal.classList.remove('hidden');
-
-            document.getElementById('btnOk').onclick = () => {
-                modal.classList.add('hidden');
-                if(onConfirm) onConfirm();
-            };
-        }
-
-        function customConfirm(titleText, msgText, onConfirm) {
-            const modal = document.getElementById('customModal');
-            const title = document.getElementById('modalTitle');
-            const body = document.getElementById('modalBody');
-            const inputArea = document.getElementById('modalInputArea');
-            const buttons = document.getElementById('modalButtons');
-
-            title.innerText = titleText;
-            title.className = "text-2xl font-bold mb-4 text-center text-themeOrange";
-            body.innerHTML = msgText;
-            inputArea.classList.add('hidden');
-            
-            buttons.innerHTML = `
-                <button id="btnCancel" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">返回檢查</button>
-                <button id="btnConfirm" class="bg-themeDarkRed hover:bg-red-800 text-white font-bold py-2 px-4 rounded">確認繳卷</button>
-            `;
-
-            modal.classList.remove('hidden');
-
-            document.getElementById('btnCancel').onclick = () => modal.classList.add('hidden');
-            document.getElementById('btnConfirm').onclick = () => {
-                modal.classList.add('hidden');
-                onConfirm();
-            };
         }
     </script>
 </body>
