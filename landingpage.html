@@ -216,7 +216,7 @@
             <button class="subject-btn btn-math" onclick="window.location.href='0109m_1.9.16.43.html'">
                 <span>📐</span> 數學
             </button>
-            <button class="subject-btn btn-science" onclick="window.location.href='5unf.html'">
+            <button class="subject-btn btn-science" onclick="window.location.href='nm0408.html'">
                 <span>🔬</span> 自然
             </button>
             <button class="subject-btn btn-social"  onclick="window.location.href='5usf.html'">
@@ -237,20 +237,14 @@
         }
 
         function updateCountdown() {
-            const examDate = new Date('2026-01-13T00:00:00');
-            const now = new Date();
-            const diff = examDate - now;
-            const countdownElement = document.getElementById('countdownTimer');
-
-            if (diff <= 0) {
-                if (now.getDate() === examDate.getDate() && now.getMonth() === examDate.getMonth() && now.getFullYear() === examDate.getFullYear()) {
-                    countdownElement.innerHTML = "🎉 就是今天！期末考加油！ 🎉";
+            const examDate = new Date('2026-04-16T00:00:00');
+  期中加油！ 🎉";
                 } else {
-                    countdownElement.innerHTML = "期末考已結束";
+                    countdownElement.innerHTML = "期中考已結束";
                 }
             } else {
                 const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-                countdownElement.innerHTML = `距離期末考還有 <span>${days}</span> 天`;
+                countdownElement.innerHTML = `距離期中考還有 <span>${days}</span> 天`;
             }
         }
 
