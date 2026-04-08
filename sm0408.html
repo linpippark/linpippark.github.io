@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五下)社會線上期中測驗系統_1.4.8.2116</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'theme-bg': '#F2EAE0',
+                        'theme-accent1': '#B4D3D9',
+                        'theme-accent2': '#BDA6CE',
+                        'theme-primary': '#9B8EC7',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F2EAE0;
+            font-family: 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+            color: #333;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #BDA6CE; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9B8EC7; }
+
+        .radio-custom:checked + div {
+            background-color: #B4D3D9;
+            border-color: #9B8EC7;
+            font-weight: bold;
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .sticky-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 50;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 針對 PDF 列印的樣式隱藏 */
+        @media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-24">
+
+    <!-- 登入與歷程畫面 (Start Screen) -->
+    <div id="start-screen" class="container mx-auto px-4 py-10 flex-grow flex flex-col items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl border-t-8 border-theme-primary">
+            <h1 class="text-3xl font-bold text-center text-theme-primary mb-6">113學年-康軒(五下)社會線上期中測驗系統_1.4.8.2116</h1>
+            <p class="text-center text-gray-600 mb-8">測驗範圍：單元1 (我們的經濟活動) ~ 單元2 (清帝國時期臺灣的發展與改變)<br>測驗時間：40分鐘 / 總題數：50題</p>
+            
+            <div class="mb-6">
+                <label for="student-name" class="block text-lg font-medium text-gray-700 mb-2">請輸入考生姓名：</label>
+                <input type="text" id="student-name" class="w-full px-4 py-3 rounded-lg border-2 border-theme-accent2 focus:outline-none focus:border-theme-primary transition-colors text-lg" placeholder="例如：王小明">
+            </div>
+            
+            <button onclick="startExam()" class="w-full bg-theme-primary hover:bg-theme-accent2 text-white font-bold py-4 rounded-lg shadow-md transition-all transform hover:scale-105 text-xl flex items-center justify-center gap-2">
+                <i class="fa-solid fa-pen-to-square"></i> 開始測驗
+            </button>
+
+            <!-- 歷史紀錄 -->
+            <div class="mt-10">
+                <h3 class="text-xl font-bold text-theme-primary mb-4 flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left"></i> 最近3次測驗成績</h3>
+                <div id="history-container" class="bg-theme-bg rounded-lg p-4">
+                    <!-- 紀錄會動態生成於此 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 測驗畫面 (Exam Screen) -->
+    <div id="exam-screen" class="hidden flex-col h-screen">
+        <!-- 頂部標題與計時器 -->
+        <header class="bg-theme-primary text-white py-4 px-6 sticky-header flex justify-between items-center no-print">
+            <h1 class="text-xl font-bold truncate pr-4" title="113學年-康軒(五下)社會線上期中測驗系統_1.4.8.2116">
+                113學年-康軒(五下)社會線上期中測驗系統_1.4.8.2116
+            </h1>
+            <div class="flex items-center bg-white text-theme-primary px-4 py-2 rounded-full font-mono text-xl font-bold shadow-inner">
+                <i class="fa-regular fa-clock mr-2"></i>
+                <span id="timer-display">40:00</span>
+            </div>
+        </header>
+
+        <!-- 考卷主體 -->
+        <main class="container mx-auto px-4 py-8 flex-grow">
+            <!-- 考卷標題 (PDF用) -->
+            <div id="pdf-header" class="hidden print:block text-center mb-8 border-b-2 border-gray-400 pb-4">
+                <h1 class="text-3xl font-bold mb-2">113學年-康軒(五下)社會期中測驗</h1>
+                <div class="flex justify-between text-lg">
+                    <p>考生姓名：<span id="pdf-student-name"></span></p>
+                    <p>測驗成績：<span id="pdf-score" class="font-bold text-red-600"></span> 分</p>
+                </div>
+            </div>
+
+            <div id="questions-container" class="space-y-6 max-w-4xl mx-auto">
+                <!-- 題目會動態生成於此 -->
+            </div>
+            
+            <!-- 答案解析區塊 (預設隱藏，輸入密碼後顯示) -->
+            <div id="answers-reveal-container" class="hidden mt-10 p-6 bg-yellow-50 border-2 border-yellow-400 rounded-xl max-w-4xl mx-auto mb-20 no-print">
+                 <h2 class="text-2xl font-bold text-red-600 mb-4"><i class="fa-solid fa-key"></i> 正確答案與解析</h2>
+                 <p class="text-gray-700 mb-4">系統已為您標示錯誤題目。以下為全卷正確解答參考：</p>
+                 <div id="answers-list" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <!-- 解答列表 -->
+                 </div>
+            </div>
+        </main>
+
+        <!-- 底部統計與繳卷列 -->
+        <footer class="bg-white border-t-4 border-theme-accent2 py-3 px-6 sticky-footer flex flex-col sm:flex-row justify-between items-center gap-4 no-print">
+            <div class="flex items-center gap-6 text-lg font-medium">
+                <div class="text-green-600 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> 已答：<span id="stat-answered" class="font-bold text-xl">0</span></div>
+                <div class="text-red-500 flex items-center gap-1 cursor-pointer hover:underline" onclick="scrollToUnanswered()" title="點擊跳至未答題目"><i class="fa-solid fa-circle-exclamation"></i> 未答：<span id="stat-unanswered" class="font-bold text-xl">50</span></div>
+                <div class="text-orange-500 flex items-center gap-1"><i class="fa-solid fa-bookmark"></i> 稍後作答：<span id="stat-marked" class="font-bold text-xl">0</span></div>
+            </div>
+            <div class="flex gap-4">
+                 <button id="btn-show-answers" onclick="verifyPassword()" class="hidden bg-theme-accent2 hover:bg-theme-primary text-white font-bold py-2 px-6 rounded-lg shadow transition-colors">
+                    <i class="fa-solid fa-eye"></i> 看答案
+                </button>
+                <button id="btn-download-pdf" onclick="generatePDF()" class="hidden bg-theme-accent1 hover:bg-teal-500 text-gray-800 hover:text-white font-bold py-2 px-6 rounded-lg shadow transition-colors">
+                    <i class="fa-solid fa-file-pdf"></i> 下載試卷PDF
+                </button>
+                <button id="btn-submit" onclick="confirmSubmit()" class="bg-theme-primary hover:bg-purple-700 text-white font-bold py-2 px-8 rounded-lg shadow-lg transform hover:scale-105 transition-all text-xl">
+                    <i class="fa-solid fa-paper-plane"></i> 繳交考卷
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- 題庫資料 (50題，涵蓋單元1與單元2，包含是非、選擇、比較型情境題) ---
+        // 為了模擬「實驗組/對照組」概念，社會科常以「不同條件下的選擇比較」或「政策實施前後對比」來呈現。
+        const masterQuestionBank = [
+            // 單元1: 我們的經濟活動
+            { type: 'tf', text: '生產者為了獲得更高的利潤，通常會盡量降低生產成本，例如選擇租金較便宜的廠房。', ans: 'O' },
+            { type: 'tf', text: '「機會成本」是指我們在做選擇時，所放棄的其他選項中，價值「最低」的那一個。', ans: 'X' },
+            { type: 'tf', text: '分工合作雖然可以讓每個人專心做自己擅長的事，但會導致生產速度變慢，效率降低。', ans: 'X' },
+            { type: 'tf', text: '當商品供過於求（生產量大於消費者想買的數量）時，商品價格通常會下跌。', ans: 'O' },
+            { type: 'tf', text: '我們在消費時，應該優先購買「想要」的物品，滿足心靈後再買「需要」的物品。', ans: 'X' },
+            { type: 'tf', text: '投資理財一定會賺錢，只要把錢全部拿去買股票，就能快速增加財富。', ans: 'X' },
+            { type: 'tf', text: '為了保護消費者的權益，政府制定了《消費者保護法》。', ans: 'O' },
+            { type: 'tf', text: '記帳的好處是可以清楚知道自己的金錢流向，有助於規畫未來的消費與儲蓄。', ans: 'O' },
+            { type: 'tf', text: '使用信用卡消費等於是在「預支未來的錢」，如果沒有按時繳清，會產生高額的利息。', ans: 'O' },
+            { type: 'tf', text: '網購雖然方便，但收到商品如果有瑕疵，依法絕對不能退換貨。', ans: 'X' },
+            { type: 'mc', text: '王伯伯有一塊農地，如果種高麗菜可以賺10萬元，種西瓜可以賺15萬元，種草莓可以賺20萬元。最後王伯伯決定種草莓。請問他選擇「種草莓」的機會成本是多少？', options: ['10萬元', '15萬元', '20萬元', '35萬元'], ans: 1 }, // 15萬是放棄選項中最高的
+            { type: 'mc', text: '下列哪一種行為屬於「生產活動」？', options: ['小明去超商買飲料', '媽媽在工廠組裝手機', '爸爸把錢存入銀行', '妹妹把壓歲錢藏在床下'], ans: 1 },
+            { type: 'mc', text: '麵包店老闆為了烤出好吃的麵包，購買了烤箱和麵粉。請問「烤箱」和「麵粉」屬於生產要素中的哪一項？', options: ['自然資源', '人力資源', '資本', '企業才能'], ans: 2 },
+            { type: 'mc', text: '「甲農場使用人工採收茶葉，乙農場引進機器採收茶葉（假設品質相同）。」經過一段時間對比，乙農場的茶葉價格比較便宜。請問造成乙農場價格優勢的最主要原因是什麼？', options: ['降低了生產成本', '提高了茶葉品質', '改變了氣候條件', '減少了土地面積'], ans: 0 },
+            { type: 'mc', text: '為了響應環保，許多飲料店推出「自備環保杯折5元」的活動。這種做法主要是透過什麼方式來影響消費者的行為？', options: ['強制規定', '價格誘因', '減少產量', '增加稅收'], ans: 1 },
+            { type: 'mc', text: '小華每個月有1000元零用錢，他想買一雙2000元的球鞋。下列哪一種理財方式最合理且安全？', options: ['向同學借錢，以後慢慢還', '每個月存下500元，四個月後購買', '把1000元全部拿去買彩券試運氣', '偷拿爸爸錢包裡的錢'], ans: 1 },
+            { type: 'mc', text: '下列哪一項屬於「想要」而非「需要」？', options: ['生病時去看醫生的掛號費', '每天必須吃的三餐', '因為同學都有，所以我也要買的最新款遊戲機', '冬天保暖穿的普通外套'], ans: 2 },
+            { type: 'mc', text: '當我們在網路上購物遇到詐騙時，可以撥打哪一支專線尋求協助？', options: ['110', '113', '119', '165'], ans: 3 },
+            { type: 'mc', text: '阿公把退休金放在家裡的鐵罐裡，幾年後發現東西變貴了，這些錢能買的東西變少了。這是因為什麼經濟現象造成的？', options: ['通貨緊縮', '通貨膨脹', '經濟起飛', '跨國貿易'], ans: 1 },
+            { type: 'mc', text: '【情境配對題】小強擅長做報告的PPT，小美擅長上台報告。如果兩人同組完成報告，下列哪一種分工模式最符合「比較利益」原則？', options: ['小強負責上台，小美做PPT', '小強做PPT，小美負責上台', '兩人都做PPT，都不上台', '兩人都上台，不做PPT'], ans: 1 },
+            { type: 'mc', text: '關於「儲蓄」與「投資」，下列觀念何者正確？', options: ['儲蓄的風險通常比股票投資高', '投資的報酬率越高，風險通常也越高', '把錢存在銀行一定不會受到通貨膨脹影響', '小學生不能有儲蓄的觀念'], ans: 1 },
+            { type: 'mc', text: '現代社會中，企業經常透過「大量生產」來製造商品。大量生產最主要的優點是什麼？', options: ['商品獨一無二', '降低單件商品的生產成本', '減少環境汙染', '不需要任何人工'], ans: 1 },
+            { type: 'mc', text: '如果氣象局發布強烈颱風即將登陸的消息，市場上的蔬菜價格通常會有什麼變化？為什麼？', options: ['下跌；因為大家不敢出門買菜', '上漲；因為預期農作物受損，供給減少', '不變；政府有規定蔬菜不能漲價', '下跌；因為農民會趕快把菜丟掉'], ans: 1 },
+            { type: 'mc', text: '下列何者是身為消費者應盡的責任？', options: ['要求店家無限期退貨', '購買前看清楚商品標示與保存期限', '只買最便宜但不安全的商品', '買到瑕疵品自認倒楣不反映'], ans: 1 },
+            { type: 'mc', text: '有兩家珍奶店，A店花費重金裝潢，B店裝潢簡單但花錢購買更好的茶葉。若兩家珍奶售價相同，A店可能面臨什麼經濟問題？', options: ['利潤比B店高', '生產成本比B店高，壓縮利潤', '消費者絕對不會去A店', 'A店違反公平交易法'], ans: 1 },
+
+            // 單元2: 清帝國時期臺灣的發展與改變
+            { type: 'tf', text: '清帝國統治初期，為了防止臺灣再次成為反清基地，對漢人渡臺採取「嚴格限制」的政策。', ans: 'O' },
+            { type: 'tf', text: '早期渡過黑水溝來臺灣的移民，為了祈求平安，經常會攜帶原鄉的神明香火，因此臺灣有許多媽祖、王爺的信仰。', ans: 'O' },
+            { type: 'tf', text: '清代漢人來臺開墾，經常與原住民族發生土地衝突，政府於是設立了「土牛溝」或「土牛紅線」來劃分雙方界線。', ans: 'O' },
+            { type: 'tf', text: '林爽文事件是清代臺灣規模最大的一場民變，後來靠著沈葆楨帶兵才平息。', ans: 'X' }, // 福康安平息
+            { type: 'tf', text: '為了開墾土地需要大量水源，清代臺灣興建了許多水圳，其中位於北部的是「八堡圳」。', ans: 'X' }, // 八堡圳在中部彰化，北部是瑠公圳
+            { type: 'tf', text: '清代臺灣因為「分類械鬥」嚴重，所以當時的漢人移民完全沒有互相合作開墾的例子。', ans: 'X' },
+            { type: 'tf', text: '牡丹社事件是日本藉口琉球船民被臺灣原住民殺害，而出兵攻打臺灣的事件。', ans: 'O' },
+            { type: 'tf', text: '臺灣開港通商後，出口最多的三樣商品是：茶葉、樟腦、蔗糖。', ans: 'O' },
+            { type: 'tf', text: '馬雅各醫生在臺灣北部行醫傳教，並設立了滬尾偕醫館。', ans: 'X' }, // 馬雅各在南部，北部是馬偕
+            { type: 'tf', text: '劉銘傳擔任臺灣首任巡撫期間，在臺灣鋪設了第一條鐵路（基隆到新竹），推動了現代化建設。', ans: 'O' },
+            { type: 'mc', text: '「唐山過臺灣，心肝結歸丸」這句俗諺，主要反映了清代初期漢人移民面臨的哪一種情況？', options: ['渡過臺灣海峽十分危險', '臺灣的氣候非常寒冷', '臺灣的原住民非常熱情', '在臺灣做生意很容易賺錢'], ans: 0 },
+            { type: 'mc', text: '【對照比較題】清代初期，朝廷對臺灣實施「渡臺禁令」；到了清代晚期（牡丹社事件後），沈葆楨卻實施「開山撫番」並「廢除渡臺禁令」。請問政策轉變的最主要原因是什麼？', options: ['臺灣人口太多需要減少', '為了開發山地資源並防範外國勢力入侵', '原住民要求漢人大量來臺', '為了讓臺灣獨立建國'], ans: 1 },
+            { type: 'mc', text: '清代臺灣各地經常發生「分類械鬥」，例如漳州人與泉州人打架。這主要是因為什麼原因引起的？', options: ['為了爭奪土地、水源或商業利益', '為了反抗清朝政府的統治', '受到外國傳教士的煽動', '為了爭取考試當官的名額'], ans: 0 },
+            { type: 'mc', text: '下列哪一項水利工程與其所在地區的配對是「正確」的？', options: ['瑠公圳 - 彰化地區', '八堡圳 - 高雄地區', '曹公圳 - 臺北地區', '曹公圳 - 高雄地區'], ans: 3 },
+            { type: 'mc', text: '臺灣在西元1860年代開港通商，當時被迫開放的港口不包括下列哪一個？', options: ['雞籠（基隆）', '滬尾（淡水）', '鹿港', '打狗（高雄）'], ans: 2 }, // 條約開放基隆,淡水,安平,打狗
+            { type: 'mc', text: '開港通商後，臺灣的經濟重心產生了轉移。請問經濟重心是從哪裡轉移到哪裡？', options: ['從北部轉移到南部', '從南部轉移到北部', '從東部轉移到西部', '沒有改變'], ans: 1 }, // 因為茶和樟腦在北部
+            { type: 'mc', text: '開港通商後，外國商人紛紛來臺灣設立什麼機構來收購商品和進行貿易？', options: ['洋行', '商行', '郊行', '公行'], ans: 0 },
+            { type: 'mc', text: '這位傳教士來到臺灣南部，建立了全臺第一所西醫醫院（新樓醫院的前身），並引入了西方醫療技術。請問他是誰？', options: ['馬偕', '馬雅各', '八田與一', '巴克禮'], ans: 1 },
+            { type: 'mc', text: '牡丹社事件促使清廷派哪一位官員來臺處理善後，並開始積極建設臺灣（如建造恆春縣城、億載金城）？', options: ['施琅', '沈葆楨', '丁日昌', '劉銘傳'], ans: 1 },
+            { type: 'mc', text: '中法戰爭期間，法軍攻打臺灣北部。當時負責防守並在戰後被任命為臺灣第一任巡撫的是誰？', options: ['沈葆楨', '丁日昌', '劉銘傳', '唐景崧'], ans: 2 },
+            { type: 'mc', text: '【綜合比較題】下列關於「郊」（如泉郊、廈郊）與「洋行」的比較，何者正確？', options: ['兩者都是外國人設立的', '「郊」是與中國大陸貿易的商人公會；「洋行」是外國商人的商館', '「郊」主要出口茶葉；「洋行」主要出口米和糖', '兩者都出現在清帝國統治初期'], ans: 1 },
+            { type: 'mc', text: '劉銘傳在臺灣推動了許多新政。下列哪一項「不是」他在臺灣的建設？', options: ['鋪設鐵路', '架設電報線', '設立郵政總局', '興建嘉南大圳'], ans: 3 }, // 嘉南大圳是日治時期八田與一
+            { type: 'mc', text: '清代俗諺「三年一小反，五年一大亂」，反映了當時臺灣社會的什麼現象？', options: ['自然災害頻繁', '民變事件不斷', '原漢衝突減少', '外國軍隊時常入侵'], ans: 1 },
+            { type: 'mc', text: '開港通商後，哪一種產業的興起，使得許多原本從事水稻種植的農民轉而種植這種經濟作物，並促進了臺灣丘陵地的開發？', options: ['茶葉', '甘蔗', '稻米', '香蕉'], ans: 0 },
+            { type: 'mc', text: '清代許多單身男子來臺開墾，被稱為「羅漢腳」。他們如果在開墾過程中不幸去世，無人祭拜，民眾通常會集資建立什麼來祭祀他們？', options: ['城隍廟', '有應公廟', '孔廟', '天后宮'], ans: 1 }
+        ];
+
+        // 狀態變數
+        let currentQuestions = [];
+        let userAnswers = {};
+        let markedQuestions = new Set();
+        let examTimer;
+        let timeLeft = 40 * 60; // 40 minutes in seconds
+        let studentName = "";
+
+        // --- 初始化與洗牌功能 ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        window.onload = function() {
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('kanghsuan_history') || '[]');
+            const container = document.getElementById('history-container');
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">尚無測驗紀錄</p>';
+                return;
+            }
+            let html = '<ul class="divide-y divide-gray-300">';
+            // 只取最近3次
+            history.slice(0, 3).forEach(record => {
+                html += `
+                    <li class="py-3 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-gray-800">${record.name}</span>
+                            <span class="text-sm text-gray-500 ml-2">${record.date}</span>
+                        </div>
+                        <div class="text-lg font-bold ${record.score >= 80 ? 'text-green-600' : (record.score >= 60 ? 'text-orange-500' : 'text-red-600')}">
+                            ${record.score} 分
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        // --- 進入考試 ---
+        function startExam() {
+            const nameInput = document.getElementById('student-name').value.trim();
+            if (!nameInput) {
+                Swal.fire({ icon: 'warning', title: '請輸入姓名', text: '考試前必須輸入考生的名字喔！', confirmButtonColor: '#9B8EC7' });
+                return;
+            }
+            studentName = nameInput;
+            document.getElementById('pdf-student-name').textContent = studentName;
+
+            // 準備考題
+            currentQuestions = JSON.parse(JSON.stringify(masterQuestionBank)); // 深拷貝
+            shuffleArray(currentQuestions);
+            
+            // 重置狀態
+            userAnswers = {};
+            markedQuestions.clear();
+            timeLeft = 40 * 60;
+            
+            renderQuestions();
+            updateStats();
+
+            // 切換畫面
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('exam-screen').classList.remove('hidden');
+            document.getElementById('exam-screen').classList.add('flex');
+
+            // 啟動計時器
+            startTimer();
+            window.scrollTo(0, 0);
+        }
+
+        // --- 渲染考題 ---
+        function renderQuestions() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+
+            currentQuestions.forEach((q, index) => {
+                const qNum = index + 1;
+                let optionsHtml = '';
+
+                if (q.type === 'tf') {
+                    optionsHtml = `
+                        <div class="flex gap-4 mt-3">
+                            <label class="cursor-pointer flex-1 relative">
+                                <input type="radio" name="q${index}" value="O" class="peer sr-only radio-custom" onchange="handleAnswer(${index}, 'O')">
+                                <div class="px-4 py-3 rounded-lg border-2 border-gray-200 peer-hover:border-theme-accent1 transition-all text-center text-xl bg-white shadow-sm">
+                                    <i class="fa-regular fa-circle text-blue-500"></i> 是 (O)
+                                </div>
+                            </label>
+                            <label class="cursor-pointer flex-1 relative">
+                                <input type="radio" name="q${index}" value="X" class="peer sr-only radio-custom" onchange="handleAnswer(${index}, 'X')">
+                                <div class="px-4 py-3 rounded-lg border-2 border-gray-200 peer-hover:border-theme-accent1 transition-all text-center text-xl bg-white shadow-sm">
+                                    <i class="fa-solid fa-xmark text-red-500"></i> 否 (X)
+                                </div>
+                            </label>
+                        </div>
+                    `;
+                } else if (q.type === 'mc') {
+                    optionsHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">';
+                    q.options.forEach((opt, optIndex) => {
+                        const optLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
+                        optionsHtml += `
+                            <label class="cursor-pointer relative">
+                                <input type="radio" name="q${index}" value="${optIndex}" class="peer sr-only radio-custom" onchange="handleAnswer(${index}, '${optIndex}')">
+                                <div class="px-4 py-3 rounded-lg border-2 border-gray-200 peer-hover:border-theme-accent1 transition-all bg-white shadow-sm flex items-center gap-2">
+                                    <span class="font-bold text-gray-500 w-6">${optLetter}.</span> 
+                                    <span class="text-lg">${opt}</span>
+                                </div>
+                            </label>
+                        `;
+                    });
+                    optionsHtml += '</div>';
+                }
+
+                const cardHtml = `
+                    <div id="q-card-${index}" class="bg-white p-6 rounded-xl shadow-md border-l-8 border-theme-accent1 relative transition-colors duration-300 print:shadow-none print:border-gray-300 print:mb-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-gray-800 flex-1">
+                                <span class="text-theme-primary mr-2">${qNum}.</span>
+                                ${q.type === 'tf' ? '<span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded mr-2 no-print">是非題</span>' : '<span class="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded mr-2 no-print">選擇題</span>'}
+                                ${q.text}
+                            </h3>
+                            <label class="flex items-center gap-2 cursor-pointer text-orange-500 hover:bg-orange-50 px-3 py-1 rounded-full transition-colors no-print">
+                                <input type="checkbox" class="w-5 h-5 accent-orange-500" onchange="handleMark(${index}, this.checked)">
+                                <span class="font-medium whitespace-nowrap"><i class="fa-solid fa-flag"></i> 稍後作答</span>
+                            </label>
+                        </div>
+                        ${optionsHtml}
+                        <!-- 錯誤標示區塊 (交卷後顯示) -->
+                        <div id="result-msg-${index}" class="hidden mt-3 text-lg font-bold p-3 rounded-lg"></div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // --- 互動邏輯 ---
+        function handleAnswer(qIndex, value) {
+            userAnswers[qIndex] = value;
+            document.getElementById(`q-card-${qIndex}`).classList.remove('border-red-400', 'bg-red-50'); // 清除未答警告顏色
+            updateStats();
+        }
+
+        function handleMark(qIndex, isChecked) {
+            const card = document.getElementById(`q-card-${qIndex}`);
+            if (isChecked) {
+                markedQuestions.add(qIndex);
+                card.classList.add('border-orange-400', 'bg-orange-50');
+            } else {
+                markedQuestions.delete(qIndex);
+                card.classList.remove('border-orange-400', 'bg-orange-50');
+            }
+            updateStats();
+        }
+
+        function updateStats() {
+            const answeredCount = Object.keys(userAnswers).length;
+            const totalCount = currentQuestions.length;
+            const unansweredCount = totalCount - answeredCount;
+            const markedCount = markedQuestions.size;
+
+            document.getElementById('stat-answered').textContent = answeredCount;
+            document.getElementById('stat-unanswered').textContent = unansweredCount;
+            document.getElementById('stat-marked').textContent = markedCount;
+
+            // 未答題變紅色警告
+            const unAnsEl = document.getElementById('stat-unanswered');
+            if (unansweredCount > 0) {
+                unAnsEl.parentElement.classList.add('text-red-500');
+                unAnsEl.parentElement.classList.remove('text-gray-500');
+            } else {
+                unAnsEl.parentElement.classList.remove('text-red-500');
+                unAnsEl.parentElement.classList.add('text-gray-500');
+            }
+        }
+
+        function scrollToUnanswered() {
+            for (let i = 0; i < currentQuestions.length; i++) {
+                if (!(i in userAnswers)) {
+                    const card = document.getElementById(`q-card-${i}`);
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 閃爍效果提示
+                    card.classList.add('ring-4', 'ring-red-400');
+                    setTimeout(() => card.classList.remove('ring-4', 'ring-red-400'), 1500);
+                    break;
+                }
+            }
+        }
+
+        // --- 計時器邏輯 ---
+        function startTimer() {
+            const display = document.getElementById('timer-display');
+            
+            examTimer = setInterval(() => {
+                timeLeft--;
+                
+                let minutes = Math.floor(timeLeft / 60);
+                let seconds = timeLeft % 60;
+                minutes = minutes < 10 ? "0" + minutes : minutes;
+                seconds = seconds < 10 ? "0" + seconds : seconds;
+                
+                display.textContent = minutes + ":" + seconds;
+
+                // 提醒邏輯
+                if (timeLeft === 25 * 60) {
+                    showToast('info', '時間提醒', '考試剩下 25 分鐘囉！');
+                } else if (timeLeft === 10 * 60) {
+                    showToast('warning', '時間提醒', '注意！考試只剩下 10 分鐘！');
+                    display.parentElement.classList.add('bg-orange-100', 'text-orange-600');
+                } else if (timeLeft === 5 * 60) {
+                    showToast('error', '最後倒數', '考試剩下最後 5 分鐘，請把握時間檢查！');
+                    display.parentElement.classList.remove('bg-orange-100', 'text-orange-600');
+                    display.parentElement.classList.add('bg-red-100', 'text-red-600', 'animate-pulse');
+                } else if (timeLeft <= 0) {
+                    clearInterval(examTimer);
+                    Swal.fire({
+                        title: '時間到！',
+                        text: '考試時間已結束，系統將自動為您繳交考卷。',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        confirmButtonColor: '#9B8EC7'
+                    }).then(() => {
+                        processSubmission();
+                    });
+                }
+            }, 1000);
+        }
+
+        function showToast(icon, title, text) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: icon,
+                title: title,
+                text: text,
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+            });
+        }
+
+        // --- 繳卷邏輯 ---
+        function confirmSubmit() {
+            const unansweredCount = currentQuestions.length - Object.keys(userAnswers).length;
+            
+            if (unansweredCount > 0) {
+                Swal.fire({
+                    title: '還有題目未作答！',
+                    text: `您還有 ${unansweredCount} 題沒有填寫答案，請填寫完畢後再繳卷。`,
+                    icon: 'warning',
+                    confirmButtonText: '去作答',
+                    confirmButtonColor: '#9B8EC7'
+                }).then(() => {
+                    scrollToUnanswered();
+                });
+                return;
+            }
+
+            if (markedQuestions.size > 0) {
+                Swal.fire({
+                    title: '有稍後作答的標記',
+                    text: `您有 ${markedQuestions.size} 題標記為「稍後作答」，確定不再檢查要直接交卷嗎？`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#9B8EC7',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '確認交卷',
+                    cancelButtonText: '返回檢查'
+                }).then((result) => {
+                    if (result.isConfirmed) processSubmission();
+                });
+            } else {
+                Swal.fire({
+                    title: '確認繳卷？',
+                    text: "交卷後將無法修改答案！",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#9B8EC7',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '是的，我要交卷'
+                }).then((result) => {
+                    if (result.isConfirmed) processSubmission();
+                });
+            }
+        }
+
+        function processSubmission() {
+            clearInterval(examTimer);
+            document.getElementById('timer-display').parentElement.classList.remove('animate-pulse');
+            
+            // 計算分數 (每題2分)
+            let score = 0;
+            let correctCount = 0;
+            
+            currentQuestions.forEach((q, index) => {
+                const userAns = userAnswers[index];
+                const isCorrect = String(userAns) === String(q.ans);
+                
+                // 鎖定所有 radio
+                const radios = document.getElementsByName(`q${index}`);
+                radios.forEach(radio => radio.disabled = true);
+                
+                // 移除稍後作答 checkbox
+                const card = document.getElementById(`q-card-${index}`);
+                const checkboxLabel = card.querySelector('label.text-orange-500');
+                if(checkboxLabel) checkboxLabel.remove();
+
+                const msgDiv = document.getElementById(`result-msg-${index}`);
+                msgDiv.classList.remove('hidden');
+
+                if (isCorrect) {
+                    score += 2;
+                    correctCount++;
+                    msgDiv.classList.add('bg-green-100', 'text-green-700');
+                    msgDiv.innerHTML = '<i class="fa-solid fa-check"></i> 答對了！';
+                } else {
+                    // 標示錯誤，但不馬上顯示答案
+                    card.classList.add('border-red-500', 'bg-red-50');
+                    msgDiv.classList.add('bg-red-100', 'text-red-700');
+                    msgDiv.innerHTML = '<i class="fa-solid fa-xmark"></i> 答錯了或未作答。';
+                }
+            });
+
+            // 儲存紀錄
+            const history = JSON.parse(localStorage.getItem('kanghsuan_history') || '[]');
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            history.unshift({ name: studentName, score: score, date: dateStr });
+            localStorage.setItem('kanghsuan_history', JSON.stringify(history));
+
+            // 更新 UI 狀態
+            document.getElementById('btn-submit').classList.add('hidden');
+            document.getElementById('btn-show-answers').classList.remove('hidden');
+            document.getElementById('btn-download-pdf').classList.remove('hidden');
+            document.getElementById('pdf-score').textContent = score;
+
+            // 顯示成績 Alert
+            Swal.fire({
+                title: '測驗完成！',
+                html: `
+                    <div class="text-2xl mb-4">考生：<span class="font-bold text-theme-primary">${studentName}</span></div>
+                    <div class="text-5xl font-bold ${score >= 80 ? 'text-green-600' : (score >= 60 ? 'text-orange-500' : 'text-red-600')} mb-4">${score} 分</div>
+                    <p>答對題數：${correctCount} / 50</p>
+                    <p class="text-sm text-gray-500 mt-4">您可以點擊下方按鈕下載考卷PDF，或輸入密碼查看正確解答。</p>
+                `,
+                icon: score >= 80 ? 'success' : 'info',
+                confirmButtonColor: '#9B8EC7',
+                confirmButtonText: '查看試卷'
+            });
+        }
+
+        // --- 密碼保護看答案 ---
+        function verifyPassword() {
+            Swal.fire({
+                title: '請輸入密碼',
+                text: '為保護教學公平性，需輸入教師密碼方可查看正確解答。',
+                input: 'password',
+                inputAttributes: {
+                    autocapitalize: 'off'
+                },
+                showCancelButton: true,
+                confirmButtonText: '確認',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#9B8EC7',
+                preConfirm: (pwd) => {
+                    if (pwd !== '1234') {
+                        Swal.showValidationMessage('密碼錯誤！');
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showAnswers();
+                }
+            });
+        }
+
+        function showAnswers() {
+            const container = document.getElementById('answers-reveal-container');
+            const list = document.getElementById('answers-list');
+            container.classList.remove('hidden');
+            list.innerHTML = '';
+
+            currentQuestions.forEach((q, index) => {
+                const msgDiv = document.getElementById(`result-msg-${index}`);
+                let ansText = "";
+                
+                if (q.type === 'tf') {
+                    ansText = q.ans;
+                } else if (q.type === 'mc') {
+                    const optLetter = String.fromCharCode(65 + parseInt(q.ans));
+                    ansText = `${optLetter}`;
+                }
+
+                // 如果答錯，在該題下方顯示正確答案
+                const userAns = userAnswers[index];
+                if (String(userAns) !== String(q.ans)) {
+                    msgDiv.innerHTML = `<i class="fa-solid fa-xmark"></i> 您的作答是錯誤的。 <span class="ml-2 text-blue-700 font-bold"><i class="fa-solid fa-circle-right"></i> 正確答案：${ansText}</span>`;
+                }
+
+                // 在底部匯總區顯示
+                list.innerHTML += `
+                    <div class="bg-white p-2 rounded border border-gray-200 text-center shadow-sm">
+                        <span class="text-gray-500 mr-2">${index + 1}.</span> 
+                        <span class="font-bold text-xl text-theme-primary">${ansText}</span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('btn-show-answers').classList.add('hidden');
+            
+            Swal.fire({
+                icon: 'success',
+                title: '已解鎖正確答案',
+                text: '您可以在每題錯誤的下方，以及頁面最底部的列表查看正確解答。',
+                confirmButtonColor: '#9B8EC7'
+            }).then(() => {
+                // 滾動到第一個錯誤的題目或解答區
+                container.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
+        // --- PDF 匯出 ---
+        function generatePDF() {
+            Swal.fire({
+                title: '產生PDF中...',
+                text: '請稍候，系統正在為您排版並產生PDF檔案。',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // 準備列印用的 DOM
+            const element = document.querySelector('main'); // 只印 main 區塊
+            document.getElementById('pdf-header').classList.remove('hidden'); // 顯示抬頭
+
+            // 設定 html2pdf 選項
+            const opt = {
+                margin:       10,
+                filename:     `康軒五下社會期中考_${studentName}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 執行匯出
+            html2pdf().set(opt).from(element).save().then(() => {
+                document.getElementById('pdf-header').classList.add('hidden'); // 隱藏抬頭
+                Swal.fire({
+                    icon: 'success',
+                    title: '下載成功！',
+                    text: '試卷已成功儲存為 PDF 格式。',
+                    confirmButtonColor: '#9B8EC7'
+                });
+            });
+        }
+    </script>
+</body>
+</html>
