@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五下)數學線上期末測驗系統_0414</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- xlsx-js-style -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        customCyan: '#03AED2',
+                        customYellow: '#F8DE22',
+                        customOrange: '#F45B26',
+                        customRed: '#D12052',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #f0fdfa; }
+        .question-card { transition: all 0.3s ease; }
+        .question-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .radio-custom:checked + label { background-color: #F8DE22; border-color: #F45B26; font-weight: bold; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #03AED2; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #028ca8; }
+
+        .highlight-unanswered { animation: pulseRed 2s infinite; border: 2px solid #D12052; }
+        @keyframes pulseRed {
+            0% { box-shadow: 0 0 0 0 rgba(209, 32, 82, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(209, 32, 82, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(209, 32, 82, 0); }
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-customCyan text-white shadow-lg fixed w-full top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3 w-full justify-between">
+                    <span class="font-bold text-xl md:text-2xl truncate" title="113學年-康軒(五下)數學線上期末測驗系統_0414">
+                        <i class="fa-solid fa-calculator mr-2"></i>113學年-康軒(五下)數學線上期末測驗系統_0414
+                    </span>
+                    <div id="timerDisplay" class="hidden font-mono text-xl md:text-2xl bg-customRed px-4 py-1 rounded-full font-bold shadow-inner">
+                        <i class="fa-regular fa-clock mr-2"></i><span id="timeText">40:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto mt-24 px-4 sm:px-6 lg:px-8">
+        
+        <!-- Welcome / Entry Screen -->
+        <div id="welcomeScreen" class="bg-white rounded-2xl shadow-xl p-8 border-t-8 border-customYellow relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-customCyan rounded-full opacity-20"></div>
+            <div class="absolute bottom-0 left-0 -mb-4 -ml-4 w-16 h-16 bg-customOrange rounded-full opacity-20"></div>
+            
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">期末測驗準備開始！</h2>
+            <p class="text-center text-gray-600 mb-8 font-medium">範圍：國小數學五下 (康軒版) 第1單元 ~ 第5單元<br>總題數：50題 / 測驗時間：40分鐘</p>
+            
+            <div class="max-w-md mx-auto space-y-6">
+                <div>
+                    <label for="studentName" class="block text-lg font-bold text-customCyan mb-2">請輸入考生姓名：</label>
+                    <input type="text" id="studentName" class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-customCyan focus:outline-none text-lg transition-colors" placeholder="例如：王小明" required>
+                </div>
+                <button onclick="startExam()" class="w-full bg-customOrange hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg text-xl transition-all transform hover:scale-105">
+                    <i class="fa-solid fa-play mr-2"></i>開始作答
+                </button>
+                <p class="text-center text-sm text-gray-500 font-bold bg-gray-100 py-2 rounded">
+                    <i class="fa-solid fa-book-open mr-1"></i>考題資料來源：康軒版國小數學五下考古題
+                </p>
+            </div>
+
+            <!-- Recent Scores Section -->
+            <div class="mt-12 bg-orange-50 rounded-xl p-6 border border-orange-100">
+                <h3 class="text-xl font-bold text-customOrange mb-4"><i class="fa-solid fa-ranking-star mr-2"></i>最近3次測驗成績</h3>
+                <ul id="recentScoresList" class="space-y-2 text-gray-700">
+                    <!-- JS will populate this -->
+                </ul>
+            </div>
+
+            <!-- Teacher / Parent Area -->
+            <div class="mt-8 border-t pt-6">
+                <button onclick="toggleTeacherArea()" class="text-customCyan font-bold hover:text-cyan-700 transition-colors">
+                    <i class="fa-solid fa-user-tie mr-1"></i>老師/家長管理專區 (點擊展開)
+                </button>
+                <div id="teacherArea" class="hidden mt-4 bg-gray-100 p-6 rounded-xl border border-gray-200">
+                    <h4 class="font-bold text-gray-700 mb-4">考題管理 (需密碼)</h4>
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="downloadQuestions()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow transition-colors">
+                            <i class="fa-solid fa-download mr-1"></i>下載考題 (JSON)
+                        </button>
+                        <label class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg shadow cursor-pointer transition-colors">
+                            <i class="fa-solid fa-upload mr-1"></i>上傳考題 (JSON)
+                            <input type="file" id="uploadQuestions" accept=".json" class="hidden" onchange="uploadQuestionsFile(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">考生：<span id="displayStudentName" class="text-customCyan"></span></h2>
+                <button onclick="requirePasswordForAnswers()" class="bg-gray-800 hover:bg-gray-900 text-white py-2 px-4 rounded-lg shadow-md text-sm font-bold transition-colors">
+                    <i class="fa-solid fa-key mr-1"></i>預先查看解答(密碼保護)
+                </button>
+            </div>
+            
+            <form id="quizForm">
+                <div id="questionsContainer" class="space-y-6">
+                    <!-- Questions will be injected here -->
+                </div>
+            </form>
+
+            <!-- Export Error Button (Visible only after submit) -->
+            <div id="exportBtnContainer" class="hidden mt-8 text-center bg-white p-6 rounded-xl shadow border-2 border-customRed">
+                <h3 class="text-xl font-bold text-customRed mb-4">考試結束！你可以將錯誤題目匯出進行複習</h3>
+                <button onclick="exportWrongAnswers()" class="bg-customRed hover:bg-red-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-transform transform hover:scale-105">
+                    <i class="fa-solid fa-file-excel mr-2"></i>匯出錯題 Excel 檔 (exam_result.xls)
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <div id="bottomStatusBar" class="hidden fixed bottom-0 w-full bg-white border-t-4 border-customYellow shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] py-3 z-40 transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex space-x-6 text-lg font-bold mb-3 md:mb-0">
+                <span class="text-green-600"><i class="fa-solid fa-check-circle mr-1"></i>已答：<span id="answeredCount">0</span> 題</span>
+                <span class="text-customRed cursor-pointer hover:underline" onclick="scrollToFirstUnanswered()" title="點擊跳至第一題未答題目"><i class="fa-solid fa-circle-xmark mr-1"></i>未答：<span id="unansweredCount">50</span> 題</span>
+                <span class="text-customOrange"><i class="fa-solid fa-bookmark mr-1"></i>稍後作答：<span id="markedCount">0</span> 題</span>
+            </div>
+            <button id="submitBtn" onclick="submitExam()" class="bg-customCyan hover:bg-cyan-600 text-white font-bold py-2 px-12 rounded-full shadow-lg text-xl transition-transform transform hover:scale-105">
+                <i class="fa-solid fa-paper-plane mr-2"></i>繳卷送出
+            </button>
+        </div>
+    </div>
+
+    <!-- Question Bank & Logic -->
+    <script>
+        // --- Question Bank (50 Questions covering Units 1-5) ---
+        // 題型包含：選擇題(multiple-choice)、是非題(true-false)。配合題概念融合於選擇題中。
+        let defaultQuestions = [
+            // 第1單元：分數的計算 (10題)
+            { id: 1, unit: "第1單元：分數的計算", type: "multiple-choice", question: "計算 1/2 + 1/3 的結果是多少？", options: ["2/5", "5/6", "1/6", "1/5"], answer: 1, explanation: "通分：1/2 = 3/6，1/3 = 2/6。相加得到 5/6。" },
+            { id: 2, unit: "第1單元：分數的計算", type: "multiple-choice", question: "計算 1又1/4 - 3/8 的結果是多少？", options: ["7/8", "5/8", "1又1/8", "3/4"], answer: 0, explanation: "1又1/4 = 5/4 = 10/8。10/8 - 3/8 = 7/8。" },
+            { id: 3, unit: "第1單元：分數的計算", type: "true-false", question: "同分母分數相加時，分母相加，分子也相加。", options: ["○", "╳"], answer: 1, explanation: "錯誤。同分母分數相加時，分母不變，只有分子相加。" },
+            { id: 4, unit: "第1單元：分數的計算", type: "multiple-choice", question: "一罐果汁有 2又1/5 公升，喝掉了 3/4 公升，還剩下多少公升？", options: ["1又11/20", "1又9/20", "2又11/20", "29/20"], answer: 1, explanation: "2又1/5 - 3/4 = 11/5 - 3/4 = 44/20 - 15/20 = 29/20 = 1又9/20 公升。" },
+            { id: 5, unit: "第1單元：分數的計算", type: "multiple-choice", question: "找出等值分數：4/7 = (  )/28，括號中應填入多少？", options: ["12", "16", "20", "24"], answer: 1, explanation: "分母 7 × 4 = 28，所以分子也要 4 × 4 = 16。" },
+            { id: 6, unit: "第1單元：分數的計算", type: "true-false", question: "兩個真分數相加，其結果一定是大於1的假分數或帶分數。", options: ["○", "╳"], answer: 1, explanation: "錯誤。例如 1/4 + 1/4 = 1/2，結果仍是真分數。" },
+            { id: 7, unit: "第1單元：分數的計算", type: "multiple-choice", question: "小明花了 2/3 小時寫數學，4/5 小時寫國語，他總共花了多少小時寫作業？", options: ["1又7/15", "1又8/15", "6/8", "14/15"], answer: 0, explanation: "2/3 + 4/5 = 10/15 + 12/15 = 22/15 = 1又7/15 小時。" },
+            { id: 8, unit: "第1單元：分數的計算", type: "multiple-choice", question: "計算 3 - 1又2/7 的結果？", options: ["1又5/7", "2又5/7", "1又2/7", "2又2/7"], answer: 0, explanation: "3 = 2又7/7。2又7/7 - 1又2/7 = 1又5/7。" },
+            { id: 9, unit: "第1單元：分數的計算", type: "true-false", question: "異分母分數要比較大小或進行加減前，必須先進行「通分」。", options: ["○", "╳"], answer: 0, explanation: "正確。異分母必須化為同分母(通分)才能進行加減運算。" },
+            { id: 10, unit: "第1單元：分數的計算", type: "multiple-choice", question: "【配合題觀念】下列哪一個算式的結果與 1/2 + 1/4 相同？", options: ["1/3 + 1/3", "1 - 1/4", "5/8 + 1/8", "2/4 + 2/4"], answer: 1, explanation: "1/2 + 1/4 = 3/4。而 1 - 1/4 = 3/4，兩者相同。" },
+
+            // 第2單元：數的十進位結構 (10題)
+            { id: 11, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "在小數 3.1415 中，千分位上的數字是多少？", options: ["1", "4", "5", "3"], answer: 0, explanation: "十分位是1，百分位是4，千分位是1，萬分位是5。" },
+            { id: 12, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "0.08 是 8 的多少倍？", options: ["100倍", "10倍", "0.1倍", "0.01倍"], answer: 3, explanation: "8 × 0.01 = 0.08。所以是0.01倍。" },
+            { id: 13, unit: "第2單元：數的十進位結構", type: "true-false", question: "將一個小數的小數點向右移動兩位，這個數就會變成原來的 100 倍。", options: ["○", "╳"], answer: 0, explanation: "正確。小數點向右移一位是10倍，兩位是100倍。" },
+            { id: 14, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "「十二點零五三」記作數字是多少？", options: ["12.53", "12.053", "12.503", "120.53"], answer: 1, explanation: "整數部分是12，小數部分零五三即為 .053，合起來是 12.053。" },
+            { id: 15, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "將 5600 縮小成原來的 1/1000，會變成多少？", options: ["5.6", "0.56", "56", "0.056"], answer: 0, explanation: "5600 ÷ 1000 = 5.6，也就是小數點向左移動三位。" },
+            { id: 16, unit: "第2單元：數的十進位結構", type: "true-false", question: "0.7 和 0.70 的值相等，但在表示精確度上意義相同。", options: ["○", "╳"], answer: 1, explanation: "錯誤。值相等，但 0.70 表示精確到百分位，0.7 表示精確到十分位，意義不同。" },
+            { id: 17, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "2 個 10、5 個 1、3 個 0.1 和 8 個 0.001 合起來是多少？", options: ["25.38", "25.308", "25.038", "205.38"], answer: 1, explanation: "20 + 5 + 0.3 + 0.008 = 25.308 (百分位沒有給，所以是0)。" },
+            { id: 18, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "【配合題觀念】下列哪一個數最大？", options: ["0.909", "0.99", "0.099", "0.999"], answer: 3, explanation: "比較十分位都是9。比較百分位：0.99 和 0.999 是9。比較千分位：0.999 的千分位是9，故最大。" },
+            { id: 19, unit: "第2單元：數的十進位結構", type: "multiple-choice", question: "7.025 的「2」是位在哪一個位值？", options: ["十分位", "百分位", "千分位", "個位"], answer: 1, explanation: "小數點後第一位(0)是十分位，第二位(2)是百分位。" },
+            { id: 20, unit: "第2單元：數的十進位結構", type: "true-false", question: "十進位結構中，每相鄰兩個位值，左邊的位值是右邊位值的 10 倍。", options: ["○", "╳"], answer: 0, explanation: "正確。這就是十進位「逢十進一」的基礎結構。" },
+
+            // 第3單元：小數的乘法 (10題)
+            { id: 21, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "計算 1.5 × 0.6 的結果是多少？", options: ["0.09", "0.9", "9", "90"], answer: 1, explanation: "先算 15 × 6 = 90。共有兩位小數，小數點向左移兩位，得到 0.90，即 0.9。" },
+            { id: 22, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "一條緞帶長 2.4 公尺，3.5 條相同的緞帶總共長多少公尺？", options: ["7.4", "8.2", "8.4", "9.6"], answer: 2, explanation: "2.4 × 3.5 = 8.4 公尺。" },
+            { id: 23, unit: "第3單元：小數的乘法", type: "true-false", question: "一個大於 0 的數，乘上一個小於 1 的小數，積會比原來的數小。", options: ["○", "╳"], answer: 0, explanation: "正確。例如 5 × 0.8 = 4，積(4)比原數(5)小。" },
+            { id: 24, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "若 23 × 45 = 1035，則 0.23 × 4.5 = ？", options: ["103.5", "10.35", "1.035", "0.1035"], answer: 2, explanation: "0.23有兩位小數，4.5有一位小數，積要有 2+1=3 位小數。1035向左移三位為 1.035。" },
+            { id: 25, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "正方形的邊長是 1.25 公分，它的面積是多少平方公分？", options: ["1.5625", "2.5", "5", "1.25"], answer: 0, explanation: "正方形面積 = 邊長 × 邊長 = 1.25 × 1.25 = 1.5625 平方公分。" },
+            { id: 26, unit: "第3單元：小數的乘法", type: "true-false", question: "計算小數乘法時，小數點必須要先對齊才能開始乘。", options: ["○", "╳"], answer: 1, explanation: "錯誤。小數加減法才需要對齊小數點，乘法是靠最後數小數位數來點小數點。" },
+            { id: 27, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "一瓶鮮奶 1.8 公升，哥哥喝了 0.2 瓶，是喝了多少公升？", options: ["0.36", "3.6", "0.9", "1.6"], answer: 0, explanation: "1.8 × 0.2 = 0.36 公升。" },
+            { id: 28, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "【配合題觀念】把下列算式的積從小排到大：甲：5 × 0.9、乙：5 × 1.2、丙：5 × 1。", options: ["甲 < 乙 < 丙", "甲 < 丙 < 乙", "丙 < 甲 < 乙", "乙 < 丙 < 甲"], answer: 1, explanation: "乘數越小，積越小。0.9 < 1 < 1.2，所以 甲 < 丙 < 乙。" },
+            { id: 29, unit: "第3單元：小數的乘法", type: "multiple-choice", question: "每公斤蘋果售價 45.5 元，媽媽買了 2.4 公斤，要付多少元？", options: ["108.2", "109.2", "110", "112"], answer: 1, explanation: "45.5 × 2.4 = 109.20，即 109.2 元。" },
+            { id: 30, unit: "第3單元：小數的乘法", type: "true-false", question: "當計算 0.05 × 0.4 時，積的小數位數共有三位，所以答案是 0.020。", options: ["○", "╳"], answer: 0, explanation: "正確。5 × 4 = 20，補足三位小數變成 0.020 (雖然通常寫作0.02)。" },
+
+            // 第4單元：扇形 (10題)
+            { id: 31, unit: "第4單元：扇形", type: "multiple-choice", question: "一個圓的圓心角總共是幾度？", options: ["180度", "270度", "360度", "90度"], answer: 2, explanation: "一個完整的圓，其圓心角為 360 度。" },
+            { id: 32, unit: "第4單元：扇形", type: "multiple-choice", question: "1/4 圓的扇形，其圓心角是多少度？", options: ["45度", "60度", "90度", "120度"], answer: 2, explanation: "360 × 1/4 = 90 度。" },
+            { id: 33, unit: "第4單元：扇形", type: "true-false", question: "扇形是由兩條半徑和一段弧所圍成的圖形。", options: ["○", "╳"], answer: 0, explanation: "正確。這是扇形的定義。" },
+            { id: 34, unit: "第4單元：扇形", type: "multiple-choice", question: "圓心角是 120 度的扇形，是幾分之幾圓？", options: ["1/2", "1/3", "1/4", "1/6"], answer: 1, explanation: "120/360 = 1/3 圓。" },
+            { id: 35, unit: "第4單元：扇形", type: "multiple-choice", question: "同一個圓中，圓心角越大的扇形，其面積會如何？", options: ["越小", "越大", "不變", "無法比較"], answer: 1, explanation: "在同一個圓內，扇形面積與圓心角大小成正比。" },
+            { id: 36, unit: "第4單元：扇形", type: "true-false", question: "將圓對摺兩次後展開，所得到的摺痕相交處的角度為 90 度。", options: ["○", "╳"], answer: 0, explanation: "正確。對摺兩次會將圓平分為4等分，即 1/4 圓，圓心角為 90 度。" },
+            { id: 37, unit: "第4單元：扇形", type: "multiple-choice", question: "圓心角 60 度的扇形，和圓心角 30 度的扇形(半徑相同)，面積相差幾倍？", options: ["2倍", "3倍", "4倍", "一樣大"], answer: 0, explanation: "半徑相同時，面積比等於圓心角比：60 ÷ 30 = 2 倍。" },
+            { id: 38, unit: "第4單元：扇形", type: "multiple-choice", question: "【配合題觀念】把以下圓心角由大到小排列：(甲)直角 (乙)平角 (丙) 1/3 圓。", options: ["乙 > 甲 > 丙", "乙 > 丙 > 甲", "丙 > 乙 > 甲", "甲 > 丙 > 乙"], answer: 1, explanation: "甲:直角=90度；乙:平角=180度；丙: 1/3 圓=120度。故 乙 > 丙 > 甲。" },
+            { id: 39, unit: "第4單元：扇形", type: "multiple-choice", question: "一個圓形披薩平分成 8 塊，吃掉 3 塊，吃掉部分的圓心角合起來是幾度？", options: ["45度", "90度", "135度", "180度"], answer: 2, explanation: "一塊是 360 ÷ 8 = 45 度。3塊是 45 × 3 = 135 度。" },
+            { id: 40, unit: "第4單元：扇形", type: "true-false", question: "半圓也是一種扇形。", options: ["○", "╳"], answer: 0, explanation: "正確。半圓是由一條直徑(兩條半徑)和半圓弧圍成的，圓心角為180度，屬於扇形。" },
+
+            // 第5單元：體積 (10題)
+            { id: 41, unit: "第5單元：體積", type: "multiple-choice", question: "長方體的體積公式是什麼？", options: ["長 × 寬", "長 × 寬 × 高", "邊長 × 邊長 × 邊長", "(長+寬) × 2"], answer: 1, explanation: "長方體體積 = 長 × 寬 × 高。" },
+            { id: 42, unit: "第5單元：體積", type: "multiple-choice", question: "1 立方公尺 (m³) 等於多少立方公分 (cm³)？", options: ["1,000", "10,000", "100,000", "1,000,000"], answer: 3, explanation: "1 m = 100 cm。1 m³ = 100 × 100 × 100 = 1,000,000 cm³。" },
+            { id: 43, unit: "第5單元：體積", type: "true-false", question: "正方體的每個面都是正方形，只要知道一個邊長就能算出體積。", options: ["○", "╳"], answer: 0, explanation: "正確。正方體體積 = 邊長 × 邊長 × 邊長。" },
+            { id: 44, unit: "第5單元：體積", type: "multiple-choice", question: "一個邊長為 5 公分的正方體，它的體積是多少？", options: ["25 立方公分", "125 立方公分", "150 立方公分", "250 立方公分"], answer: 1, explanation: "體積 = 5 × 5 × 5 = 125 立方公分。" },
+            { id: 45, unit: "第5單元：體積", type: "multiple-choice", question: "一個長方體盒子，裡面長 10 公分、寬 8 公分、高 5 公分，可以裝入幾個 1 立方公分的白色積木？", options: ["400個", "80個", "50個", "130個"], answer: 0, explanation: "容積 = 10 × 8 × 5 = 400 立方公分，故可裝 400 個 1 立方公分的積木。" },
+            { id: 46, unit: "第5單元：體積", type: "true-false", question: "2000000 立方公分等於 2 立方公尺。", options: ["○", "╳"], answer: 0, explanation: "正確。因為 1,000,000 cm³ = 1 m³，所以除以一百萬即可。" },
+            { id: 47, unit: "第5單元：體積", type: "multiple-choice", question: "有一個體積是 64 立方公分的正方體，它的邊長是多少公分？", options: ["4公分", "6公分", "8公分", "16公分"], answer: 0, explanation: "因為 4 × 4 × 4 = 64，所以邊長是 4 公分。" },
+            { id: 48, unit: "第5單元：體積", type: "multiple-choice", question: "把一個長方體切成兩半，這兩半的體積總和與原來的長方體體積相比如何？", options: ["變大", "變小", "不變", "不一定"], answer: 2, explanation: "體積具有可加減性，切開後總體積不會改變。" },
+            { id: 49, unit: "第5單元：體積", type: "multiple-choice", question: "【配合題觀念】爸爸買了一個長 2 公尺、寬 1 公尺、高 1 公尺的大水塔，它的體積是多少立方公分？", options: ["20,000", "200,000", "2,000,000", "20,000,000"], answer: 2, explanation: "體積是 2 × 1 × 1 = 2 m³。換算成立方公分是 2 × 1,000,000 = 2,000,000 cm³。" },
+            { id: 50, unit: "第5單元：體積", type: "true-false", question: "要測量一張薄紙的體積，用「立方公尺」做單位比較適合。", options: ["○", "╳"], answer: 1, explanation: "錯誤。薄紙的體積非常小，用立方公分或更小的單位才合適，用立方公尺太大了。" }
+        ];
+
+        let questions = [];
+        let userAnswers = {};
+        let markedForLater = {};
+        
+        let timerInterval;
+        let timeLeft = 40 * 60; // 40 minutes in seconds
+        let examSubmitted = false;
+        let studentName = "";
+
+        // --- Init & Start ---
+        window.onload = function() {
+            renderRecentScores();
+        };
+
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function startExam() {
+            const nameInput = document.getElementById('studentName').value.trim();
+            if(!nameInput) {
+                Swal.fire({ icon: 'warning', title: '請輸入姓名', text: '考試前必須先輸入考生姓名喔！', confirmButtonColor: '#F45B26' });
+                return;
+            }
+            studentName = nameInput;
+            document.getElementById('displayStudentName').innerText = studentName;
+            
+            // Randomize questions for this session
+            // Clone default questions to avoid reference mutation, then shuffle
+            questions = shuffleArray(JSON.parse(JSON.stringify(defaultQuestions)));
+            
+            // Reset states
+            userAnswers = {};
+            markedForLater = {};
+            examSubmitted = false;
+            timeLeft = 40 * 60;
+            
+            document.getElementById('welcomeScreen').classList.add('hidden');
+            document.getElementById('quizScreen').classList.remove('hidden');
+            document.getElementById('bottomStatusBar').classList.remove('hidden');
+            document.getElementById('timerDisplay').classList.remove('hidden');
+            document.getElementById('exportBtnContainer').classList.add('hidden');
+            
+            renderQuestions();
+            updateBottomStats();
+            
+            // Start Timer
+            startTimer();
+        }
+
+        // --- Rendering ---
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            
+            questions.forEach((q, index) => {
+                const qNum = index + 1;
+                
+                let optionsHtml = '';
+                q.options.forEach((opt, optIndex) => {
+                    const optId = `q${q.id}_opt${optIndex}`;
+                    optionsHtml += `
+                        <div class="mb-2">
+                            <input type="radio" id="${optId}" name="q${q.id}" value="${optIndex}" class="hidden radio-custom" onchange="handleAnswer(${q.id}, ${optIndex})">
+                            <label for="${optId}" class="flex items-center p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-full">
+                                <span class="w-8 h-8 flex justify-center items-center rounded-full bg-gray-200 mr-3 font-bold text-gray-700">${String.fromCharCode(65 + optIndex)}</span>
+                                <span class="text-lg">${opt}</span>
+                            </label>
+                        </div>
+                    `;
+                });
+
+                const cardHtml = `
+                    <div id="card_${q.id}" class="question-card bg-white p-6 rounded-xl shadow border-l-8 border-customCyan mb-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <span class="bg-customCyan text-white px-3 py-1 rounded-md font-bold text-lg mr-3">第 ${qNum} 題</span>
+                                <span class="text-sm font-bold text-customOrange bg-orange-100 px-2 py-1 rounded border border-orange-200">${q.unit}</span>
+                            </div>
+                            <label class="flex items-center cursor-pointer space-x-2 text-gray-600 hover:text-customOrange font-bold bg-gray-50 px-3 py-1 rounded-full border">
+                                <input type="checkbox" class="w-5 h-5 accent-customOrange" onchange="toggleMarkForLater(${q.id}, this.checked)">
+                                <span>稍後作答</span>
+                            </label>
+                        </div>
+                        
+                        <div class="text-xl font-medium text-gray-800 mb-6 leading-relaxed">${q.question}</div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${optionsHtml}
+                        </div>
+
+                        <!-- Feedback Area (Hidden until submitted) -->
+                        <div id="feedback_${q.id}" class="hidden mt-6 p-4 rounded-lg">
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHtml;
+            });
+        }
+
+        // --- Interaction Logic ---
+        function handleAnswer(qId, optIndex) {
+            if(examSubmitted) return;
+            userAnswers[qId] = optIndex;
+            updateBottomStats();
+            
+            // Remove highlight if it was flashing
+            const card = document.getElementById(`card_${qId}`);
+            if(card) card.classList.remove('highlight-unanswered');
+        }
+
+        function toggleMarkForLater(qId, isChecked) {
+            markedForLater[qId] = isChecked;
+            updateBottomStats();
+        }
+
+        function updateBottomStats() {
+            let answeredCount = Object.keys(userAnswers).length;
+            let markedCount = Object.values(markedForLater).filter(v => v).length;
+            let unansweredCount = questions.length - answeredCount;
+
+            document.getElementById('answeredCount').innerText = answeredCount;
+            document.getElementById('unansweredCount').innerText = unansweredCount;
+            document.getElementById('markedCount').innerText = markedCount;
+        }
+
+        function scrollToFirstUnanswered() {
+            if(examSubmitted) return;
+            for(let i=0; i<questions.length; i++) {
+                const qId = questions[i].id;
+                if(userAnswers[qId] === undefined) {
+                    const card = document.getElementById(`card_${qId}`);
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Add pulse effect
+                    card.classList.add('highlight-unanswered');
+                    setTimeout(() => card.classList.remove('highlight-unanswered'), 2000);
+                    break;
+                }
+            }
+        }
+
+        // --- Timer Logic ---
+        function startTimer() {
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                checkTimeAlerts();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    autoSubmitExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            let m = Math.floor(timeLeft / 60);
+            let s = timeLeft % 60;
+            document.getElementById('timeText').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function checkTimeAlerts() {
+            if (timeLeft === 25 * 60) {
+                showToastWarning('考試時間剩下 25 分鐘！');
+            } else if (timeLeft === 10 * 60) {
+                showToastWarning('注意！考試時間只剩下 10 分鐘！');
+            } else if (timeLeft === 5 * 60) {
+                Swal.fire({
+                    title: '時間快到了！',
+                    text: '距離考試結束只剩下 5 分鐘，請把握時間檢查。',
+                    icon: 'warning',
+                    confirmButtonColor: '#F45B26',
+                    confirmButtonText: '我知道了'
+                });
+            }
+        }
+
+        function showToastWarning(msg) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'warning',
+                title: msg,
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+            });
+        }
+
+        // --- Submission Logic ---
+        function submitExam() {
+            let unansweredCount = questions.length - Object.keys(userAnswers).length;
+            let markedCount = Object.values(markedForLater).filter(v => v).length;
+
+            if (unansweredCount > 0) {
+                Swal.fire({
+                    title: '無法繳卷！',
+                    html: `您還有 <b><span class="text-customRed">${unansweredCount}</span></b> 題未作答。<br>請完成所有題目後再繳交。`,
+                    icon: 'error',
+                    confirmButtonColor: '#03AED2',
+                    confirmButtonText: '前往未答題'
+                }).then((result) => {
+                    if(result.isConfirmed) scrollToFirstUnanswered();
+                });
+                return;
+            }
+
+            if (markedCount > 0) {
+                Swal.fire({
+                    title: '提醒！',
+                    html: `您有 <b><span class="text-customOrange">${markedCount}</span></b> 題標記為「稍後作答」。<br>確定要現在繳卷送出嗎？`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#03AED2',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: '確定繳卷',
+                    cancelButtonText: '返回檢查'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        processSubmission();
+                    }
+                });
+                return;
+            }
+
+            // Normal confirm
+            Swal.fire({
+                title: '確認繳卷？',
+                text: "送出後將無法修改答案！",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#03AED2',
+                cancelButtonColor: '#d33',
+                confirmButtonText: '確認送出',
+                cancelButtonText: '再檢查一下'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    processSubmission();
+                }
+            });
+        }
+
+        function autoSubmitExam() {
+            Swal.fire({
+                title: '時間到！',
+                text: '考試時間已結束，系統將自動為您繳交答案。',
+                icon: 'info',
+                confirmButtonColor: '#03AED2',
+                confirmButtonText: '查看成績',
+                allowOutsideClick: false
+            }).then(() => {
+                processSubmission();
+            });
+        }
+
+        function processSubmission() {
+            clearInterval(timerInterval);
+            examSubmitted = true;
+            
+            // Calculate Score (each question is 100/50 = 2 points)
+            let correctCount = 0;
+            const pointsPerQuestion = 100 / questions.length;
+            
+            questions.forEach(q => {
+                if (userAnswers[q.id] === q.answer) {
+                    correctCount++;
+                }
+            });
+
+            let finalScore = Math.round(correctCount * pointsPerQuestion);
+            
+            // Save to local storage for "Recent Scores"
+            saveScore(studentName, finalScore);
+
+            // Show SweetAlert Score
+            let msgText = finalScore >= 80 ? '表現非常棒！繼續保持！' : (finalScore >= 60 ? '不錯喔！再多加複習會更好！' : '別灰心，多看詳解把觀念弄懂喔！');
+            Swal.fire({
+                title: `測驗結束！`,
+                html: `<div class="text-4xl font-bold text-customCyan my-4">${finalScore} 分</div>
+                       <p class="text-lg">答對：${correctCount} 題 / 共 ${questions.length} 題</p>
+                       <p class="text-md text-gray-600 mt-2">${msgText}</p>`,
+                icon: 'success',
+                confirmButtonColor: '#03AED2',
+                confirmButtonText: '查看答錯題目與詳解'
+            }).then(() => {
+                revealAnswersAndExplanations();
+            });
+
+            // UI updates
+            document.getElementById('submitBtn').classList.add('hidden');
+            document.getElementById('exportBtnContainer').classList.remove('hidden');
+            document.getElementById('bottomStatusBar').innerHTML = `<div class="w-full text-center text-xl font-bold text-customCyan">考試已結束，總分：${finalScore} 分</div>`;
+            
+            // Disable all inputs
+            const allInputs = document.querySelectorAll('#quizForm input');
+            allInputs.forEach(input => input.disabled = true);
+        }
+
+        function revealAnswersAndExplanations() {
+            questions.forEach(q => {
+                const userAns = userAnswers[q.id];
+                const isCorrect = userAns === q.answer;
+                const feedbackDiv = document.getElementById(`feedback_${q.id}`);
+                const card = document.getElementById(`card_${q.id}`);
+                
+                feedbackDiv.classList.remove('hidden');
+                
+                if (isCorrect) {
+                    card.classList.add('border-green-500');
+                    card.classList.replace('border-customCyan', 'border-green-500');
+                    feedbackDiv.classList.add('bg-green-50', 'border', 'border-green-200');
+                    feedbackDiv.innerHTML = `
+                        <div class="flex items-start">
+                            <i class="fa-solid fa-circle-check text-green-500 text-2xl mr-3 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-green-700 text-lg mb-1">答對了！</h4>
+                                <p class="text-gray-700 font-medium">【詳解】 ${q.explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    card.classList.add('border-customRed');
+                    card.classList.replace('border-customCyan', 'border-customRed');
+                    feedbackDiv.classList.add('bg-red-50', 'border', 'border-red-200');
+                    
+                    let userAnsText = userAns !== undefined ? String.fromCharCode(65 + userAns) + ". " + q.options[userAns] : "未作答";
+                    let correctAnsText = String.fromCharCode(65 + q.answer) + ". " + q.options[q.answer];
+
+                    feedbackDiv.innerHTML = `
+                        <div class="flex items-start">
+                            <i class="fa-solid fa-circle-xmark text-customRed text-2xl mr-3 mt-1"></i>
+                            <div class="w-full">
+                                <h4 class="font-bold text-customRed text-lg mb-2">答錯了！</h4>
+                                <div class="bg-white p-3 rounded border border-red-100 mb-2">
+                                    <p class="text-sm text-gray-500 mb-1">你的答案：<span class="text-customRed font-bold strikethrough">${userAnsText}</span></p>
+                                    <p class="text-md text-green-600 font-bold">正確答案：${correctAnsText}</p>
+                                </div>
+                                <p class="text-gray-800 font-medium bg-yellow-50 p-3 rounded">【名師詳解】<br> ${q.explanation}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        // --- Teacher / Security Functions ---
+        function requirePasswordForAnswers() {
+            Swal.fire({
+                title: '輸入老師/家長密碼',
+                input: 'password',
+                inputAttributes: {
+                    autocapitalize: 'off'
+                },
+                showCancelButton: true,
+                confirmButtonText: '確認',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#03AED2',
+                preConfirm: (pwd) => {
+                    if (pwd !== '1234') {
+                        Swal.showValidationMessage('密碼錯誤！');
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({icon:'success', title:'密碼正確', text:'已顯示所有解答！', timer: 1500});
+                    examSubmitted = true; // prevent further answering
+                    clearInterval(timerInterval); // stop timer
+                    revealAnswersAndExplanations();
+                }
+            });
+        }
+
+        function toggleTeacherArea() {
+            Swal.fire({
+                title: '管理專區密碼',
+                input: 'password',
+                showCancelButton: true,
+                confirmButtonText: '登入',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#03AED2',
+                preConfirm: (pwd) => {
+                    if (pwd !== '1234') {
+                        Swal.showValidationMessage('密碼錯誤！');
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const area = document.getElementById('teacherArea');
+                    area.classList.toggle('hidden');
+                }
+            });
+        }
+
+        // --- JSON Import/Export ---
+        function downloadQuestions() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(defaultQuestions, null, 4));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href",     dataStr);
+            downloadAnchorNode.setAttribute("download", "kanghsuan_math_grade5_sem2.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            Swal.fire({icon: 'success', title: '下載成功', text: '考題 JSON 已成功下載。', timer: 2000});
+        }
+
+        function uploadQuestionsFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedQuestions = JSON.parse(e.target.result);
+                    if(Array.isArray(importedQuestions) && importedQuestions.length > 0 && importedQuestions[0].hasOwnProperty('question')) {
+                        defaultQuestions = importedQuestions;
+                        Swal.fire({icon: 'success', title: '上傳成功', text: `成功載入 ${importedQuestions.length} 題考題！下次開始作答將使用新題庫。`});
+                    } else {
+                        throw new Error("格式錯誤");
+                    }
+                } catch(err) {
+                    Swal.fire({icon: 'error', title: '上傳失敗', text: 'JSON 格式不正確，請確認檔案。'});
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Excel Export (錯題) ---
+        function exportWrongAnswers() {
+            const wrongQuestions = questions.filter(q => userAnswers[q.id] !== q.answer);
+            
+            if(wrongQuestions.length === 0) {
+                Swal.fire('太棒了！', '你沒有答錯任何一題，不需要匯出喔！', 'success');
+                return;
+            }
+
+            // Create Workbook
+            const wb = XLSX.utils.book_new();
+            
+            // Prepare Data Array
+            let wsData = [
+                ["題號", "單元", "題目", "你的答案", "正確答案", "詳解"]
+            ];
+
+            wrongQuestions.forEach((q, index) => {
+                let userAnsText = userAnswers[q.id] !== undefined ? q.options[userAnswers[q.id]] : "未作答";
+                let correctAnsText = q.options[q.answer];
+                wsData.push([
+                    index + 1,
+                    q.unit,
+                    q.question,
+                    userAnsText,
+                    correctAnsText,
+                    q.explanation
+                ]);
+            });
+
+            // Create Worksheet
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Apply Styles using xlsx-js-style (Rule 11: wrong answer red and bold)
+            // First row (headers) styling
+            const headerStyle = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "03AED2" } }, alignment: { horizontal: "center" } };
+            for(let C = 0; C <= 5; ++C) {
+                let cellAddress = XLSX.utils.encode_cell({c: C, r: 0});
+                if(!ws[cellAddress]) continue;
+                ws[cellAddress].s = headerStyle;
+            }
+
+            // Apply red & bold style to "你的答案" column (Column index 3)
+            const wrongAnswerStyle = { font: { bold: true, color: { rgb: "FF0000" } } };
+            for(let R = 1; R <= wrongQuestions.length; ++R) {
+                let cellAddress = XLSX.utils.encode_cell({c: 3, r: R});
+                if(!ws[cellAddress]) continue;
+                ws[cellAddress].s = wrongAnswerStyle;
+            }
+
+            // Set column widths
+            ws['!cols'] = [ {wch: 5}, {wch: 20}, {wch: 50}, {wch: 20}, {wch: 20}, {wch: 60} ];
+
+            // Append to workbook and save
+            XLSX.utils.book_append_sheet(wb, ws, "錯誤題目整理");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
+
+        // --- Local Storage (Rule 22) ---
+        function saveScore(name, score) {
+            let scores = JSON.parse(localStorage.getItem('mathQuizScores') || '[]');
+            const now = new Date();
+            const dateString = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            
+            scores.unshift({ name, score, date: dateString });
+            if (scores.length > 3) scores.pop(); // Keep only last 3
+            
+            localStorage.setItem('mathQuizScores', JSON.stringify(scores));
+            renderRecentScores();
+        }
+
+        function renderRecentScores() {
+            let scores = JSON.parse(localStorage.getItem('mathQuizScores') || '[]');
+            const list = document.getElementById('recentScoresList');
+            list.innerHTML = '';
+            
+            if (scores.length === 0) {
+                list.innerHTML = '<li class="text-gray-500 italic">尚無測驗紀錄</li>';
+                return;
+            }
+            
+            scores.forEach(s => {
+                let badgeColor = s.score >= 80 ? 'bg-green-100 text-green-800' : (s.score >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+                list.innerHTML += `
+                    <li class="flex justify-between items-center bg-white p-3 rounded shadow-sm">
+                        <span class="font-bold text-gray-700">${s.name}</span>
+                        <span class="text-sm text-gray-500">${s.date}</span>
+                        <span class="${badgeColor} px-3 py-1 rounded-full font-bold text-lg">${s.score} 分</span>
+                    </li>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
