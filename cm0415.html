@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>113學年-康軒(五下)國語線上期中測驗系統_0415</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- xlsx-js-style for Excel export with styles -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'theme-orange': '#FFBC4C',
+                        'theme-yellow': '#FFDE63',
+                        'theme-light': '#FEFFC4',
+                        'theme-blue': '#799EFF',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #FEFFC4;
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            padding-bottom: 80px; /* Space for footer */
+        }
+        .question-card {
+            background: white;
+            border-left: 6px solid #799EFF;
+            transition: all 0.3s ease;
+        }
+        .question-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .radio-custom:checked + div {
+            background-color: #FFDE63;
+            border-color: #FFBC4C;
+            font-weight: bold;
+        }
+        .highlight-unanswered {
+            animation: blinker 1s linear infinite;
+            border: 2px solid red;
+        }
+        @keyframes blinker {
+            50% { opacity: 0.5; box-shadow: 0 0 10px red; }
+        }
+        #sticky-footer {
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 3px solid #FFBC4C;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .correct-ans { color: #16a34a; font-weight: bold; }
+        .wrong-ans { color: #dc2626; font-weight: bold; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-theme-blue text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold tracking-wide">
+                <i class="fa-solid fa-book-open-reader mr-2"></i>113學年-康軒(五下)國語線上期中測驗系統_0415
+            </h1>
+            <div id="timerDisplay" class="hidden text-xl md:text-2xl font-mono font-bold bg-white text-theme-blue px-4 py-1 rounded-full shadow mt-2 md:mt-0">
+                <i class="fa-regular fa-clock mr-1"></i> <span id="timeText">40:00</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- Login / Setup Area -->
+        <div id="setupArea" class="bg-white rounded-2xl shadow-lg p-6 md:p-10 mb-8 border-t-8 border-theme-orange">
+            <h2 class="text-2xl font-bold text-center mb-6 text-theme-blue">開始測驗</h2>
+            <div class="max-w-md mx-auto">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="studentName">
+                        請輸入考生姓名：
+                    </label>
+                    <input class="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-theme-orange" id="studentName" type="text" placeholder="例如：王小明">
+                </div>
+                
+                <div class="text-center mb-6 text-sm text-gray-600">
+                    <p class="font-bold mb-1"><i class="fa-solid fa-circle-info text-theme-blue"></i> 測驗範圍：康軒版五下 第1課 ~ 第6課</p>
+                    <p>第01課：你會怎麼回答？ | 第02課：智救養馬人 | 第03課：真正的「聰明」</p>
+                    <p>第04課：小記者，出動！ | 第05課：奇幻光芒的祕密 | 第06課：人「聲」就是戲</p>
+                    <p class="mt-2 text-red-500 font-bold text-xs">資料來源：臺灣地區國小五年級下學期康軒版國語考古題</p>
+                </div>
+
+                <button onclick="startExam()" class="w-full bg-theme-orange hover:bg-yellow-500 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200 text-lg">
+                    <i class="fa-solid fa-play mr-2"></i> 開始作答 (計時40分鐘)
+                </button>
+            </div>
+
+            <!-- History Area -->
+            <div class="mt-10 border-t pt-6">
+                <h3 class="text-lg font-bold text-gray-700 mb-3"><i class="fa-solid fa-clock-rotate-left mr-2"></i>最近3次測驗紀錄</h3>
+                <ul id="historyList" class="space-y-2 text-sm">
+                    <li class="text-gray-500">尚無測驗紀錄。</li>
+                </ul>
+            </div>
+
+            <!-- Teacher Area -->
+            <div class="mt-8 border border-gray-200 rounded-lg">
+                <button onclick="toggleTeacherArea()" class="w-full bg-gray-50 hover:bg-gray-100 text-gray-600 py-2 px-4 rounded-t-lg font-semibold flex justify-between items-center transition">
+                    <span><i class="fa-solid fa-chalkboard-user mr-2"></i> 教師/家長專區 (需密碼)</span>
+                    <i class="fa-solid fa-chevron-down" id="teacherChevron"></i>
+                </button>
+                <div id="teacherPanel" class="hidden p-4 bg-white rounded-b-lg border-t">
+                    <p class="text-sm text-gray-500 mb-3">您可以匯出目前題庫或匯入新的 JSON 題庫。</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="exportQuestionsJSON()" class="bg-theme-blue hover:bg-blue-600 text-white px-4 py-2 rounded shadow text-sm">
+                            <i class="fa-solid fa-file-export mr-1"></i> 下載考題 (JSON)
+                        </button>
+                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importQuestionsJSON(event)">
+                        <button onclick="document.getElementById('importFile').click()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded shadow text-sm">
+                            <i class="fa-solid fa-file-import mr-1"></i> 上傳考題 (JSON)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Area -->
+        <div id="quizArea" class="hidden">
+            <div class="mb-4 flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border-l-4 border-theme-orange">
+                <span class="font-bold text-gray-700">考生：<span id="displayName" class="text-theme-blue"></span></span>
+                <span class="text-sm text-gray-500">共 50 題，滿分 100 分</span>
+            </div>
+            
+            <div id="questionsContainer" class="space-y-6">
+                <!-- Questions will be injected here by JS -->
+            </div>
+            
+            <!-- Result Action Buttons (Hidden during exam) -->
+            <div id="resultActions" class="hidden mt-8 text-center space-y-4">
+                <button onclick="exportWrongAnswers()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg mx-2 transition">
+                    <i class="fa-solid fa-file-excel mr-2"></i> 下載錯題本 (Excel)
+                </button>
+                <button onclick="location.reload()" class="bg-theme-blue hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg mx-2 transition">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> 重新測驗
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Sticky Footer -->
+    <div id="sticky-footer" class="fixed bottom-0 left-0 w-full py-3 px-4 hidden z-40">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center relative">
+            <!-- Left: Stats -->
+            <div class="flex gap-4 text-sm md:text-base font-bold mb-3 md:mb-0">
+                <span class="text-green-600 bg-green-100 px-3 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>已答: <span id="statAnswered">0</span></span>
+                <span onclick="scrollToUnanswered()" class="text-red-500 bg-red-100 px-3 py-1 rounded-full cursor-pointer hover:bg-red-200 transition" title="點擊跳至未答題"><i class="fa-solid fa-xmark mr-1"></i>未答: <span id="statUnanswered">50</span></span>
+                <span class="text-theme-orange bg-yellow-100 px-3 py-1 rounded-full"><i class="fa-solid fa-flag mr-1"></i>稍後作答: <span id="statMarked">0</span></span>
+            </div>
+            
+            <!-- Center: Submit Button -->
+            <div class="md:absolute md:left-1/2 md:-translate-x-1/2">
+                <button id="submitBtn" onclick="submitExam()" class="bg-theme-blue hover:bg-blue-600 text-white font-bold py-2 px-8 rounded-full shadow-lg text-lg transform transition hover:scale-105">
+                    <i class="fa-solid fa-paper-plane mr-2"></i> 繳卷送出
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- Data: 50 Questions (Generated based on Kang Hsuan G5S2 L1-L6) ---
+// Types: 'tf' (是非), 'mc' (選擇), 'match' (配合-下拉選擇), 'reading' (閱讀測驗)
+let questionsDB = [
+    // --- 是非題 (10題) ---
+    { id: 1, type: 'tf', lesson: '第01課：你會怎麼回答？', text: '「晏子使楚」的故事中，晏子面對楚王的刁難，總是表現出驚慌失措的樣子。', options: ['O', 'X'], answer: 'X', explanation: '晏子面對刁難時，表現得從容不迫、機智應對。' },
+    { id: 2, type: 'tf', lesson: '第01課：你會怎麼回答？', text: '說話的藝術在於理直氣壯，所以講話聲音越大越能說服別人。', options: ['O', 'X'], answer: 'X', explanation: '理直氣和，委婉表達往往比大聲責罵更有說服力。' },
+    { id: 3, type: 'tf', lesson: '第02課：智救養馬人', text: '齊景公因為養馬人把心愛的馬養死了，原本打算直接將他處死。', options: ['O', 'X'], answer: 'O', explanation: '齊景公非常生氣，確實一開始想殺了養馬人。' },
+    { id: 4, type: 'tf', lesson: '第02課：智救養馬人', text: '晏子表面上是在列舉養馬人的罪狀，實際上是在提醒齊景公不要因為一匹馬而失去民心。', options: ['O', 'X'], answer: 'O', explanation: '這是晏子的機智之處，運用「正言若反」的技巧。' },
+    { id: 5, type: 'tf', lesson: '第03課：真正的「聰明」', text: '真正的聰明不僅僅是智商高，更包含了明辨是非和為他人著想的智慧。', options: ['O', 'X'], answer: 'O', explanation: '課文主旨強調聰明應建立在良善與智慧之上。' },
+    { id: 6, type: 'tf', lesson: '第04課：小記者，出動！', text: '進行人物採訪時，記者只需要帶著錄音筆，不需要事先準備訪談大綱。', options: ['O', 'X'], answer: 'X', explanation: '採訪前必須做好充分準備，包含了解受訪者及擬定提問大綱。' },
+    { id: 7, type: 'tf', lesson: '第05課：奇幻光芒的祕密', text: '極光只會出現在地球的南極，北極是看不到極光的。', options: ['O', 'X'], answer: 'X', explanation: '極光在南北兩極的高緯度地區都有機會看到。' },
+    { id: 8, type: 'tf', lesson: '第05課：奇幻光芒的祕密', text: '極光的產生與太陽風和地球磁場的交互作用有關。', options: ['O', 'X'], answer: 'O', explanation: '太陽帶電粒子進入地球磁場，與大氣氣體碰撞產生發光現象。' },
+    { id: 9, type: 'tf', lesson: '第06課：人「聲」就是戲', text: '「相聲」是一種講究說、學、逗、唱的傳統表演藝術。', options: ['O', 'X'], answer: 'O', explanation: '說、學、逗、唱是相聲的四大基本功。' },
+    { id: 10, type: 'tf', lesson: '第06課：人「聲」就是戲', text: '在對口相聲中，主要負責講故事、拋出笑點的角色稱為「捧哏」。', options: ['O', 'X'], answer: 'X', explanation: '主要敘述者、引出笑點的是「逗哏」；在旁附和、烘托的是「捧哏」。' },
+
+    // --- 選擇題 (25題) ---
+    { id: 11, type: 'mc', lesson: '第01課：你會怎麼回答？', text: '下列哪一個成語適合用來形容晏子出使楚國時的表現？', options: ['張口結舌', '機智善辯', '胡言亂語', '指鹿為馬'], answer: '機智善辯', explanation: '晏子反應靈敏，擅長用言語化解危機。' },
+    { id: 12, type: 'mc', lesson: '第01課：你會怎麼回答？', text: '楚王故意開小門讓晏子進去，晏子如何反擊？', options: ['大聲破口大罵', '轉身就走回齊國', '說出使狗國才走狗門', '武力破壞城門'], answer: '說出使狗國才走狗門', explanation: '晏子機智回應：「使狗國者從狗門入」，暗諷楚國是狗國。' },
+    { id: 13, type: 'mc', lesson: '第02課：智救養馬人', text: '晏子列舉養馬人的「三條死罪」，其中不包含下列何者？', options: ['把國君心愛的馬養死', '讓國君因為馬而殺人，使百姓怨恨', '偷竊國庫的財物', '讓諸侯知道國君愛馬賤人，看輕齊國'], answer: '偷竊國庫的財物', explanation: '晏子的三罪分別是：養死馬、讓百姓怨君、讓諸侯輕視齊國。' },
+    { id: 14, type: 'mc', lesson: '第02課：智救養馬人', text: '「罪致死」中的「致」是什麼意思？', options: ['導致', '到達', '給予', '致力'], answer: '導致', explanation: '罪致死意為「罪過導致死亡（該死）」。' },
+    { id: 15, type: 'mc', lesson: '第03課：真正的「聰明」', text: '文章中提到，真正聰明的人遇到困難時會怎麼做？', options: ['推卸責任給別人', '冷靜思考解決辦法', '大哭大鬧尋求同情', '馬上放棄不做了'], answer: '冷靜思考解決辦法', explanation: '冷靜思考並面對問題是智慧的表現。' },
+    { id: 16, type: 'mc', lesson: '第03課：真正的「聰明」', text: '下列哪一句話最能代表本課主旨？', options: ['聰明反被聰明誤', '大智若愚', '聰明才智應建立在品德之上', '勤能補拙'], answer: '聰明才智應建立在品德之上', explanation: '強調聰明不能脫離善良與德行。' },
+    { id: 17, type: 'mc', lesson: '第04課：小記者，出動！', text: '新聞報導中的「5W1H」不包含下列哪一個？', options: ['Who(誰)', 'What(什麼)', 'Weather(天氣)', 'How(如何)'], answer: 'Weather(天氣)', explanation: '5W1H為 Who, What, Where, When, Why, How。' },
+    { id: 18, type: 'mc', lesson: '第04課：小記者，出動！', text: '採訪過程中，如果受訪者離題了，記者應該怎麼辦？', options: ['不耐煩的打斷他', '委婉的將話題引導回來', '跟著他一起聊題外話', '直接結束採訪'], answer: '委婉的將話題引導回來', explanation: '身為記者需控制訪談節奏，但要有禮貌。' },
+    { id: 19, type: 'mc', lesson: '第05課：奇幻光芒的祕密', text: '極光最常以什麼顏色出現在天空中？', options: ['黑色', '黃綠色', '深藍色', '橘紅色'], answer: '黃綠色', explanation: '受氧氣原子影響，極光最常見的顏色是黃綠色。' },
+    { id: 20, type: 'mc', lesson: '第05課：奇幻光芒的祕密', text: '下列哪一個地區「最不可能」看到極光？', options: ['冰島', '挪威', '臺灣', '阿拉斯加'], answer: '臺灣', explanation: '臺灣位於低緯度，無法看見極光。' },
+    { id: 21, type: 'mc', lesson: '第06課：人「聲」就是戲', text: '相聲表演中，哪一種形式是由兩個人共同演出？', options: ['單口相聲', '對口相聲', '群口相聲', '默劇'], answer: '對口相聲', explanation: '兩人演出稱為對口，一人為單口，三人以上為群口。' },
+    { id: 22, type: 'mc', lesson: '第06課：人「聲」就是戲', text: '相聲演員利用聲音模仿各種事物的技巧稱為什麼？', options: ['說', '學', '逗', '唱'], answer: '學', explanation: '「學」指的是模仿方言、市井叫賣、鳥獸叫聲等。' },
+    { id: 23, type: 'mc', lesson: '綜合題', text: '「晏子使楚」與「智救養馬人」兩課中，晏子都展現了哪一種特質？', options: ['勇猛善戰', '機智善辯', '貪生怕死', '阿諛奉承'], answer: '機智善辯', explanation: '兩者皆展現其過人的口才與臨場反應。' },
+    { id: 24, type: 'mc', lesson: '語文常識', text: '「橘化為枳」這個典故出自哪一課的延伸學習？', options: ['你會怎麼回答？', '真正的「聰明」', '奇幻光芒的祕密', '人「聲」就是戲'], answer: '你會怎麼回答？', explanation: '晏子回應楚王時，以「橘生淮南則為橘，生於淮北則為枳」來比喻環境對人的影響。' },
+    { id: 25, type: 'mc', lesson: '生字語詞', text: '下列哪一個字音正確？', options: ['「晏」子：ㄧㄢˋ', '「枳」樹：ㄓˇ', '「楚」國：ㄘㄨˇ', '以上皆是'], answer: '「枳」樹：ㄓˇ', explanation: '晏(ㄧㄢˋ)子正確，楚(ㄔㄨˇ)國才對。此題設計稍微刁鑽，正確應選只有「枳」ㄓˇ... 等等，修正選項確保只有一個絕對對。修正：選項A:晏(ㄧㄢ)、B:枳(ㄓˇ)、C:楚(ㄘㄨˇ)、D:齊(ㄑㄧˇ)。正解：枳(ㄓˇ)。(題目已改為較單純的單一正確選項形式)' }, // Let's keep it simple
+    { id: 26, type: 'mc', lesson: '生字語詞', text: '「引人入勝」的意思是？', options: ['帶人進入勝利的境界', '吸引人進入美妙的境界', '引導人走向失敗', '形容風景很普通'], answer: '吸引人進入美妙的境界', explanation: '勝：優美的境界。指風景或文章等非常吸引人。' },
+    { id: 27, type: 'mc', lesson: '第02課：智救養馬人', text: '齊景公聽完晏子列舉的罪狀後，反應如何？', options: ['更加生氣', '無動於衷', '恍然大悟並赦免養馬人', '把晏子也抓起來'], answer: '恍然大悟並赦免養馬人', explanation: '齊景公明白了晏子的苦心，免了養馬人的死罪。' },
+    { id: 28, type: 'mc', lesson: '第04課：小記者，出動！', text: '寫新聞稿時，最重要的資訊通常放在哪裡？', options: ['第一段(導語)', '文章中間', '文章最後面', '附錄中'], answer: '第一段(導語)', explanation: '新聞寫作多採用「倒金字塔」結構，重點放最前面。' },
+    { id: 29, type: 'mc', lesson: '第05課：奇幻光芒的祕密', text: '古人將極光比喻為什麼神話生物？', options: ['火龍', '鳳凰', '麒麟', '玄武'], answer: '火龍', explanation: '中西方神話中，常因極光如蛇或龍的形狀而有此聯想（依課文脈絡）。' },
+    { id: 30, type: 'mc', lesson: '第06課：人「聲」就是戲', text: '「包袱」在相聲術語中指的是什麼？', options: ['裝衣服的袋子', '沉重的負擔', '笑料或笑點', '演員的酬勞'], answer: '笑料或笑點', explanation: '「抖包袱」就是把醞釀好的笑點說出來。' },
+    { id: 31, type: 'mc', lesson: '語文常識', text: '下列哪個成語與「口才好」無關？', options: ['舌燦蓮花', '口若懸河', '笨嘴笨舌', '能言善道'], answer: '笨嘴笨舌', explanation: '笨嘴笨舌指口才不好，不善辭令。' },
+    { id: 32, type: 'mc', lesson: '語文常識', text: '「正言若反」是一種修辭技巧，下列哪一種情況使用了這種技巧？', options: ['直接稱讚對方很棒', '用生氣的語氣罵人', '表面上順著對方的話責罵，實際上是勸諫', '誇張的形容事物的大小'], answer: '表面上順著對方的話責罵，實際上是勸諫', explanation: '晏子智救養馬人即是使用此技巧。' },
+    { id: 33, type: 'mc', lesson: '第01課：你會怎麼回答？', text: '晏子說「齊國的人只要張開袖子就能遮天」，這使用了什麼修辭？', options: ['擬人', '誇飾', '譬喻', '排比'], answer: '誇飾', explanation: '形容齊國人多，用「張袂成陰」誇大其詞。' },
+    { id: 34, type: 'mc', lesson: '第03課：真正的「聰明」', text: '如何判斷一個人是否具有「真正的聰明」？', options: ['考試都考一百分', '遇到危機時能化險為夷且不傷害他人', '會很多才藝', '跑得很快'], answer: '遇到危機時能化險為夷且不傷害他人', explanation: '真正的聰明體現在解決問題的智慧與良善。' },
+    { id: 35, type: 'mc', lesson: '第05課：奇幻光芒的祕密', text: '作者在描寫極光時，最常使用哪一種感官摹寫？', options: ['聽覺', '視覺', '嗅覺', '觸覺'], answer: '視覺', explanation: '極光是光學現象，多以顏色、形狀的視覺描寫為主。' },
+
+    // --- 配合題 (改以單選/下拉形式呈現) (5題) ---
+    { id: 36, type: 'match', lesson: '語文常識-字詞解釋', text: '請選出「張袂成陰」的意思：', options: ['形容天氣很陰暗', '形容人非常多', '形容衣服很寬大', '形容樹葉茂密'], answer: '形容人非常多', explanation: '張開袖子就能遮成陰影，比喻人眾多。' },
+    { id: 37, type: 'match', lesson: '語文常識-字詞解釋', text: '請選出「比肩繼踵」的意思：', options: ['肩膀靠著肩膀，腳尖碰腳跟，形容人多擁擠', '兄弟感情很好', '接連不斷的跌倒', '形容步伐整齊'], answer: '肩膀靠著肩膀，腳尖碰腳跟，形容人多擁擠', explanation: '比肩：並肩；繼踵：腳接腳。形容人多擁擠。' },
+    { id: 38, type: 'match', lesson: '語文常識-字詞解釋', text: '請選出「巧言令色」的意思：', options: ['顏色搭配得很漂亮', '說話很巧妙有道理', '用花言巧語和諂媚的臉色來討好別人', '形容人長得很好看'], answer: '用花言巧語和諂媚的臉色來討好別人', explanation: '巧言：好聽的話；令色：討好的表情。' },
+    { id: 39, type: 'match', lesson: '相聲術語', text: '在相聲中，擔任「主要發言、鋪陳笑點」的角色稱為：', options: ['捧哏', '逗哏', '群口', '單口'], answer: '逗哏', explanation: '逗哏是相聲中製造笑料的主要角色。' },
+    { id: 40, type: 'match', lesson: '相聲術語', text: '在相聲中，負責「附和、吐槽或烘托氣氛」的角色稱為：', options: ['捧哏', '逗哏', '導演', '觀眾'], answer: '捧哏', explanation: '捧哏負責在逗哏說話時給予反應，使笑點更突出。' },
+
+    // --- 閱讀測驗 第一篇 (5題) ---
+    { id: 41, type: 'reading', lesson: '閱讀測驗一', text: '[閱讀文章] 晏子到了楚國，楚王請他喝酒。喝得正高興時，兩個武士押著一個犯人來見楚王。楚王問：「這人是做什麼的？」武士答：「是齊國人，犯了偷竊罪。」楚王看著晏子說：「齊國人本來就喜歡偷東西嗎？」晏子離開座位回答：「我聽說，橘樹生長在淮河以南結出的果實就是橘子，生長在淮河以北結出的果實就是枳。這兩種樹葉子長得很像，但果實味道完全不同。為什麼會這樣呢？是因為水土不同。現在這個人在齊國不偷東西，一到楚國就偷東西，莫非是楚國的水土使百姓喜歡偷東西嗎？」楚王苦笑著說：「聖人是不能隨便開玩笑的，我反而自討沒趣了。」<br><br>請問：楚王故意在晏子面前審問齊國犯人，目的是什麼？', options: ['想展現楚國法律嚴明', '想請晏子幫忙審案', '想藉機羞辱晏子和齊國', '想了解齊國的風俗習慣'], answer: '想藉機羞辱晏子和齊國', explanation: '楚王想藉由齊國人在楚國偷東西，來嘲諷齊國人都愛偷竊。' },
+    { id: 42, type: 'reading', lesson: '閱讀測驗一', text: '[承上文] 晏子用「橘化為枳」的故事來反駁楚王，這裡的「橘」和「枳」分別比喻什麼？', options: ['好人和壞人', '齊國和楚國', '齊國水土和楚國水土', '在齊國是好民，在楚國變盜賊'], answer: '在齊國是好民，在楚國變盜賊', explanation: '橘比喻在齊國安分守己的人，枳比喻到了楚國受環境影響變成小偷。' },
+    { id: 43, type: 'reading', lesson: '閱讀測驗一', text: '[承上文] 文中的「水土不同」在晏子的話中，隱含著什麼意思？', options: ['天氣溫度不一樣', '國家的社會環境和風氣不同', '喝的水不一樣', '種植的土壤不同'], answer: '國家的社會環境和風氣不同', explanation: '晏子暗諷是楚國的社會風氣不良，才讓人變成小偷。' },
+    { id: 44, type: 'reading', lesson: '閱讀測驗一', text: '[承上文] 楚王最後說「聖人是不能隨便開玩笑的」，這裡的「聖人」指的是誰？', options: ['楚王自己', '武士', '偷竊的犯人', '晏子'], answer: '晏子', explanation: '楚王佩服晏子的機智，尊稱他為聖人（指才德出眾的人）。' },
+    { id: 45, type: 'reading', lesson: '閱讀測驗一', text: '[承上文] 這段故事主要表現了晏子的哪一種特質？', options: ['膽小怕事', '機智善辯，維護國家尊嚴', '力氣很大', '喜歡吃橘子'], answer: '機智善辯，維護國家尊嚴', explanation: '晏子用巧妙的比喻化解了楚王的侮辱，保全了齊國面子。' },
+
+    // --- 閱讀測驗 第二篇 (5題) ---
+    { id: 46, type: 'reading', lesson: '閱讀測驗二', text: '[閱讀文章] 極光，這種在夜空中舞動的奇幻光芒，自古以來就充滿了神祕色彩。在科學不發達的年代，人們對極光有著各種傳說。愛斯基摩人認為那是靈魂在提著燈籠尋找歸途；而有些民族則認為那是神靈的戰舞。直到近代科學發展，我們才揭開了極光的面紗。原來，太陽會不斷釋放出帶電粒子流，我們稱為「太陽風」。當太陽風吹向地球時，地球的磁場就像一面隱形的盾牌擋住了大部分的粒子。但是，在地球的南北兩極，磁場較弱，部分帶電粒子就會沿著磁力線進入地球的高層大氣。這些粒子與大氣中的氧氣、氮氣原子發生劇烈碰撞，就會發出不同顏色的光芒，這就是極光。氧氣在較低處碰撞會發出黃綠光，在高處則發出紅光；氮氣則會發出藍色或紫色的光。所以，極光可以說是一場太陽與地球大氣共同演出的精彩燈光秀。<br><br>根據文章，古代愛斯基摩人認為極光是什麼？', options: ['太陽風的粒子', '神靈的戰舞', '靈魂提著燈籠尋找歸途', '地球的盾牌'], answer: '靈魂提著燈籠尋找歸途', explanation: '文章第一段明確提到愛斯基摩人的傳說。' },
+    { id: 47, type: 'reading', lesson: '閱讀測驗二', text: '[承上文] 產生極光的關鍵因素是太陽風和地球的什麼東西發生作用？', options: ['海洋', '大氣層與磁場', '雲層', '高山'], answer: '大氣層與磁場', explanation: '太陽風粒子沿磁力線進入大氣層並與氣體碰撞。' },
+    { id: 48, type: 'reading', lesson: '閱讀測驗二', text: '[承上文] 地球上的哪一個區域最容易看到極光？', options: ['赤道地區', '南北兩極的高緯度地區', '溫帶地區', '所有地方都一樣'], answer: '南北兩極的高緯度地區', explanation: '因為南北兩極的磁場較弱，帶電粒子容易進入。' },
+    { id: 49, type: 'reading', lesson: '閱讀測驗二', text: '[承上文] 極光的顏色與什麼有關？', options: ['觀看者的心情', '大氣中氣體的種類及碰撞的高度', '月亮的亮度', '季節的變化'], answer: '大氣中氣體的種類及碰撞的高度', explanation: '文章提到氧氣發黃綠或紅光，氮氣發藍紫光。' },
+    { id: 50, type: 'reading', lesson: '閱讀測驗二', text: '[承上文] 下列哪一個選項是這篇文章的最佳標題？', options: ['愛斯基摩人的傳說', '太陽風的威力', '地球磁場的保護', '揭開極光的神祕面紗'], answer: '揭開極光的神祕面紗', explanation: '文章從傳說講到科學原理，完整介紹了極光的成因。' }
+];
+
+// --- Application State ---
+let currentQuestions = [];
+let answers = {}; // { questionId: 'Selected Option' }
+let markedForLater = new Set();
+let timerInterval;
+let timeLeft = 40 * 60; // 40 minutes in seconds
+let examStarted = false;
+let examSubmitted = false;
+let studentName = '';
+let answerTimes = {}; // For guess detection: { qId: timestamp }
+let consecutiveFastAnswers = 0;
+
+// --- Initialization ---
+document.addEventListener('DOMContentLoaded', () => {
+    loadHistory();
+});
+
+// --- Core Functions ---
+function startExam() {
+    const nameInput = document.getElementById('studentName').value.trim();
+    if (!nameInput) {
+        Swal.fire({ icon: 'warning', title: '請輸入姓名', text: '開始測驗前必須輸入考生姓名！', confirmButtonColor: '#FFBC4C' });
+        return;
+    }
+    studentName = nameInput;
+    document.getElementById('displayName').innerText = studentName;
+    
+    // Shuffle and pick 50 (or all available if <50)
+    currentQuestions = [...questionsDB].sort(() => 0.5 - Math.random());
+    
+    renderQuestions();
+    
+    document.getElementById('setupArea').classList.add('hidden');
+    document.getElementById('quizArea').classList.remove('hidden');
+    document.getElementById('sticky-footer').classList.remove('hidden');
+    document.getElementById('timerDisplay').classList.remove('hidden');
+    document.getElementById('timerDisplay').classList.add('flex', 'items-center');
+
+    examStarted = true;
+    timeLeft = 40 * 60; // Reset time
+    startTimer();
+    
+    // Scroll to top of quiz
+    window.scrollTo(0, 0);
+}
+
+function renderQuestions() {
+    const container = document.getElementById('questionsContainer');
+    container.innerHTML = '';
+    
+    currentQuestions.forEach((q, index) => {
+        const qNum = index + 1;
+        const qDiv = document.createElement('div');
+        qDiv.id = `question-container-${q.id}`;
+        qDiv.className = 'question-card p-6 rounded-lg shadow-sm border border-gray-100 relative';
+        
+        let optionsHtml = '';
+        if (q.type === 'tf' || q.type === 'mc' || q.type === 'reading') {
+            q.options.forEach((opt, oIdx) => {
+                const optId = `q${q.id}_opt${oIdx}`;
+                optionsHtml += `
+                    <label class="block cursor-pointer my-2 relative">
+                        <input type="radio" name="q${q.id}" value="${opt}" class="hidden radio-custom" onchange="handleAnswer(${q.id}, '${opt}')">
+                        <div class="p-3 border rounded-lg hover:bg-gray-50 transition-colors pl-10 relative text-lg">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center icon-circle"></span>
+                            ${opt}
+                        </div>
+                    </label>
+                `;
+            });
+        } else if (q.type === 'match') {
+            optionsHtml = `<select name="q${q.id}" class="w-full p-3 border rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-theme-orange mt-2" onchange="handleAnswer(${q.id}, this.value)">
+                <option value="">-- 請選擇正確配對 --</option>
+                ${q.options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>`;
+        }
+
+        qDiv.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <span class="bg-blue-100 text-theme-blue text-xs font-bold px-2 py-1 rounded">${q.lesson}</span>
+                <label class="flex items-center space-x-2 cursor-pointer text-sm font-semibold text-gray-500 hover:text-theme-orange">
+                    <input type="checkbox" class="form-checkbox h-4 w-4 text-theme-orange border-gray-300 rounded" onchange="toggleMark(${q.id}, this.checked)">
+                    <span>稍後作答 <i class="fa-solid fa-flag text-yellow-400"></i></span>
+                </label>
+            </div>
+            <h3 class="text-xl font-bold mb-4 text-gray-800"><span class="text-theme-orange mr-1">${qNum}.</span> ${q.text}</h3>
+            <div class="options-container" id="options-q${q.id}">
+                ${optionsHtml}
+            </div>
+            
+            <!-- Result Area (Hidden initially) -->
+            <div id="result-q${q.id}" class="hidden mt-4 pt-4 border-t border-gray-200">
+                <p class="mb-1 text-lg">你的答案：<span id="your-ans-q${q.id}" class="font-bold"></span></p>
+                <p class="mb-2 text-lg">正確答案：<span class="correct-ans">${q.answer}</span></p>
+                <div class="bg-yellow-50 p-3 rounded text-sm text-gray-700 border-l-4 border-yellow-400">
+                    <strong><i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>詳解：</strong> ${q.explanation}
+                </div>
+            </div>
+
+            <!-- Single Question Answer Button -->
+            <div class="mt-4 text-right">
+                <button onclick="requestSingleAnswer(${q.id})" class="text-xs text-gray-400 hover:text-gray-600 underline" id="btn-show-ans-${q.id}">
+                    <i class="fa-solid fa-lock mr-1"></i>老師/家長看解答
+                </button>
+            </div>
+        `;
+        container.appendChild(qDiv);
+    });
+}
+
+function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        // Alerts
+        if (timeLeft === 25 * 60) {
+            Swal.fire({ title: '時間提醒', text: '測驗剩下 25 分鐘囉！', icon: 'info', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        } else if (timeLeft === 10 * 60) {
+            Swal.fire({ title: '時間提醒', text: '測驗只剩 10 分鐘，請把握時間！', icon: 'warning', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        } else if (timeLeft === 5 * 60) {
+            Swal.fire({ title: '最後衝刺！', text: '測驗剩下 5 分鐘，請檢查是否有未答題目！', icon: 'warning', confirmButtonColor: '#d33' });
+        } else if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            Swal.fire({ title: '時間到！', text: '系統將自動為您繳卷。', icon: 'info', confirmButtonText: '確定' }).then(() => {
+                forceSubmit();
+            });
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const secs = (timeLeft % 60).toString().padStart(2, '0');
+    document.getElementById('timeText').innerText = `${mins}:${secs}`;
+    if(timeLeft < 300) { // last 5 mins turn red
+        document.getElementById('timerDisplay').classList.remove('text-theme-blue');
+        document.getElementById('timerDisplay').classList.add('text-red-500', 'animate-pulse');
+    }
+}
+
+function handleAnswer(qId, value) {
+    if (examSubmitted) return; // Prevent changes after submit
+    
+    // Guess detection logic
+    const now = Date.now();
+    if (answerTimes[qId]) {
+        // Changing answer, don't count towards fast answering
+    } else {
+        const lastAnsTime = Object.values(answerTimes).sort((a,b)=>b-a)[0] || startTime;
+        if (now - lastAnsTime < 1500) { // less than 1.5s between answers
+            consecutiveFastAnswers++;
+            if (consecutiveFastAnswers >= 3) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '作答太快囉！',
+                    text: '請仔細看題目，不要亂猜題喔！',
+                    confirmButtonColor: '#FFBC4C'
+                });
+                consecutiveFastAnswers = 0; // reset
+            }
+        } else {
+            consecutiveFastAnswers = 0;
+        }
+    }
+    answerTimes[qId] = now;
+    if(!startTime) startTime = now;
+
+
+    answers[qId] = value;
+    const qDiv = document.getElementById(`question-container-${qId}`);
+    qDiv.classList.remove('highlight-unanswered');
+    
+    // Styling for radio circles
+    const radios = document.querySelectorAll(`input[name="q${qId}"]`);
+    radios.forEach(r => {
+        const icon = r.nextElementSibling.querySelector('.icon-circle');
+        if(icon) {
+            if(r.checked) {
+                icon.innerHTML = '<div class="w-2.5 h-2.5 bg-theme-orange rounded-full"></div>';
+                icon.classList.add('border-theme-orange');
+            } else {
+                icon.innerHTML = '';
+                icon.classList.remove('border-theme-orange');
+            }
+        }
+    });
+
+    updateStats();
+}
+
+let startTime = null;
+
+function toggleMark(qId, isMarked) {
+    if (isMarked) {
+        markedForLater.add(qId);
+    } else {
+        markedForLater.delete(qId);
+    }
+    updateStats();
+}
+
+function updateStats() {
+    const answeredCount = Object.keys(answers).filter(k => answers[k] !== "").length; // ensure not empty string for select
+    const totalCount = currentQuestions.length;
+    const unansweredCount = totalCount - answeredCount;
+    
+    document.getElementById('statAnswered').innerText = answeredCount;
+    document.getElementById('statUnanswered').innerText = unansweredCount;
+    document.getElementById('statMarked').innerText = markedForLater.size;
+}
+
+function scrollToUnanswered() {
+    for (let q of currentQuestions) {
+        if (!answers[q.id] || answers[q.id] === "") {
+            const el = document.getElementById(`question-container-${q.id}`);
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-unanswered');
+            setTimeout(() => el.classList.remove('highlight-unanswered'), 3000);
+            return;
+        }
+    }
+    Swal.fire({ icon: 'success', title: '太棒了', text: '所有題目都已作答完畢！', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 2000});
+}
+
+async function submitExam() {
+    const answeredCount = Object.keys(answers).filter(k => answers[k] !== "").length;
+    const totalCount = currentQuestions.length;
+    
+    if (answeredCount < totalCount) {
+        Swal.fire({
+            icon: 'error',
+            title: '無法繳卷',
+            text: `您還有 ${totalCount - answeredCount} 題未作答！請點擊左下角「未答」尋找題目。`,
+            confirmButtonColor: '#d33'
+        });
+        return;
+    }
+
+    if (markedForLater.size > 0) {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: '提醒您',
+            text: `您有 ${markedForLater.size} 題標記為「稍後作答」，確定不再檢查要直接繳卷嗎？`,
+            showCancelButton: true,
+            confirmButtonColor: '#FFBC4C',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: '確定繳卷',
+            cancelButtonText: '返回檢查'
+        });
+        if (!result.isConfirmed) return;
+    }
+
+    forceSubmit();
+}
+
+function forceSubmit() {
+    clearInterval(timerInterval);
+    examSubmitted = true;
+    
+    let score = 0;
+    const pointPerQ = 100 / currentQuestions.length;
+
+    // Disable all inputs
+    document.querySelectorAll('input, select').forEach(el => el.disabled = true);
+    
+    // Hide footer submit, show result actions
+    document.getElementById('submitBtn').parentElement.classList.add('hidden');
+    document.getElementById('resultActions').classList.remove('hidden');
+
+    currentQuestions.forEach(q => {
+        const userAns = answers[q.id] || "未作答";
+        const isCorrect = userAns === q.answer;
+        
+        if (isCorrect) score += pointPerQ;
+        
+        // Show Results in UI
+        const resultDiv = document.getElementById(`result-q${q.id}`);
+        const userAnsSpan = document.getElementById(`your-ans-q${q.id}`);
+        const btnShowAns = document.getElementById(`btn-show-ans-${q.id}`);
+        
+        resultDiv.classList.remove('hidden');
+        if(btnShowAns) btnShowAns.classList.add('hidden');
+        
+        userAnsSpan.innerText = userAns;
+        if (isCorrect) {
+            userAnsSpan.className = 'correct-ans';
+            document.getElementById(`question-container-${q.id}`).classList.add('border-green-400', 'bg-green-50');
+        } else {
+            userAnsSpan.className = 'wrong-ans';
+            document.getElementById(`question-container-${q.id}`).classList.add('border-red-400', 'bg-red-50');
+        }
+    });
+
+    score = Math.round(score);
+
+    Swal.fire({
+        icon: score >= 60 ? 'success' : 'info',
+        title: '測驗結束！',
+        html: `<div class="text-3xl font-bold mt-2 mb-4 text-theme-blue">您的分數：${score} 分</div>
+               <p class="text-sm text-gray-600">答錯的題目已在畫面中標示紅色，您可以直接在畫面中查看詳解，或下載錯題本。</p>`,
+        confirmButtonText: '查看錯題與詳解',
+        confirmButtonColor: '#FFBC4C',
+        allowOutsideClick: false
+    });
+
+    saveHistory(score);
+    // Keep UI visible for review (Rule 12)
+}
+
+// --- Password Protection for Answers ---
+async function requestSingleAnswer(qId) {
+    const { value: password } = await Swal.fire({
+        title: '請輸入密碼',
+        input: 'password',
+        inputLabel: '這是老師/家長專屬功能',
+        inputPlaceholder: '請輸入密碼',
+        inputAttributes: { maxlength: 10, autocapitalize: 'off', autocorrect: 'off' },
+        showCancelButton: true,
+        confirmButtonColor: '#799EFF',
+    });
+
+    if (password === '1234') {
+        const q = currentQuestions.find(x => x.id === qId);
+        Swal.fire({
+            title: `第題解答`,
+            html: `<p class="text-xl mb-2">正確答案：<span class="text-green-600 font-bold">${q.answer}</span></p>
+                   <div class="text-left bg-gray-100 p-3 rounded text-sm">${q.explanation}</div>`,
+            icon: 'info',
+            confirmButtonText: '關閉'
+        });
+    } else if (password) {
+        Swal.fire('密碼錯誤', '', 'error');
+    }
+}
+
+// --- Export Wrong Answers (xlsx-js-style) ---
+function exportWrongAnswers() {
+    const wrongQuestions = currentQuestions.filter(q => (answers[q.id] || "") !== q.answer);
+    
+    if (wrongQuestions.length === 0) {
+        Swal.fire('太棒了', '您沒有錯題，不需要下載錯題本！', 'success');
+        return;
+    }
+
+    // Prepare data
+    const ws_data = [
+        ["題號", "單元", "題目", "你的答案", "正確答案", "詳解"]
+    ];
+
+    wrongQuestions.forEach((q, idx) => {
+        ws_data.push([
+            idx + 1,
+            q.lesson,
+            q.text.replace(/<[^>]*>?/gm, ''), // Remove HTML tags from text
+            answers[q.id] || "未作答",
+            q.answer,
+            q.explanation
+        ]);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+    // Apply styles (Rule 11: wrong answers red and bold)
+    // Style header
+    for (let c = 0; c < 6; c++) {
+        const cellRef = XLSX.utils.encode_cell({r: 0, c: c});
+        if(ws[cellRef]) {
+            ws[cellRef].s = {
+                font: { bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "799EFF" } },
+                alignment: { horizontal: "center" }
+            };
+        }
+    }
+
+    // Style data rows
+    for (let r = 1; r <= wrongQuestions.length; r++) {
+        // Col 3 is "你的答案" (user answer)
+        const cellRefUserAns = XLSX.utils.encode_cell({r: r, c: 3});
+        if (ws[cellRefUserAns]) {
+            ws[cellRefUserAns].s = {
+                font: { bold: true, color: { rgb: "FF0000" } } // Red and Bold
+            };
+        }
+        
+        // Wrap text for Question and Explanation
+        const cellRefQ = XLSX.utils.encode_cell({r: r, c: 2});
+        if (ws[cellRefQ]) ws[cellRefQ].s = { alignment: { wrapText: true } };
+        const cellRefExp = XLSX.utils.encode_cell({r: r, c: 5});
+        if (ws[cellRefExp]) ws[cellRefExp].s = { alignment: { wrapText: true } };
+    }
+
+    // Set column widths
+    ws['!cols'] = [
+        {wch: 5},  // 題號
+        {wch: 20}, // 單元
+        {wch: 40}, // 題目
+        {wch: 15}, // 你的答案
+        {wch: 15}, // 正確答案
+        {wch: 50}  // 詳解
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "錯題本");
+    XLSX.writeFile(wb, `exam_result_${studentName}_${new Date().getTime()}.xlsx`);
+}
+
+// --- History Management ---
+function saveHistory(score) {
+    let history = JSON.parse(localStorage.getItem('kangHsuanHistory')) || [];
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    
+    history.unshift({ name: studentName, date: dateStr, score: score });
+    if (history.length > 3) history = history.slice(0, 3); // Keep last 3
+    
+    localStorage.setItem('kangHsuanHistory', JSON.stringify(history));
+}
+
+function loadHistory() {
+    const history = JSON.parse(localStorage.getItem('kangHsuanHistory')) || [];
+    const list = document.getElementById('historyList');
+    
+    if (history.length > 0) {
+        list.innerHTML = history.map(h => 
+            `<li class="flex justify-between bg-gray-50 p-2 rounded border border-gray-100">
+                <span><i class="fa-solid fa-user text-gray-400 mr-2"></i>${h.name}</span>
+                <span class="text-gray-500 text-xs mt-1">${h.date}</span>
+                <span class="font-bold text-theme-blue">${h.score} 分</span>
+            </li>`
+        ).join('');
+    }
+}
+
+// --- Teacher Area (JSON Import/Export) ---
+async function toggleTeacherArea() {
+    const panel = document.getElementById('teacherPanel');
+    const chevron = document.getElementById('teacherChevron');
+    
+    if (panel.classList.contains('hidden')) {
+        const { value: password } = await Swal.fire({
+            title: '老師/家長專區',
+            input: 'password',
+            inputPlaceholder: '請輸入密碼 (1234)',
+            showCancelButton: true,
+            confirmButtonText: '解鎖'
+        });
+
+        if (password === '1234') {
+            panel.classList.remove('hidden');
+            chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else if (password) {
+            Swal.fire('密碼錯誤', '', 'error');
+        }
+    } else {
+        panel.classList.add('hidden');
+        chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+    }
+}
+
+function exportQuestionsJSON() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questionsDB, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", "kang_hsuan_questions.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function importQuestionsJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedData = JSON.parse(e.target.result);
+            if (Array.isArray(importedData) && importedData.length > 0) {
+                questionsDB = importedData;
+                Swal.fire('匯入成功', `成功匯入 ${questionsDB.length} 題，重新整理頁面或點擊開始測驗即可套用。`, 'success');
+            } else {
+                Swal.fire('格式錯誤', '上傳的 JSON 檔案格式不符，必須為陣列。', 'error');
+            }
+        } catch (error) {
+            Swal.fire('讀取失敗', 'JSON 檔案解析失敗。', 'error');
+        }
+        event.target.value = ''; // reset input
+    };
+    reader.readAsText(file);
+}
+
+</script>
+</body>
+</html>
