@@ -711,6 +711,19 @@
             setTimeout(() => {
                 this.renderCharts();
             }, 100);
+
+            // 鎖定滑鼠右鍵選單
+            document.addEventListener('contextmenu', event => {
+                event.preventDefault();
+            });
+
+            // 鎖定特定鍵盤按鍵 (Alt/Option, Shift, Windows/Command)
+            document.addEventListener('keydown', event => {
+                // metaKey 包含 Windows 鍵與 Mac 的 Command 鍵
+                if (event.altKey || event.shiftKey || event.metaKey) {
+                    event.preventDefault();
+                }
+            });
         },
         beforeUnmount() {
             if (this.timer) clearInterval(this.timer);
