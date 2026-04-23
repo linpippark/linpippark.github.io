@@ -140,12 +140,13 @@
                                 <th class="p-3 border-b-2 border-white">姓名</th>
                                 <th class="p-3 border-b-2 border-white">單位</th>
                                 <th class="p-3 border-b-2 border-white">在職天數統計</th>
+                                <th class="p-3 border-b-2 border-white text-center">備註</th>
                                 <th class="p-3 border-b-2 border-white text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredOnboard.length === 0">
-                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
+                                <td colspan="6" class="text-center p-4 text-gray-400">無符合資料</td>
                             </tr>
                             <tr v-for="(item, index) in filteredOnboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
                                 <td class="p-3 font-mono text-sm">{{ item.date }}</td>
@@ -155,6 +156,9 @@
                                 </td>
                                 <td class="p-3 text-sm" :class="getTenureStatus(item.date, item.originalName) === '無需統計(已離職)' ? 'text-gray-400 italic' : 'text-blue-600 font-bold'">
                                     {{ getTenureStatus(item.date, item.originalName) }}
+                                </td>
+                                <td class="p-3 text-center text-sm text-gray-500">
+                                    {{ item.remark || '' }}
                                 </td>
                                 <td class="p-3 text-center">
                                     <button @click="openForm('onboard', item)" class="text-[#FFD586] hover:text-yellow-600 mx-1" title="修改"><i class="fas fa-edit"></i></button>
@@ -251,15 +255,15 @@
                     { id: 12, date: '2025-11-17', originalName: '茍穎書', dept: '一組' },
                     { id: 13, date: '2025-11-17', originalName: '陳建和', dept: '二組' },
                     { id: 14, date: '2025-11-17', originalName: '陳勁凱', dept: '二組' },
-                    { id: 15, date: '2025-11-24', originalName: '張雅涵', dept: '行一' },
+                    { id: 15, date: '2025-11-24', originalName: '張雅涵', dept: '行一', remark: 'Happy' },
                     { id: 16, date: '2025-12-01', originalName: '黃鈺媖', dept: '一組' },
                     { id: 17, date: '2025-12-01', originalName: '林宛樺', dept: '三組' },
-                    { id: 18, date: '2026-02-09', originalName: '林厚實', dept: '行一' },
+                    { id: 18, date: '2026-02-09', originalName: '林厚實', dept: '行一', remark: 'MIS' },
                     { id: 19, date: '2026-03-02', originalName: '葉子歆', dept: '三組' },
                     { id: 20, date: '2026-03-23', originalName: '陳昱翔', dept: '三組' },
-                    { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一' },
-                    { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一' },
-                    { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二' },
+                    { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一', remark: 'Planning' },
+                    { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一', remark: 'MIS' },
+                    { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二', remark: 'HR' },
                 ],
                 
                 // 離職資料
@@ -379,7 +383,7 @@
             },
             // 計算年資
             getTenureStatus(dateStr, name) {
-                // 如果該人員出現在離職名單中，則無需統計
+                // 如果該英雄出現在離職名單中，則無需統計
                 const hasOffboarded = this.offboardList.some(item => item.originalName === name);
                 if (hasOffboarded) {
                     return '無需統計(已離職)';
@@ -462,7 +466,8 @@
             },
             // 打開新增/修改視窗
             async openForm(type, item = null) {
-                const title = item ? `修改${type === 'onboard' ? '到職' : '離職'}人員` : `新增${type === 'onboard' ? '到職' : '離職'}人員`;
+                const title = item ? `修改${type === 'onboard' ? '到職' : '離職'}英雄` : `新增${type === 'onboard' ? '到職' : '離職'}英雄`;
+                const isOnboard = type === 'onboard';
                 
                 await this.requirePassword(async () => {
                     const { value: formValues } = await Swal.fire({
@@ -475,6 +480,10 @@
                                 <input id="swal-name" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入姓名" value="${item ? item.originalName : ''}">
                                 <label class="text-sm font-bold text-gray-600 mt-2">單位</label>
                                 <input id="swal-dept" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入單位名稱 (例如: 一組)" value="${item ? item.dept : ''}">
+                                ${isOnboard ? `
+                                <label class="text-sm font-bold text-gray-600 mt-2">備註</label>
+                                <input id="swal-remark" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入備註 (選填)" value="${item && item.remark ? item.remark : ''}">
+                                ` : ''}
                             </div>`,
                         focusConfirm: false,
                         showCancelButton: true,
@@ -486,10 +495,15 @@
                             const date = document.getElementById('swal-date').value;
                             const name = document.getElementById('swal-name').value;
                             const dept = document.getElementById('swal-dept').value;
-                            if (!date || !name || !dept) {
-                                Swal.showValidationMessage('所有欄位都必須填寫！');
+                            let remark = '';
+                            if (isOnboard) {
+                                remark = document.getElementById('swal-remark').value;
                             }
-                            return { date, originalName: name, dept };
+                            
+                            if (!date || !name || !dept) {
+                                Swal.showValidationMessage('日期、姓名與單位都必須填寫！');
+                            }
+                            return isOnboard ? { date, originalName: name, dept, remark } : { date, originalName: name, dept };
                         }
                     });
 
@@ -591,7 +605,7 @@
                             
                             // 圖片放置於標題下方
                             pdf.addImage(imgData, 'PNG', margin, margin + 15, renderWidth, pdfHeight);
-                            pdf.save("HeroList_人員統計報表.pdf");
+                            pdf.save("HeroList_英雄統計報表.pdf");
                             
                             Swal.close();
                         });
