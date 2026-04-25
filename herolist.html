@@ -51,7 +51,7 @@
         </h1>
         <div class="text-right text-sm flex flex-col items-center md:items-end font-medium">
             <p><i class="far fa-clock mr-1"></i>現在時間：{{ currentTime }}</p>
-            <p class="text-[#FFE99A]"><i class="fas fa-sync-alt mr-1"></i>最後更新：2026/4/23 22:25:20</p>
+            <p class="text-[#FFE99A]"><i class="fas fa-sync-alt mr-1"></i>最後更新：2026/4/25 10:28:20</p>
             <button @click="exportToPDF" class="mt-2 bg-[#FFE99A] text-gray-800 font-bold px-4 py-1.5 rounded-full shadow hover:bg-white hover:text-[#FF9898] transition-all duration-300">
                 <i class="fas fa-file-pdf mr-1 text-red-500"></i>匯出 PDF 報表
             </button>
@@ -98,6 +98,9 @@
                 </div>
             </div>
             <div class="flex gap-2">
+                <button @click="toggleCharts" class="bg-gradient-to-r from-purple-300 to-indigo-300 text-white font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
+                    <i class="fas" :class="showCharts ? 'fa-eye-slash' : 'fa-chart-pie'"></i> {{ showCharts ? '隱藏統計表' : '顯示統計表' }}
+                </button>
                 <button @click="openForm('onboard')" class="bg-gradient-to-r from-[#FFD586] to-[#FFE99A] text-gray-800 font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
                     <i class="fas fa-user-plus mr-1"></i> 新增到職
                 </button>
@@ -108,7 +111,7 @@
         </div>
 
         <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div v-if="showCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 transition-all duration-500">
             <div class="glass-card p-4">
                 <h2 class="text-xl font-bold text-center text-[#FF9898] mb-2"><i class="fas fa-chart-bar mr-2"></i>到職英雄統計</h2>
                 <div class="relative h-64">
@@ -139,7 +142,7 @@
                                 <th class="p-3 border-b-2 border-white">到職日</th>
                                 <th class="p-3 border-b-2 border-white">姓名</th>
                                 <th class="p-3 border-b-2 border-white">單位</th>
-                                <th class="p-3 border-b-2 border-white">在職天數統計</th>
+                                <th class="p-3 border-b-2 border-white">在職天數</th>
                                 <th class="p-3 border-b-2 border-white text-center">備註</th>
                                 <th class="p-3 border-b-2 border-white text-center">操作</th>
                             </tr>
@@ -183,18 +186,22 @@
                                 <th class="p-3 border-b-2 border-white">離職日</th>
                                 <th class="p-3 border-b-2 border-white">姓名</th>
                                 <th class="p-3 border-b-2 border-white">單位</th>
+                                <th class="p-3 border-b-2 border-white">在職天數</th>
                                 <th class="p-3 border-b-2 border-white text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredOffboard.length === 0">
-                                <td colspan="4" class="text-center p-4 text-gray-400">無符合資料</td>
+                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
                             </tr>
                             <tr v-for="(item, index) in filteredOffboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
                                 <td class="p-3 font-mono text-sm">{{ item.date }}</td>
                                 <td class="p-3 font-bold text-gray-700">{{ maskName(item.originalName) }}</td>
                                 <td class="p-3">
                                     <span class="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">{{ item.dept }}</span>
+                                </td>
+                                <td class="p-3 text-sm text-[#FF9898] font-bold">
+                                    {{ getOffboardTenure(item) }}
                                 </td>
                                 <td class="p-3 text-center">
                                     <button @click="openForm('offboard', item)" class="text-[#FFD586] hover:text-yellow-600 mx-1" title="修改"><i class="fas fa-edit"></i></button>
@@ -225,6 +232,7 @@
                 currentTime: '',
                 lastUpdated: '',
                 timer: null,
+                showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
                 filters: {
                     year: 'all',
                     dept: 'all'
@@ -276,7 +284,7 @@
                     { id: 29, date: '2025-04-30', originalName: '孫東正', dept: '二組' },
                     { id: 30, date: '2025-04-30', originalName: '劉英愉', dept: '一組' },
                     { id: 31, date: '2025-06-18', originalName: '潘建宏', dept: '行一' },
-                    { id: 32, date: '2025-07-11', originalName: '黃政皓', dept: '三組' },
+                    { id: 32, date: '2025-07-11', originalName: '黃政皓', dept: '二組' },
                     { id: 33, date: '2025-07-31', originalName: '陳姿穎', dept: '二組' },
                     { id: 34, date: '2025-07-31', originalName: '魏葆蓉', dept: '行二' },
                     { id: 35, date: '2025-07-31', originalName: '張桂瑜', dept: '一組' },
@@ -364,12 +372,25 @@
         watch: {
             filters: {
                 handler() {
-                    this.renderCharts();
+                    // 只有在圖表顯示的狀態下才重新繪製，節省效能
+                    if (this.showCharts) {
+                        this.renderCharts();
+                    }
                 },
                 deep: true
             }
         },
         methods: {
+            // 切換統計表顯示狀態
+            toggleCharts() {
+                this.showCharts = !this.showCharts;
+                // 如果是打開的狀態，等待 DOM 渲染完成後再畫圖表
+                if (this.showCharts) {
+                    this.$nextTick(() => {
+                        this.renderCharts();
+                    });
+                }
+            },
             // 姓名去識別化
             maskName(name) {
                 if (!name) return '';
@@ -401,6 +422,39 @@
                 if (days < 0) {
                     months--;
                     const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                    days += prevMonth.getDate();
+                }
+                if (months < 0) {
+                    years--;
+                    months += 12;
+                }
+
+                let result = [];
+                if (years > 0) result.push(`${years}年`);
+                if (months > 0) result.push(`${months}個月`);
+                if (days > 0 || result.length === 0) result.push(`${days}天`);
+
+                return result.join('');
+            },
+            // 計算離職英雄的在職天數
+            getOffboardTenure(offboardItem) {
+                // 從到職名單中尋找同名且到職日早於離職日的紀錄
+                const onboardRecord = this.onboardList.find(
+                    onItem => onItem.originalName === offboardItem.originalName && new Date(onItem.date) <= new Date(offboardItem.date)
+                );
+
+                if (!onboardRecord) return '無到職紀錄';
+
+                const start = new Date(onboardRecord.date);
+                const end = new Date(offboardItem.date);
+
+                let years = end.getFullYear() - start.getFullYear();
+                let months = end.getMonth() - start.getMonth();
+                let days = end.getDate() - start.getDate();
+
+                if (days < 0) {
+                    months--;
+                    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
                     days += prevMonth.getDate();
                 }
                 if (months < 0) {
@@ -614,6 +668,8 @@
             },
             // 繪製統計圖表
             renderCharts() {
+                if (!this.showCharts) return; // 如果圖表區塊是隱藏的，就不執行繪製以避免報錯
+                
                 const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
                 
                 // 處理資料函數
@@ -706,11 +762,6 @@
             this.setLastUpdated();
             this.updateClock();
             this.timer = setInterval(this.updateClock, 1000);
-            
-            // 延遲一點等 DOM 渲染完再畫圖表
-            setTimeout(() => {
-                this.renderCharts();
-            }, 100);
 
             // 鎖定滑鼠右鍵選單
             document.addEventListener('contextmenu', event => {
