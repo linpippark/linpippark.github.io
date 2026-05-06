@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreams Calendar</title>
+    
+    <!-- 引入 Tailwind CSS (前端樣式框架) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 SweetAlert2 (彈出視窗套件) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- 引入 html2pdf.js (PDF匯出套件) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- 引入 FontAwesome (圖示) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 系統自訂樣式設定 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f9fafb;
+        }
+
+        /* 自訂繽紛主題色系 */
+        .color-angel { background-color: #FFAAA5; color: #7f1d1d; }
+        .color-all { background-color: #FFD3B6; color: #9a3412; }
+        .color-pip { background-color: #FDFFAB; color: #854d0e; }
+        .color-leo { background-color: #A8E6CF; color: #14532d; }
+
+        .border-angel { border-left: 6px solid #ff7a73; }
+        .border-all { border-left: 6px solid #ffaa73; }
+        .border-pip { border-left: 6px solid #eab308; }
+        .border-leo { border-left: 6px solid #4ade80; }
+
+        /* SweetAlert2 自訂樣式微調 */
+        .swal2-popup { font-family: 'Noto Sans TC', sans-serif !important; }
+        
+        /* 列印與 PDF 匯出時隱藏特定元素 */
+        @media print {
+            .no-print { display: none !important; }
+        }
+
+        /* 表單輸入框統一樣式 */
+        .custom-input {
+            width: 100%; padding: 8px; margin: 5px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- 主容器：用於匯出 PDF 的區塊 -->
+    <div id="pdf-container" class="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        
+        <!-- 頁首：標題與今日日期 -->
+        <header class="bg-gray-800 text-white p-6 flex flex-col sm:flex-row justify-between items-center">
+            <h1 class="text-3xl font-bold tracking-wider"><i class="fa-solid fa-calendar-days mr-3"></i>Dreams Calendar</h1>
+            <div class="mt-4 sm:mt-0 text-lg font-medium bg-gray-700 px-4 py-2 rounded-lg shadow-inner">
+                <i class="fa-regular fa-clock mr-2"></i><span id="current-date"></span>
+            </div>
+        </header>
+
+        <!-- 工具列：篩選按鈕與操作按鈕 -->
+        <div class="p-6 border-b border-gray-100 bg-gray-50 no-print flex flex-col lg:flex-row justify-between gap-4 items-center">
+            
+            <!-- 分類篩選區 -->
+            <div class="flex flex-wrap gap-2" id="filter-buttons">
+                <button onclick="setFilter('All Categories')" class="filter-btn px-4 py-2 rounded-full font-bold bg-gray-200 text-gray-700 hover:bg-gray-300 transition" data-filter="All Categories">顯示全部</button>
+                <button onclick="setFilter('All')" class="filter-btn px-4 py-2 rounded-full font-bold color-all shadow-sm hover:opacity-80 transition" data-filter="All">家庭 (All)</button>
+                <button onclick="setFilter('Angel')" class="filter-btn px-4 py-2 rounded-full font-bold color-angel shadow-sm hover:opacity-80 transition" data-filter="Angel">Angel</button>
+                <button onclick="setFilter('Pip')" class="filter-btn px-4 py-2 rounded-full font-bold color-pip shadow-sm hover:opacity-80 transition" data-filter="Pip">Pip</button>
+                <button onclick="setFilter('Leo')" class="filter-btn px-4 py-2 rounded-full font-bold color-leo shadow-sm hover:opacity-80 transition" data-filter="Leo">Leo</button>
+            </div>
+
+            <!-- 操作區 -->
+            <div class="flex gap-3">
+                <button onclick="openAddModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow transition">
+                    <i class="fa-solid fa-plus mr-2"></i>新增行程
+                </button>
+                <button onclick="exportToPDF()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-bold shadow transition">
+                    <i class="fa-solid fa-file-pdf mr-2"></i>下載 PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- 內容列表區：以結構化清單取代月曆網格 -->
+        <div class="p-6">
+            <div id="events-list" class="space-y-4">
+                <!-- 行程卡片將由 JavaScript 動態生成於此 -->
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- 1. 初始資料設定 (依照需求規劃匯入) ---
+        let events = [
+            { id: 1, date: '2026-05-22', endDate: '', time: '', title: '英語單字王', category: 'Leo' },
+            { id: 2, date: '2026-05-23', endDate: '', time: '晚上', title: '回蘆洲隔天出遊', category: 'All' },
+            { id: 3, date: '2026-05-24', endDate: '', time: '', title: '里民活動家族小旅行', category: 'All' },
+            { id: 4, date: '2026-05-27', endDate: '', time: '20:00', title: 'AI Coding上課', category: 'Pip' },
+            { id: 5, date: '2026-05-31', endDate: '', time: '10:00', title: 'AI Coding上課', category: 'Pip' },
+            { id: 6, date: '2026-06-11', endDate: '', time: '', title: '世界盃足球開', category: 'Pip' },
+            { id: 7, date: '2026-06-19', endDate: '', time: '', title: '端午節', category: 'All' },
+            { id: 8, date: '2026-06-20', endDate: '2026-06-21', time: '', title: '聚賢考前衝刺班', category: 'Leo' },
+            { id: 9, date: '2026-06-23', endDate: '', time: '', title: '期末考1(國英自)', category: 'Leo' },
+            { id: 10, date: '2026-06-23', endDate: '', time: '', title: '校門口導護', category: 'Angel' },
+            { id: 11, date: '2026-06-24', endDate: '', time: '', title: '期末考2(數社)', category: 'Leo' },
+            { id: 12, date: '2026-06-28', endDate: '', time: '10:00', title: 'AI Coding', category: 'Pip' },
+            { id: 13, date: '2026-06-30', endDate: '', time: '', title: '五下最後一天上課', category: 'Leo' },
+            { id: 14, date: '2026-07-01', endDate: '', time: '', title: '暑假開始聚賢暑假班', category: 'Leo' },
+            { id: 15, date: '2026-07-18', endDate: '2026-07-19', time: '', title: '桃園中壢南方莊園yaya', category: 'All' },
+            { id: 16, date: '2026-07-25', endDate: '2026-07-27', time: '', title: 'Leo生日遊(暫定)', category: 'All' }
+        ];
+
+        let currentFilter = 'All Categories';
+
+        // --- 2. 系統初始化與日期顯示 ---
+        function init() {
+            // 右上角顯示今日日期 (yyyy-MM-dd)
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const MM = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('current-date').innerText = `${yyyy}-${MM}-${dd}`;
+
+            renderEvents();
+            updateFilterButtons();
+        }
+
+        // --- 3. 畫面渲染邏輯 (結構化表格列表) ---
+        function renderEvents() {
+            const container = document.getElementById('events-list');
+            container.innerHTML = '';
+
+            // 資料排序 (依據日期先後)
+            let filteredEvents = events.filter(e => currentFilter === 'All Categories' || e.category === currentFilter);
+            filteredEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            if (filteredEvents.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-500 font-bold text-lg">目前沒有找到符合的行程記錄。</div>`;
+                return;
+            }
+
+            let currentMonth = null;
+            
+            // 定義 1~12 月專屬的背景色 (針對左側日期區塊)
+            const monthBgColors = [
+                'bg-red-50 text-red-800',       // 1月
+                'bg-orange-50 text-orange-800', // 2月
+                'bg-amber-50 text-amber-800',   // 3月
+                'bg-green-50 text-green-800',   // 4月
+                'bg-sky-50 text-sky-800',       // 5月
+                'bg-indigo-50 text-indigo-800', // 6月
+                'bg-purple-50 text-purple-800', // 7月
+                'bg-fuchsia-50 text-fuchsia-800',// 8月
+                'bg-pink-50 text-pink-800',     // 9月
+                'bg-rose-50 text-rose-800',     // 10月
+                'bg-teal-50 text-teal-800',     // 11月
+                'bg-cyan-50 text-cyan-800'      // 12月
+            ];
+
+            // 定義 1~12 月專屬的標題列背景色
+            const monthHeaderColors = [
+                'bg-red-200 text-red-900',       // 1月
+                'bg-orange-200 text-orange-900', // 2月
+                'bg-amber-200 text-amber-900',   // 3月
+                'bg-green-200 text-green-900',   // 4月
+                'bg-sky-200 text-sky-900',       // 5月
+                'bg-indigo-200 text-indigo-900', // 6月
+                'bg-purple-200 text-purple-900', // 7月
+                'bg-fuchsia-200 text-fuchsia-900',// 8月
+                'bg-pink-200 text-pink-900',     // 9月
+                'bg-rose-200 text-rose-900',     // 10月
+                'bg-teal-200 text-teal-900',     // 11月
+                'bg-cyan-200 text-cyan-900'      // 12月
+            ];
+
+            // 產生清單卡片
+            filteredEvents.forEach(event => {
+                // 解析月份以進行分群與上色
+                const dateObj = new Date(event.date);
+                const month = dateObj.getMonth() + 1; // 1 ~ 12
+                const year = dateObj.getFullYear();
+                const monthKey = `${year}年${month}月`;
+
+                // 若遇到新的月份，插入「月份標題列」
+                if (currentMonth !== monthKey) {
+                    currentMonth = monthKey;
+                    const headerColorClass = monthHeaderColors[month - 1];
+                    container.innerHTML += `
+                        <div class="mt-8 mb-3 px-4 py-2 rounded-lg font-bold text-xl shadow-sm flex items-center ${headerColorClass}">
+                            <i class="fa-regular fa-calendar-check mr-2"></i> ${monthKey} 行程
+                        </div>
+                    `;
+                }
+
+                // 決定顏色樣式
+                const colorClass = `color-${event.category.toLowerCase()}`;
+                const borderClass = `border-${event.category.toLowerCase()}`;
+                const monthDateBgClass = monthBgColors[month - 1]; // 取得該月份的專屬背景色
+                
+                // 格式化日期顯示 (處理日期區間與星期)
+                let dateDisplay = formatDateWithWeekday(event.date);
+                if (event.endDate) {
+                    dateDisplay += ` <i class="fa-solid fa-arrow-right mx-1 text-gray-400 text-sm"></i> ${formatDateWithWeekday(event.endDate)}`;
+                }
+                if (event.time) {
+                    dateDisplay += ` <span class="ml-2 text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-sm font-bold"><i class="fa-regular fa-clock mr-1"></i>${event.time}</span>`;
+                }
+
+                const cardHTML = `
+                    <div class="flex flex-col md:flex-row bg-white rounded-lg shadow-sm border border-gray-200 ${borderClass} hover:shadow-md transition duration-200 overflow-hidden">
+                        
+                        <!-- 日期區塊 (依據月份變更背景顏色) -->
+                        <div class="md:w-1/3 p-4 flex items-center border-r border-gray-100 ${monthDateBgClass}">
+                            <div class="font-bold text-lg">${dateDisplay}</div>
+                        </div>
+                        
+                        <!-- 內容與分類區塊 -->
+                        <div class="md:w-2/3 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-gray-800">${event.title}</h3>
+                            </div>
+                            
+                            <!-- 分類標籤 -->
+                            <div class="px-4 py-1.5 rounded-full font-bold text-sm shadow-sm ${colorClass}">
+                                <i class="fa-solid fa-user mr-1"></i> ${event.category}
+                            </div>
+                            
+                            <!-- 操作按鈕 (列印時隱藏) -->
+                            <div class="flex gap-2 no-print mt-3 sm:mt-0">
+                                <button onclick="openEditModal(${event.id})" class="text-gray-500 hover:text-blue-500 p-2 transition bg-gray-100 hover:bg-blue-50 rounded-full" title="修改">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="deleteEvent(${event.id})" class="text-gray-500 hover:text-red-500 p-2 transition bg-gray-100 hover:bg-red-50 rounded-full" title="刪除">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        // --- 4. 輔助功能：日期格式化 (加入星期) ---
+        function formatDateWithWeekday(dateString) {
+            if(!dateString) return '';
+            const dateObj = new Date(dateString);
+            const MM = dateObj.getMonth() + 1;
+            const dd = dateObj.getDate();
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            const day = weekdays[dateObj.getDay()];
+            return `${MM}/${dd}(${day})`;
+        }
+
+        // --- 5. 篩選功能 ---
+        function setFilter(category) {
+            currentFilter = category;
+            updateFilterButtons();
+            renderEvents();
+        }
+
+        function updateFilterButtons() {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === currentFilter) {
+                    btn.classList.add('ring-4', 'ring-blue-300');
+                } else {
+                    btn.classList.remove('ring-4', 'ring-blue-300');
+                }
+            });
+        }
+
+        // --- 6. SweetAlert2 表單結構 ---
+        function getFormHTML(event = {}) {
+            return `
+                <div class="text-left mt-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">分類歸屬</label>
+                    <select id="swal-category" class="custom-input bg-gray-50 text-lg font-bold">
+                        <option value="All" ${event.category === 'All' ? 'selected' : ''}>All (家庭活動)</option>
+                        <option value="Angel" ${event.category === 'Angel' ? 'selected' : ''}>Angel</option>
+                        <option value="Pip" ${event.category === 'Pip' ? 'selected' : ''}>Pip</option>
+                        <option value="Leo" ${event.category === 'Leo' ? 'selected' : ''}>Leo</option>
+                    </select>
+
+                    <label class="block text-sm font-bold text-gray-700 mb-1">行程名稱 <span class="text-red-500">*</span></label>
+                    <input type="text" id="swal-title" class="custom-input" placeholder="請輸入行程名稱..." value="${event.title || ''}">
+
+                    <div class="flex gap-4">
+                        <div class="flex-1">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">開始日期 <span class="text-red-500">*</span></label>
+                            <input type="date" id="swal-date" class="custom-input" value="${event.date || ''}">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">結束日期 (選填)</label>
+                            <input type="date" id="swal-endDate" class="custom-input" value="${event.endDate || ''}">
+                        </div>
+                    </div>
+
+                    <label class="block text-sm font-bold text-gray-700 mb-1">時間備註 (選填，例如：10:00 或 晚上)</label>
+                    <input type="text" id="swal-time" class="custom-input" placeholder="例如: 20:00" value="${event.time || ''}">
+                </div>
+            `;
+        }
+
+        // --- 7. 新增行程 (Create) ---
+        function openAddModal() {
+            Swal.fire({
+                title: '<span class="text-2xl font-bold">新增行程記錄</span>',
+                html: getFormHTML(),
+                showCancelButton: true,
+                confirmButtonText: '確定新增',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#3b82f6',
+                preConfirm: () => {
+                    const title = document.getElementById('swal-title').value;
+                    const date = document.getElementById('swal-date').value;
+                    if (!title || !date) {
+                        Swal.showValidationMessage('請務必填寫「行程名稱」與「開始日期」');
+                        return false;
+                    }
+                    return {
+                        id: Date.now(),
+                        title: title,
+                        date: date,
+                        endDate: document.getElementById('swal-endDate').value,
+                        time: document.getElementById('swal-time').value,
+                        category: document.getElementById('swal-category').value
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    events.push(result.value);
+                    renderEvents();
+                    Swal.fire({ title: '新增成功！', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
+
+        // --- 8. 修改行程 (Update) ---
+        function openEditModal(id) {
+            const eventIndex = events.findIndex(e => e.id === id);
+            const event = events[eventIndex];
+
+            Swal.fire({
+                title: '<span class="text-2xl font-bold">修改行程記錄</span>',
+                html: getFormHTML(event),
+                showCancelButton: true,
+                confirmButtonText: '儲存修改',
+                cancelButtonText: '取消',
+                confirmButtonColor: '#3b82f6',
+                preConfirm: () => {
+                    const title = document.getElementById('swal-title').value;
+                    const date = document.getElementById('swal-date').value;
+                    if (!title || !date) {
+                        Swal.showValidationMessage('請務必填寫「行程名稱」與「開始日期」');
+                        return false;
+                    }
+                    return {
+                        id: event.id,
+                        title: title,
+                        date: date,
+                        endDate: document.getElementById('swal-endDate').value,
+                        time: document.getElementById('swal-time').value,
+                        category: document.getElementById('swal-category').value
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    events[eventIndex] = result.value;
+                    renderEvents();
+                    Swal.fire({ title: '修改成功！', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
+
+        // --- 9. 刪除行程 (Delete) ---
+        function deleteEvent(id) {
+            Swal.fire({
+                title: '確定要刪除此行程嗎？',
+                text: "刪除後將無法復原！",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '是的，刪除！',
+                cancelButtonText: '取消'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    events = events.filter(e => e.id !== id);
+                    renderEvents();
+                    Swal.fire({ title: '已刪除！', icon: 'success', timer: 1500, showConfirmButton: false });
+                }
+            });
+        }
+
+        // --- 10. 匯出成 PDF (Export) ---
+        function exportToPDF() {
+            // 彈出處理中提示
+            Swal.fire({
+                title: '正在準備 PDF...',
+                text: '請稍候，文件即將下載',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            const element = document.getElementById('pdf-container');
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Dreams_Calendar_${document.getElementById('current-date').innerText}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            // 使用 html2pdf 產生檔案
+            html2pdf().set(opt).from(element).save().then(() => {
+                Swal.fire({ title: '下載完成！', icon: 'success', timer: 1500, showConfirmButton: false });
+            }).catch(err => {
+                Swal.fire({ title: '下載失敗', text: '產生 PDF 時發生錯誤', icon: 'error' });
+                console.error(err);
+            });
+        }
+
+        // 啟動系統
+        window.onload = init;
+    </script>
+</body>
+</html>
