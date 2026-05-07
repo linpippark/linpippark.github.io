@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TextProcessing Web App</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 配置 Tailwind CSS 以符合指定的色系
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lightBeige: '#FFE8BE', // 淺米底色
+                        accentYellow: '#F7DD7D', // 強調黃色
+                        primaryBlue: '#406AAF', // 主色藍
+                        secondaryBlue: '#427AB5' // 次色藍
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 全局統一自訂滾動條，適配新色系 */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #FFE8BE;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #427AB5;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #406AAF;
+        }
+        
+        /* 頁籤切換動畫邏輯 */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-lightBeige min-h-screen flex flex-col font-sans text-gray-800">
+
+    <!-- 最上方顯示 TextProcessing -->
+    <header class="bg-primaryBlue p-5 shadow-md flex justify-center items-center z-10 relative">
+        <h1 class="text-lightBeige text-3xl font-bold tracking-widest drop-shadow-md">
+            TextProcessing
+        </h1>
+    </header>
+
+    <!-- TAB 切換選單 -->
+    <nav class="flex justify-center bg-secondaryBlue shadow-md sticky top-0 z-20">
+        <button class="tab-btn active px-8 py-4 font-bold bg-accentYellow text-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab1')">TextShower</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab2')">TextTear</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">Tool 03</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">Tool 04</button>
+    </nav>
+
+    <!-- 內容區域 -->
+    <main class="flex-grow p-6 flex flex-col items-center w-full max-w-5xl mx-auto">
+        
+        <!-- =================== TAB 1: TextShower =================== -->
+        <div id="tab1" class="tab-content active w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
+            <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
+                TextShower 
+                <span id="ts-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
+            </h2>
+            
+            <textarea id="ts-input" class="w-full h-80 bg-lightBeige bg-opacity-30 border border-secondaryBlue text-gray-800 p-5 rounded-xl text-lg focus:outline-none focus:ring-4 focus:ring-accentYellow resize-none shadow-inner transition-all leading-relaxed" placeholder="請輸入欲處理的文字..."></textarea>
+            
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <button id="ts-process-btn" class="w-full md:w-auto bg-accentYellow text-primaryBlue font-bold py-3 px-12 rounded-xl shadow-md hover:bg-yellow-400 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
+                    Shower!
+                </button>
+                
+                <div class="w-full flex-grow flex flex-col gap-2">
+                    <div id="ts-status-text" class="text-sm text-primaryBlue text-right h-5 font-bold tracking-wide"></div>
+                    <div class="w-full bg-lightBeige rounded-full h-3 overflow-hidden shadow-inner border border-secondaryBlue/20">
+                        <div id="ts-progress-bar" class="bg-primaryBlue h-full w-0 transition-all duration-500 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================== TAB 2: TextTear =================== -->
+        <div id="tab2" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
+            <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
+                TextTear 
+                <span id="tt-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
+            </h2>
+
+            <div class="flex flex-col gap-2 h-64 md:h-72">
+                <textarea id="tt-input" class="w-full h-full bg-lightBeige bg-opacity-30 border border-secondaryBlue text-gray-800 p-5 rounded-xl focus:ring-4 focus:ring-accentYellow focus:outline-none resize-none shadow-inner text-lg leading-relaxed transition-all" placeholder="請在此貼上文章..."></textarea>
+            </div>
+
+            <div class="flex flex-col items-center gap-4 min-h-[5rem]">
+                <button id="tt-process-btn" onclick="processTextTear()" class="bg-accentYellow text-primaryBlue font-bold text-lg px-12 py-3 rounded-full shadow-md hover:bg-yellow-400 hover:shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none">
+                    Tear!
+                </button>
+                
+                <div id="tt-progress-container" class="w-full max-w-sm hidden flex-col gap-2 items-center transition-opacity duration-300 opacity-0">
+                    <span id="tt-progress-text" class="text-primaryBlue text-xs font-bold tracking-wider">處理進度: 0%</span>
+                    <div class="w-full bg-lightBeige rounded-full h-2 shadow-inner border border-secondaryBlue/20 overflow-hidden">
+                        <div id="tt-progress-bar" class="bg-primaryBlue h-full rounded-full transition-all duration-100 ease-linear" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-2 h-80 md:h-80 relative">
+                <textarea id="tt-output" readonly class="w-full h-full bg-gray-50 border border-secondaryBlue text-gray-800 p-5 rounded-xl focus:outline-none resize-none shadow-inner text-lg leading-relaxed transition-all"></textarea>
+                
+                <button onclick="copyToClipboardTT()" class="absolute bottom-5 right-5 bg-primaryBlue text-lightBeige font-bold px-6 py-2 rounded-lg shadow-md hover:bg-secondaryBlue transition duration-300 ease-in-out transform hover:scale-105">
+                    複製全部
+                </button>
+            </div>
+        </div>
+
+        <!-- =================== TAB 3: Placeholder =================== -->
+        <div id="tab3" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col justify-center items-center gap-6 border-t-8 border-primaryBlue min-h-[500px]">
+            <i class="fas fa-tools text-6xl text-secondaryBlue opacity-50 mb-4"></i>
+            <h2 class="text-3xl font-bold text-secondaryBlue opacity-70 tracking-widest">TOOL 03 準備中</h2>
+            <p class="text-gray-400">未來擴充功能將在此實裝</p>
+        </div>
+
+        <!-- =================== TAB 4: Placeholder =================== -->
+        <div id="tab4" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col justify-center items-center gap-6 border-t-8 border-primaryBlue min-h-[500px]">
+            <i class="fas fa-cogs text-6xl text-secondaryBlue opacity-50 mb-4"></i>
+            <h2 class="text-3xl font-bold text-secondaryBlue opacity-70 tracking-widest">TOOL 04 準備中</h2>
+            <p class="text-gray-400">未來擴充功能將在此實裝</p>
+        </div>
+
+    </main>
+
+    <!-- 最下方顯示 Copyright -->
+    <footer class="bg-primaryBlue text-center p-5 shadow-inner mt-auto border-t-4 border-secondaryBlue">
+        <p class="text-lightBeige font-medium tracking-wider">Copyright &copy; 2026 Pip_Lin 版權所有</p>
+    </footer>
+
+    <script>
+        // ==========================================
+        // 共用工具函數
+        // ==========================================
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        // 產生版本字串
+        const generateVersionString = () => {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            return `v1.${month}.${day}.${minute}`;
+        };
+
+        // 共用下載函數
+        const downloadFile = (content, filename) => {
+            const blob = new window.Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        };
+
+        // ==========================================
+        // Tab 切換邏輯
+        // ==========================================
+        function switchTab(evt, tabId) {
+            // 隱藏所有內容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // 移除所有按鈕的 Active 樣式
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-accentYellow', 'text-primaryBlue');
+                btn.classList.add('hover:bg-primaryBlue', 'text-lightBeige');
+            });
+            // 顯示對應內容
+            document.getElementById(tabId).classList.add('active');
+            // 設定當前點擊按鈕樣式
+            evt.currentTarget.classList.add('bg-accentYellow', 'text-primaryBlue');
+            evt.currentTarget.classList.remove('hover:bg-primaryBlue', 'text-lightBeige');
+        }
+
+        // ==========================================
+        // 初始化載入
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const versionString = generateVersionString();
+            document.getElementById('ts-version').textContent = versionString;
+            document.getElementById('tt-version').textContent = versionString;
+        });
+
+        // ==========================================
+        // TAB 1: TextShower 邏輯
+        // ==========================================
+        const tsProcessBtn = document.getElementById('ts-process-btn');
+        tsProcessBtn.addEventListener('click', async () => {
+            const textArea = document.getElementById('ts-input');
+            const progressBar = document.getElementById('ts-progress-bar');
+            const statusText = document.getElementById('ts-status-text');
+
+            let text = textArea.value;
+            if (!text) return;
+
+            // 鎖定 UI
+            tsProcessBtn.disabled = true;
+            tsProcessBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            textArea.disabled = true;
+            textArea.classList.add('opacity-80');
+
+            try {
+                // 階段 1
+                statusText.textContent = "正在移除特殊括號...";
+                progressBar.style.width = "25%";
+                await sleep(500); 
+                text = text.replace(/【00|】|【/g, "");
+                textArea.value = text;
+
+                // 階段 2
+                statusText.textContent = "正在處理「發明」、「專利」關鍵字...";
+                progressBar.style.width = "50%";
+                await sleep(500);
+                text = text.replace(/發明|專利/g, "技術");
+                textArea.value = text;
+
+                // 階段 3
+                statusText.textContent = "正在處理「產業上之可利用性」關鍵字...";
+                progressBar.style.width = "75%";
+                await sleep(500);
+                text = text.replace(/產業上之可利用性/g, "可利用性");
+                textArea.value = text;
+
+                // 階段 4
+                statusText.textContent = "處理完成，準備下載...";
+                progressBar.style.width = "100%";
+                await sleep(600);
+
+                const now = new Date();
+                const filename = `cont-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.txt`;
+                
+                downloadFile(text, filename);
+                statusText.textContent = "下載成功！";
+            } catch (error) {
+                statusText.textContent = "處理過程中發生錯誤。";
+                console.error(error);
+            } finally {
+                setTimeout(() => {
+                    tsProcessBtn.disabled = false;
+                    tsProcessBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    textArea.disabled = false;
+                    textArea.classList.remove('opacity-80');
+                    progressBar.style.width = "0%";
+                    statusText.textContent = "";
+                }, 3000);
+            }
+        });
+
+        // ==========================================
+        // TAB 2: TextTear 邏輯
+        // ==========================================
+        function processTextTear() {
+            const inputTextArea = document.getElementById('tt-input');
+            const outputTextArea = document.getElementById('tt-output');
+            const tearBtn = document.getElementById('tt-process-btn');
+            const progressContainer = document.getElementById('tt-progress-container');
+            const progressBar = document.getElementById('tt-progress-bar');
+            const progressText = document.getElementById('tt-progress-text');
+            
+            const rawText = inputTextArea.value;
+            if (!rawText.trim()) return;
+
+            if(tearBtn) tearBtn.disabled = true;
+            outputTextArea.value = '';
+            
+            progressContainer.classList.remove('hidden');
+            setTimeout(() => {
+                progressContainer.classList.remove('opacity-0');
+                progressContainer.classList.add('opacity-100');
+            }, 10);
+            
+            progressBar.style.width = '0%';
+            progressText.innerText = '分析段落中... 0%';
+
+            const paragraphs = rawText.split(/\n+/).filter(p => p.trim() !== '');
+            const totalParagraphs = paragraphs.length;
+
+            if (totalParagraphs === 0) {
+                if(tearBtn) tearBtn.disabled = false;
+                progressContainer.classList.add('hidden');
+                return;
+            }
+
+            let part1_all_sentences = []; 
+            let part2_grouped_sentences = []; 
+            let globalCounter = 1; 
+            let currentIndex = 0;
+
+            function processChunk() {
+                const chunkSize = 5; 
+                const endIndex = Math.min(currentIndex + chunkSize, totalParagraphs);
+
+                for (let i = currentIndex; i < endIndex; i++) {
+                    const para = paragraphs[i];
+                    const groupLabel = `【C${i + 1}】`;
+                    part2_grouped_sentences.push(groupLabel);
+
+                    let segments = para.match(/[^；。]+[；。]?/g) || [para];
+
+                    segments.forEach(segment => {
+                        let cleanText = segment.trim();
+                        if (cleanText) {
+                            cleanText = cleanText.replace(/^\d+\.\s*/, '');
+                            const formattedSentence = `${globalCounter}.${cleanText}`;
+                            
+                            part1_all_sentences.push(formattedSentence);
+                            part2_grouped_sentences.push(formattedSentence);
+                            globalCounter++;
+                        }
+                    });
+                }
+
+                currentIndex = endIndex;
+                const progressPercentage = Math.floor((currentIndex / totalParagraphs) * 100);
+                progressBar.style.width = `${progressPercentage}%`;
+                progressText.innerText = `處理進度: ${progressPercentage}%`;
+
+                if (currentIndex < totalParagraphs) {
+                    setTimeout(processChunk, 15); 
+                } else {
+                    progressText.innerText = '組合文章並準備下載...';
+                    
+                    setTimeout(() => {
+                        const finalText = part1_all_sentences.join('\n') + 
+                                          '\n-------\n' + 
+                                          part2_grouped_sentences.join('\n');
+
+                        outputTextArea.value = finalText;
+                        
+                        const now = new Date();
+                        const filename = `cult-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}.txt`;
+                        
+                        downloadFile(finalText, filename);
+                        
+                        progressText.innerText = '處理完成！已自動下載';
+                        if(tearBtn) tearBtn.disabled = false;
+                        
+                        setTimeout(() => {
+                            progressContainer.classList.remove('opacity-100');
+                            progressContainer.classList.add('opacity-0');
+                            setTimeout(() => {
+                                progressContainer.classList.add('hidden');
+                            }, 300);
+                        }, 3000);
+                    }, 100);
+                }
+            }
+
+            setTimeout(processChunk, 50);
+        }
+
+        // 複製到剪貼簿
+        function copyToClipboardTT() {
+            const outputTextArea = document.getElementById('tt-output');
+            if (!outputTextArea.value) return;
+
+            outputTextArea.select();
+            outputTextArea.setSelectionRange(0, 99999); 
+
+            try {
+                document.execCommand('copy');
+                const copyBtn = document.querySelector('button[onclick="copyToClipboardTT()"]');
+                const originalText = copyBtn.innerText;
+                copyBtn.innerText = '已複製！';
+                copyBtn.classList.replace('bg-primaryBlue', 'bg-accentYellow');
+                copyBtn.classList.replace('text-lightBeige', 'text-primaryBlue');
+                
+                setTimeout(() => {
+                    copyBtn.innerText = originalText;
+                    copyBtn.classList.replace('bg-accentYellow', 'bg-primaryBlue');
+                    copyBtn.classList.replace('text-primaryBlue', 'text-lightBeige');
+                }, 2000);
+            } catch (err) {
+                console.error('複製失敗', err);
+            }
+            window.getSelection().removeAllRanges();
+        }
+    </script>
+    <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>
