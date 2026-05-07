@@ -81,7 +81,6 @@
         <div id="tab1" class="tab-content active w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
             <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
                 TextShower 
-                <span id="ts-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
             </h2>
             
             <textarea id="ts-input" class="w-full h-80 bg-lightBeige bg-opacity-30 border border-secondaryBlue text-gray-800 p-5 rounded-xl text-lg focus:outline-none focus:ring-4 focus:ring-accentYellow resize-none shadow-inner transition-all leading-relaxed" placeholder="請輸入欲處理的文字..."></textarea>
@@ -104,7 +103,7 @@
         <div id="tab2" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
             <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
                 TextTear 
-                <span id="tt-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
+                
             </h2>
 
             <div class="flex flex-col gap-2 h-64 md:h-72">
@@ -166,7 +165,7 @@
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
             const minute = String(now.getMinutes()).padStart(2, '0');
-            return `v1.${month}.${day}.${minute}`;
+         
         };
 
         // 共用下載函數
