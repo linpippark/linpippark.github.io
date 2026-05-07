@@ -159,14 +159,7 @@
         // ==========================================
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-        // 產生版本字串
-        const generateVersionString = () => {
-            const now = new Date();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-         
-        };
+       
 
         // 共用下載函數
         const downloadFile = (content, filename) => {
@@ -204,11 +197,7 @@
         // ==========================================
         // 初始化載入
         // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
-            const versionString = generateVersionString();
-            document.getElementById('ts-version').textContent = versionString;
-            document.getElementById('tt-version').textContent = versionString;
-        });
+       
 
         // ==========================================
         // TAB 1: TextShower 邏輯
