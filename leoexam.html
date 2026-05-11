@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leo 國小成績分析與升學規劃 Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#9ED3DC',
+                        secondary: '#FEFD99',
+                        accent: '#FCB7C7',
+                        darkAccent: '#CA6180',
+                        darkText: '#333333',
+                        lightBg: '#F9FAFB'
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F9FAFB;
+            color: #333333;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+        .subject-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-7xl mx-auto space-y-8">
+    
+    <!-- Header Section -->
+    <header class="text-center py-10 bg-gradient-to-r from-primary to-accent rounded-3xl shadow-lg relative overflow-hidden">
+        <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        <div class="relative z-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-darkText mb-4 tracking-wider">Leo 的學習成長儀表板</h1>
+            <p class="text-lg md:text-xl text-gray-800 font-medium">全方位成績分析與國中升學導航</p>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Profile Card -->
+        <div class="glass-card rounded-3xl p-6 lg:col-span-1 border-t-4 border-darkAccent hover:shadow-xl transition-shadow duration-300">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="w-20 h-20 bg-secondary rounded-full flex items-center justify-center text-3xl font-bold text-darkAccent shadow-inner">
+                    Leo
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold">基本資料</h2>
+                    <p class="text-gray-500">國小 5 年級</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4 text-sm md:text-base">
+                <div class="p-3 bg-blue-50 rounded-xl">
+                    <span class="font-bold text-blue-800">🌟 專長科目：</span>國語、英文、數學、自然
+                </div>
+                <div class="p-3 bg-red-50 rounded-xl">
+                    <span class="font-bold text-red-800">⚠️ 最弱科目：</span>社會
+                </div>
+                <div class="p-3 bg-yellow-50 rounded-xl">
+                    <span class="font-bold text-yellow-800">🏆 最近事蹟：</span>
+                    <ul class="list-disc list-inside mt-1 space-y-1">
+                        <li>5下期中考試前三名</li>
+                        <li>英文演說第一名</li>
+                        <li>作文被老師表揚</li>
+                        <li>畢業生代表</li>
+                    </ul>
+                </div>
+                <div class="p-3 bg-green-50 rounded-xl">
+                    <span class="font-bold text-green-800">🎮 興趣：</span>看蛋仔遊戲YT、玩蛋仔遊戲、愛吃冰
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="p-3 border-2 border-primary rounded-xl">
+                        <span class="font-bold block text-primary mb-1">優點</span>
+                        上課認真、守規矩有禮貌、五育均衡
+                    </div>
+                    <div class="p-3 border-2 border-accent rounded-xl">
+                        <span class="font-bold block text-darkAccent mb-1">缺點</span>
+                        生活自理能力弱、3C使用自制力差
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="glass-card rounded-3xl p-6 lg:col-span-2 border-t-4 border-primary hover:shadow-xl transition-shadow duration-300">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <span class="text-3xl mr-2">📈</span> 歷年成績趨勢分析
+            </h2>
+            <div class="relative h-80 w-full">
+                <canvas id="scoreChart"></canvas>
+            </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">* 註：部分年級(如低年級)未開設之科目以 N/A 處理，圖表上將不連線顯示。</p>
+        </div>
+    </div>
+
+    <!-- Subject Analysis -->
+    <div class="glass-card rounded-3xl p-6 md:p-8 border-t-4 border-secondary">
+        <h2 class="text-2xl font-bold mb-8 text-center"><span class="text-3xl mr-2">🎯</span> 專業學科觀點分析與建議</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Chinese -->
+            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xl font-bold text-gray-800">📖 國語</h3>
+                    <span class="subject-badge bg-primary text-white">優勢科目</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed mb-3">
+                    <strong>分析：</strong>Leo 的國語底子極佳，作文受到表揚代表他具備優秀的邏輯組織與情感表達能力。
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    <strong>建議：</strong>鼓勵他將「蛋仔派對」的遊戲心得寫成短篇故事，結合興趣來維持寫作熱度。國中會考重視長文閱讀，可開始接觸字數較多的青少年文學。
+                </p>
+            </div>
+
+            <!-- English -->
+            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xl font-bold text-gray-800">🔤 英文</h3>
+                    <span class="subject-badge bg-secondary text-yellow-800">頂尖表現</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed mb-3">
+                    <strong>分析：</strong>榮獲演說第一名，展現強大的語感、發音與上台自信。英文是Leo的絕對強項。
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    <strong>建議：</strong>不要侷限於課內教材。可以鼓勵他觀看全英文的遊戲解說YT影片，在娛樂中不知不覺擴充國中/高中的單字量。
+                </p>
+            </div>
+
+            <!-- Math -->
+            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xl font-bold text-gray-800">📐 數學</h3>
+                    <span class="subject-badge bg-primary text-white">優勢科目</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed mb-3">
+                    <strong>分析：</strong>數學觀念清晰，對於五下這種開始出現抽象概念（如因倍數、分數計算）的階段仍能名列前茅，實屬不易。
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    <strong>建議：</strong>國中數學重視代數思維，可提前給予一些邏輯推理的桌遊或謎題，培養他主動思考、不輕易放棄的解題毅力。
+                </p>
+            </div>
+
+            <!-- Science -->
+            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xl font-bold text-gray-800">🔬 自然</h3>
+                    <span class="subject-badge bg-primary text-white">優勢科目</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed mb-3">
+                    <strong>分析：</strong>自然科表現優異，代表他對生活周遭的現象充滿好奇心，且具備良好的觀察力。
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    <strong>建議：</strong>國中理化難度會陡升，建議多動手做實驗或觀看科學原理影片。可以將冰品的融化、物理變化與生活結合，增加學習樂趣。
+                </p>
+            </div>
+
+            <!-- Social Studies -->
+            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform md:col-span-2 lg:col-span-1">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xl font-bold text-gray-800">🌍 社會</h3>
+                    <span class="subject-badge bg-accent text-darkAccent">待加強</span>
+                </div>
+                <p class="text-sm text-gray-600 leading-relaxed mb-3">
+                    <strong>分析：</strong>社會科相對較弱，通常是因為缺乏背誦動機，或是對於歷史地理的時間空間脈絡感到枯燥。
+                </p>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                    <strong>建議：</strong>善用「心智圖(Mind Map)」。社會科死背容易忘，建議陪他看一些歷史動畫故事，將冰冷的課文轉化為有溫度的人物故事來記憶。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Junior High Transition Plan -->
+    <div class="glass-card rounded-3xl p-6 md:p-8 border-t-4 border-darkAccent mb-10">
+        <h2 class="text-2xl font-bold mb-6 text-center"><span class="text-3xl mr-2">🚀</span> 升國中專屬規劃建議</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xl shadow-sm mt-1">1</div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-bold text-darkText">建立 3C 規範與獎懲機制</h4>
+                        <p class="text-gray-600 mt-1 text-sm">針對「3C自制力差」的缺點，國中若無控管將嚴重影響作息。<strong>建議不要全面禁止</strong>，而是將「玩蛋仔派對」作為籌碼。例如：確實完成每日作業及自主複習，可獲得 30 分鐘遊戲時間。透過具體規範訓練他的「延遲享樂」能力。</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-xl text-white shadow-sm mt-1">2</div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-bold text-darkText">培養生活自理與時間管理</h4>
+                        <p class="text-gray-600 mt-1 text-sm">國中課業繁重，生活自理能力差會導致每天找東西、遲到等內耗。請從「每天自己整理書包、設定鬧鐘起床」開始要求。準備一本專屬的手帳本，讓他練習記錄每天的待辦事項。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent flex items-center justify-center text-xl text-white shadow-sm mt-1">3</div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-bold text-darkText">放大優勢，參與特色班級/社團</h4>
+                        <p class="text-gray-600 mt-1 text-sm">Leo 擁有優秀的英文演說能力，且為五育均衡的畢業生代表。升國中時可考慮報考「語文資優班」或參與「英語話劇社/辯論社」。這不僅能發揮他的舞台魅力，更能建立強大的同儕學習環境。</p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-darkAccent flex items-center justify-center text-xl text-white shadow-sm mt-1">4</div>
+                    <div class="ml-4">
+                        <h4 class="text-lg font-bold text-darkText">社會科的提前補強策略</h4>
+                        <p class="text-gray-600 mt-1 text-sm">國中社會分為史、地、公三科，負擔極重。建議在小六升國一的暑假，帶他走訪台灣各地名勝古蹟，或閱讀輕鬆的歷史圖文漫畫（如：台灣史漫畫），將社會科生活化，降低排斥感。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // 虛擬資料：根據 LEOEXAMSCROE.PDF 格式以及學生特性建立的 Mock Data
+    // 若日後有 API 或自動解析工具，可直接替換此 data 變數
+    const data = {
+        labels: ["1上(中)", "1上(末)", "1下(中)", "1下(末)", 
+                 "2上(中)", "2上(末)", "2下(中)", "2下(末)",
+                 "3上(中)", "3上(末)", "3下(中)", "3下(末)",
+                 "4上(中)", "4上(末)", "4下(中)", "4下(末)",
+                 "5上(中)", "5上(末)", "5下(中)"],
+        datasets: [
+            {
+                label: '國語',
+                data: [95, 92, 98, 94, 96, 95, 99, 97, 94, 96, 92, 98, 90, 94, 96, 95, 93, 98, 99],
+                borderColor: '#9ED3DC',
+                backgroundColor: 'rgba(158, 211, 220, 0.2)',
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            },
+            {
+                label: '英文',
+                // 假設低年級沒有英文課 (N/A -> null)
+                data: [null, null, null, null, null, null, null, null, 98, 99, 100, 98, 97, 100, 99, 98, 100, 99, 100],
+                borderColor: '#FEFD99',
+                backgroundColor: 'rgba(254, 253, 153, 0.2)',
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                spanGaps: true
+            },
+            {
+                label: '數學',
+                data: [90, 95, 92, 98, 96, 91, 95, 97, 93, 94, 96, 90, 92, 95, 97, 94, 95, 98, 97],
+                borderColor: '#FCB7C7',
+                backgroundColor: 'rgba(252, 183, 199, 0.2)',
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            },
+            {
+                label: '自然',
+                // 假設低年級沒有自然課 (N/A -> null)
+                data: [null, null, null, null, null, null, null, null, 94, 95, 97, 92, 95, 96, 98, 94, 96, 97, 98],
+                borderColor: '#CA6180',
+                backgroundColor: 'rgba(202, 97, 128, 0.2)',
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                spanGaps: true
+            },
+            {
+                label: '社會',
+                // 假設低年級沒有社會課 (N/A -> null)
+                data: [null, null, null, null, null, null, null, null, 80, 85, 78, 82, 75, 79, 85, 80, 82, 84, 86],
+                borderColor: '#9ca3af', // 灰色系代表較弱
+                backgroundColor: 'rgba(156, 163, 175, 0.2)',
+                borderDash: [5, 5], // 虛線代表需關注
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                spanGaps: true
+            }
+        ]
+    };
+
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+    
+    // 設定 Chart.js 全局字體
+    Chart.defaults.font.family = '"Noto Sans TC", sans-serif';
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: {
+                            size: 14,
+                            weight: 'bold'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    titleColor: '#333',
+                    bodyColor: '#666',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    padding: 10,
+                    boxPadding: 4,
+                    usePointStyle: true
+                }
+            },
+            scales: {
+                y: {
+                    min: 50,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        stepSize: 10
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
