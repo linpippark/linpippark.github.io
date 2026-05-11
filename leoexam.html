@@ -1,376 +1,295 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Leo 國小成績分析與升學規劃 Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#9ED3DC',
-                        secondary: '#FEFD99',
-                        accent: '#FCB7C7',
-                        darkAccent: '#CA6180',
-                        darkText: '#333333',
-                        lightBg: '#F9FAFB'
-                    },
-                    fontFamily: {
-                        sans: ['"Noto Sans TC"', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #F9FAFB;
-            color: #333333;
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        }
-        .subject-badge {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-    </style>
-</head>
-<body class="p-4 md:p-8">
+import React, { useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { User, TrendingUp, BookOpen, Map, Award, AlertCircle, CheckCircle } from 'lucide-react';
 
-<div class="max-w-7xl mx-auto space-y-8">
-    
-    <!-- Header Section -->
-    <header class="text-center py-10 bg-gradient-to-r from-primary to-accent rounded-3xl shadow-lg relative overflow-hidden">
-        <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-        <div class="relative z-10">
-            <h1 class="text-4xl md:text-5xl font-bold text-darkText mb-4 tracking-wider">Leo 的學習成長儀表板</h1>
-            <p class="text-lg md:text-xl text-gray-800 font-medium">全方位成績分析與國中升學導航</p>
+// === 1. 學生歷年成績資料 (已過濾並轉換 LEOEXAMSCROE.pdf 數據) ===
+const scoreData = [
+  { semester: '1上中', 國語: 98, 英文: null, 數學: 98, 自然: null, 社會: null, 平均: 98.00 },
+  { semester: '1上末', 國語: 98, 英文: 100, 數學: 93, 自然: null, 社會: null, 平均: 97.00 },
+  { semester: '1下中', 國語: 91, 英文: 98, 數學: 92, 自然: null, 社會: null, 平均: 93.67 },
+  { semester: '1下末', 國語: 98, 英文: 100, 數學: 98, 自然: null, 社會: null, 平均: 98.67 },
+  { semester: '2上中', 國語: 95, 英文: 97, 數學: 100, 自然: null, 社會: null, 平均: 97.33 },
+  { semester: '2上末', 國語: 96, 英文: 100, 數學: 98, 自然: null, 社會: null, 平均: 98.00 },
+  { semester: '2下中', 國語: 95, 英文: 98, 數學: 99, 自然: null, 社會: null, 平均: 97.33 },
+  { semester: '2下末', 國語: 89, 英文: 100, 數學: 98, 自然: null, 社會: null, 平均: 95.67 },
+  { semester: '3上中', 國語: 88, 英文: 99, 數學: 97, 自然: 90, 社會: null, 平均: 93.50 },
+  { semester: '3上末', 國語: 94, 英文: 93, 數學: 91, 自然: 92, 社會: 90.5, 平均: 92.10 },
+  { semester: '3下中', 國語: 89, 英文: 94, 數學: 100, 自然: 94, 社會: 80, 平均: 91.40 },
+  { semester: '3下末', 國語: 100, 英文: 90, 數學: 100, 自然: 90, 社會: 92, 平均: 94.40 },
+  { semester: '4上中', 國語: 97, 英文: 93, 數學: 99, 自然: 90, 社會: 91, 平均: 94.00 },
+  { semester: '4上末', 國語: 82, 英文: 94, 數學: 98.5, 自然: 90, 社會: 95, 平均: 91.90 },
+  { semester: '4下中', 國語: 94.5, 英文: 99, 數學: 96, 自然: 92, 社會: 94, 平均: 95.10 },
+  { semester: '4下末', 國語: 98, 英文: 96, 數學: 92, 自然: 88, 社會: 94.5, 平均: 93.70 },
+  { semester: '5上中', 國語: 96, 英文: 96, 數學: 98, 自然: 94, 社會: 91, 平均: 95.00 },
+  { semester: '5上末', 國語: 98, 英文: 90, 數學: 91, 自然: 88, 社會: 92, 平均: 91.80 },
+  { semester: '5下中', 國語: 94, 英文: 99, 數學: 95, 自然: 100, 社會: 94, 平均: 96.40 },
+];
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // 指定色票設定
+  const colors = {
+    blue: '#9ED3DC',
+    yellow: '#FEFD99',
+    pink: '#FCB7C7',
+    rose: '#CA6180',
+    gray: '#f3f4f6',
+    white: '#ffffff'
+  };
+
+  return (
+    <div className="min-h-screen font-sans" style={{ backgroundColor: colors.gray }}>
+      {/* 頂部導覽列 */}
+      <header className="shadow-md p-6 flex flex-col md:flex-row justify-between items-center" style={{ backgroundColor: colors.rose, color: colors.white }}>
+        <div className="flex items-center gap-3">
+          <TrendingUp size={32} style={{ color: colors.yellow }} />
+          <h1 className="text-2xl font-bold tracking-wider">Leo 的學習里程碑 - 升學分析儀表板</h1>
         </div>
-    </header>
+        <p className="mt-2 md:mt-0 font-medium">資料更新至：5年級下學期期中</p>
+      </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Profile Card -->
-        <div class="glass-card rounded-3xl p-6 lg:col-span-1 border-t-4 border-darkAccent hover:shadow-xl transition-shadow duration-300">
-            <div class="flex items-center space-x-4 mb-6">
-                <div class="w-20 h-20 bg-secondary rounded-full flex items-center justify-center text-3xl font-bold text-darkAccent shadow-inner">
-                    Leo
+      <main className="max-w-6xl mx-auto p-4 mt-6">
+        {/* 頁籤控制 */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button 
+            onClick={() => setActiveTab('overview')}
+            className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'overview' ? 'shadow-lg scale-105' : 'opacity-70'}`}
+            style={{ backgroundColor: activeTab === 'overview' ? colors.blue : '#e5e7eb', color: activeTab === 'overview' ? '#1f2937' : '#4b5563' }}
+          >
+            總覽與成績趨勢
+          </button>
+          <button 
+            onClick={() => setActiveTab('analysis')}
+            className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'analysis' ? 'shadow-lg scale-105' : 'opacity-70'}`}
+            style={{ backgroundColor: activeTab === 'analysis' ? colors.yellow : '#e5e7eb', color: '#1f2937' }}
+          >
+            各科觀點分析
+          </button>
+          <button 
+            onClick={() => setActiveTab('planning')}
+            className={`px-6 py-2 rounded-full font-bold transition-all ${activeTab === 'planning' ? 'shadow-lg scale-105' : 'opacity-70'}`}
+            style={{ backgroundColor: activeTab === 'planning' ? colors.pink : '#e5e7eb', color: '#1f2937' }}
+          >
+            國中升學規劃
+          </button>
+        </div>
+
+        {/* 內容區塊 - 總覽與成績趨勢 */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6 animation-fade-in">
+            {/* 基本資料卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1 rounded-2xl p-6 shadow-sm border-t-4" style={{ backgroundColor: colors.white, borderColor: colors.blue }}>
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2" style={{ borderColor: colors.blue }}>
+                  <User size={24} style={{ color: colors.blue }} />
+                  <h2 className="text-xl font-bold">學生基本資料</h2>
                 </div>
-                <div>
-                    <h2 class="text-2xl font-bold">基本資料</h2>
-                    <p class="text-gray-500">國小 5 年級</p>
+                <ul className="space-y-3">
+                  <li><span className="font-bold text-gray-600">姓名：</span>Leo (5年級)</li>
+                  <li><span className="font-bold text-gray-600">專長科目：</span>國語、英文、數學、自然</li>
+                  <li><span className="font-bold text-gray-600">待加強科目：</span>社會</li>
+                  <li><span className="font-bold text-gray-600">興趣：</span>蛋仔遊戲 (玩與看YT)、愛吃冰</li>
+                </ul>
+              </div>
+
+              <div className="md:col-span-2 rounded-2xl p-6 shadow-sm border-t-4" style={{ backgroundColor: colors.white, borderColor: colors.yellow }}>
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b-2" style={{ borderColor: colors.yellow }}>
+                  <Award size={24} style={{ color: '#d97706' }} />
+                  <h2 className="text-xl font-bold">綜合優劣勢與近期事蹟</h2>
                 </div>
-            </div>
-            
-            <div class="space-y-4 text-sm md:text-base">
-                <div class="p-3 bg-blue-50 rounded-xl">
-                    <span class="font-bold text-blue-800">🌟 專長科目：</span>國語、英文、數學、自然
-                </div>
-                <div class="p-3 bg-red-50 rounded-xl">
-                    <span class="font-bold text-red-800">⚠️ 最弱科目：</span>社會
-                </div>
-                <div class="p-3 bg-yellow-50 rounded-xl">
-                    <span class="font-bold text-yellow-800">🏆 最近事蹟：</span>
-                    <ul class="list-disc list-inside mt-1 space-y-1">
-                        <li>5下期中考試前三名</li>
-                        <li>英文演說第一名</li>
-                        <li>作文被老師表揚</li>
-                        <li>畢業生代表</li>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#fdfbf7' }}>
+                    <h3 className="font-bold flex items-center gap-1 mb-2 text-green-700"><CheckCircle size={18}/> 優勢與成就</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>5下期中考試**前三名**</li>
+                      <li>**英文演說第一名**、**畢業生代表**</li>
+                      <li>作文受表揚，**五育均衡**</li>
+                      <li>上課認真、守規矩、有禮貌</li>
                     </ul>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: '#fff5f5' }}>
+                    <h3 className="font-bold flex items-center gap-1 mb-2 text-red-700"><AlertCircle size={18}/> 需關注與改善</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>**生活自理能力**較弱</li>
+                      <li>**3C使用自制力差** (沉迷蛋仔)</li>
+                      <li>社會科(記憶與脈絡)表現浮動</li>
+                    </ul>
+                  </div>
                 </div>
-                <div class="p-3 bg-green-50 rounded-xl">
-                    <span class="font-bold text-green-800">🎮 興趣：</span>看蛋仔遊戲YT、玩蛋仔遊戲、愛吃冰
-                </div>
-                <div class="grid grid-cols-2 gap-4 mt-4">
-                    <div class="p-3 border-2 border-primary rounded-xl">
-                        <span class="font-bold block text-primary mb-1">優點</span>
-                        上課認真、守規矩有禮貌、五育均衡
-                    </div>
-                    <div class="p-3 border-2 border-accent rounded-xl">
-                        <span class="font-bold block text-darkAccent mb-1">缺點</span>
-                        生活自理能力弱、3C使用自制力差
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chart Section -->
-        <div class="glass-card rounded-3xl p-6 lg:col-span-2 border-t-4 border-primary hover:shadow-xl transition-shadow duration-300">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
-                <span class="text-3xl mr-2">📈</span> 歷年成績趨勢分析
-            </h2>
-            <div class="relative h-80 w-full">
-                <canvas id="scoreChart"></canvas>
-            </div>
-            <p class="text-xs text-gray-400 mt-4 text-center">* 註：部分年級(如低年級)未開設之科目以 N/A 處理，圖表上將不連線顯示。</p>
-        </div>
-    </div>
-
-    <!-- Subject Analysis -->
-    <div class="glass-card rounded-3xl p-6 md:p-8 border-t-4 border-secondary">
-        <h2 class="text-2xl font-bold mb-8 text-center"><span class="text-3xl mr-2">🎯</span> 專業學科觀點分析與建議</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Chinese -->
-            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold text-gray-800">📖 國語</h3>
-                    <span class="subject-badge bg-primary text-white">優勢科目</span>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed mb-3">
-                    <strong>分析：</strong>Leo 的國語底子極佳，作文受到表揚代表他具備優秀的邏輯組織與情感表達能力。
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    <strong>建議：</strong>鼓勵他將「蛋仔派對」的遊戲心得寫成短篇故事，結合興趣來維持寫作熱度。國中會考重視長文閱讀，可開始接觸字數較多的青少年文學。
-                </p>
+              </div>
             </div>
 
-            <!-- English -->
-            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold text-gray-800">🔤 英文</h3>
-                    <span class="subject-badge bg-secondary text-yellow-800">頂尖表現</span>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed mb-3">
-                    <strong>分析：</strong>榮獲演說第一名，展現強大的語感、發音與上台自信。英文是Leo的絕對強項。
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    <strong>建議：</strong>不要侷限於課內教材。可以鼓勵他觀看全英文的遊戲解說YT影片，在娛樂中不知不覺擴充國中/高中的單字量。
-                </p>
+            {/* 成績趨勢圖表 */}
+            <div className="rounded-2xl p-6 shadow-sm bg-white border-t-4" style={{ borderColor: colors.pink }}>
+              <div className="flex items-center gap-2 mb-6">
+                <TrendingUp size={24} style={{ color: colors.rose }} />
+                <h2 className="text-xl font-bold text-gray-800">歷年成績趨勢圖 (小一至小五)</h2>
+              </div>
+              <div className="h-96 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={scoreData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.5} />
+                    <XAxis dataKey="semester" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
+                    <YAxis domain={[70, 100]} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: `2px solid ${colors.blue}` }} />
+                    <Legend verticalAlign="top" height={36}/>
+                    <Line type="monotone" dataKey="國語" stroke={colors.rose} strokeWidth={3} activeDot={{ r: 8 }} connectNulls={false} />
+                    <Line type="monotone" dataKey="英文" stroke="#eab308" strokeWidth={3} connectNulls={false} />
+                    <Line type="monotone" dataKey="數學" stroke="#3b82f6" strokeWidth={3} connectNulls={false} />
+                    <Line type="monotone" dataKey="自然" stroke="#22c55e" strokeWidth={3} connectNulls={false} />
+                    <Line type="monotone" dataKey="社會" stroke="#f97316" strokeWidth={3} connectNulls={false} />
+                    <Line type="monotone" dataKey="平均" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 5" connectNulls={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-sm text-gray-500 mt-4 text-center">*註：圖表中部分科目於低年級無成績紀錄(N/A)，屬正常課綱現象。</p>
             </div>
+          </div>
+        )}
 
-            <!-- Math -->
-            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold text-gray-800">📐 數學</h3>
-                    <span class="subject-badge bg-primary text-white">優勢科目</span>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed mb-3">
-                    <strong>分析：</strong>數學觀念清晰，對於五下這種開始出現抽象概念（如因倍數、分數計算）的階段仍能名列前茅，實屬不易。
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    <strong>建議：</strong>國中數學重視代數思維，可提前給予一些邏輯推理的桌遊或謎題，培養他主動思考、不輕易放棄的解題毅力。
-                </p>
-            </div>
-
-            <!-- Science -->
-            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold text-gray-800">🔬 自然</h3>
-                    <span class="subject-badge bg-primary text-white">優勢科目</span>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed mb-3">
-                    <strong>分析：</strong>自然科表現優異，代表他對生活周遭的現象充滿好奇心，且具備良好的觀察力。
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    <strong>建議：</strong>國中理化難度會陡升，建議多動手做實驗或觀看科學原理影片。可以將冰品的融化、物理變化與生活結合，增加學習樂趣。
-                </p>
-            </div>
-
-            <!-- Social Studies -->
-            <div class="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 hover:-translate-y-1 transition-transform md:col-span-2 lg:col-span-1">
-                <div class="flex justify-between items-center mb-3">
-                    <h3 class="text-xl font-bold text-gray-800">🌍 社會</h3>
-                    <span class="subject-badge bg-accent text-darkAccent">待加強</span>
-                </div>
-                <p class="text-sm text-gray-600 leading-relaxed mb-3">
-                    <strong>分析：</strong>社會科相對較弱，通常是因為缺乏背誦動機，或是對於歷史地理的時間空間脈絡感到枯燥。
-                </p>
-                <p class="text-sm text-gray-600 leading-relaxed">
-                    <strong>建議：</strong>善用「心智圖(Mind Map)」。社會科死背容易忘，建議陪他看一些歷史動畫故事，將冰冷的課文轉化為有溫度的人物故事來記憶。
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Junior High Transition Plan -->
-    <div class="glass-card rounded-3xl p-6 md:p-8 border-t-4 border-darkAccent mb-10">
-        <h2 class="text-2xl font-bold mb-6 text-center"><span class="text-3xl mr-2">🚀</span> 升國中專屬規劃建議</h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div class="space-y-4">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-xl shadow-sm mt-1">1</div>
-                    <div class="ml-4">
-                        <h4 class="text-lg font-bold text-darkText">建立 3C 規範與獎懲機制</h4>
-                        <p class="text-gray-600 mt-1 text-sm">針對「3C自制力差」的缺點，國中若無控管將嚴重影響作息。<strong>建議不要全面禁止</strong>，而是將「玩蛋仔派對」作為籌碼。例如：確實完成每日作業及自主複習，可獲得 30 分鐘遊戲時間。透過具體規範訓練他的「延遲享樂」能力。</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-xl text-white shadow-sm mt-1">2</div>
-                    <div class="ml-4">
-                        <h4 class="text-lg font-bold text-darkText">培養生活自理與時間管理</h4>
-                        <p class="text-gray-600 mt-1 text-sm">國中課業繁重，生活自理能力差會導致每天找東西、遲到等內耗。請從「每天自己整理書包、設定鬧鐘起床」開始要求。準備一本專屬的手帳本，讓他練習記錄每天的待辦事項。</p>
-                    </div>
-                </div>
+        {/* 內容區塊 - 各科觀點分析 (表格式 + 前因後果) */}
+        {activeTab === 'analysis' && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border-t-4 animation-fade-in" style={{ borderColor: colors.yellow }}>
+            <div className="flex items-center gap-2 mb-6">
+              <BookOpen size={28} style={{ color: '#d97706' }} />
+              <h2 className="text-2xl font-bold text-gray-800">資深教師：各科優劣勢觀點與對策</h2>
             </div>
             
-            <div class="space-y-4">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent flex items-center justify-center text-xl text-white shadow-sm mt-1">3</div>
-                    <div class="ml-4">
-                        <h4 class="text-lg font-bold text-darkText">放大優勢，參與特色班級/社團</h4>
-                        <p class="text-gray-600 mt-1 text-sm">Leo 擁有優秀的英文演說能力，且為五育均衡的畢業生代表。升國中時可考慮報考「語文資優班」或參與「英語話劇社/辯論社」。這不僅能發揮他的舞台魅力，更能建立強大的同儕學習環境。</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-darkAccent flex items-center justify-center text-xl text-white shadow-sm mt-1">4</div>
-                    <div class="ml-4">
-                        <h4 class="text-lg font-bold text-darkText">社會科的提前補強策略</h4>
-                        <p class="text-gray-600 mt-1 text-sm">國中社會分為史、地、公三科，負擔極重。建議在小六升國一的暑假，帶他走訪台灣各地名勝古蹟，或閱讀輕鬆的歷史圖文漫畫（如：台灣史漫畫），將社會科生活化，降低排斥感。</p>
-                    </div>
-                </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="text-left" style={{ backgroundColor: colors.yellow }}>
+                    <th className="p-4 border-b-2 border-gray-300 font-bold text-gray-800 w-1/6">科目</th>
+                    <th className="p-4 border-b-2 border-gray-300 font-bold text-gray-800 w-2/6">前因 (現況與優勢/劣勢)</th>
+                    <th className="p-4 border-b-2 border-gray-300 font-bold text-gray-800 w-3/6">後果與解決策略 (未來發展)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4 border-b border-gray-200 font-bold text-lg text-rose-600">國語/作文</td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      因 Leo 擁有**優異的表達能力與觀察力** (作文被表揚)，且成績長期穩定在 95 分上下。
+                    </td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      故未來在國中的長文閱讀與會考寫作測驗上**具備極大優勢**。策略：可鼓勵他將玩「蛋仔遊戲」的心得寫成短文，將**興趣轉化為寫作燃料**。
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors bg-blue-50/30">
+                    <td className="p-4 border-b border-gray-200 font-bold text-lg text-yellow-600">英文</td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      因擔任畢業生代表且拿下**英文演說第一名**，顯示其**語感極佳且具備舞台自信**。成績常駐 96-100 分。
+                    </td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      故升上國中後，英文將成為他的**拉分護城河**。策略：應超前部署，國一即可嘗試報考 **GEPT全民英檢初級/中級**，並維持開口說的習慣。
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4 border-b border-gray-200 font-bold text-lg text-blue-600">數學/自然</td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      因 Leo **上課非常認真且邏輯清晰**，5下自然更拿下 **100分滿分**，數學也多維持在 95 分以上。
+                    </td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      故理科思維已成形。策略：國中理科難度遽增，建議提前訓練其**解題的耐心與步驟撰寫**，避免因為「粗心」而失分。
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-gray-50 transition-colors bg-red-50/30">
+                    <td className="p-4 border-b border-gray-200 font-bold text-lg text-orange-600">社會</td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      因社會科需要龐大的**時間脈絡與空間記憶**，(3下曾掉至80分，4上末也僅91分)，為目前**最弱科目**。
+                    </td>
+                    <td className="p-4 border-b border-gray-200 leading-relaxed">
+                      若不改善，國中史地公分家後會面臨巨大壓力。策略：教導他使用**心智圖 (Mind Map)**，將歷史事件與地理圖表建立**因果關係**，取代死背硬記。
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-        </div>
-    </div>
+          </div>
+        )}
 
-</div>
+        {/* 內容區塊 - 國中升學規劃建議 (表格式 + 前因後果) */}
+        {activeTab === 'planning' && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border-t-4 animation-fade-in" style={{ borderColor: colors.pink }}>
+            <div className="flex items-center gap-2 mb-6">
+              <Map size={28} style={{ color: colors.rose }} />
+              <h2 className="text-2xl font-bold text-gray-800">Leo 專屬國中升學規劃與輔導藍圖</h2>
+            </div>
 
-<script>
-    // 虛擬資料：根據 LEOEXAMSCROE.PDF 格式以及學生特性建立的 Mock Data
-    // 若日後有 API 或自動解析工具，可直接替換此 data 變數
-    const data = {
-        labels: ["1上(中)", "1上(末)", "1下(中)", "1下(末)", 
-                 "2上(中)", "2上(末)", "2下(中)", "2下(末)",
-                 "3上(中)", "3上(末)", "3下(中)", "3下(末)",
-                 "4上(中)", "4上(末)", "4下(中)", "4下(末)",
-                 "5上(中)", "5上(末)", "5下(中)"],
-        datasets: [
-            {
-                label: '國語',
-                data: [95, 92, 98, 94, 96, 95, 99, 97, 94, 96, 92, 98, 90, 94, 96, 95, 93, 98, 99],
-                borderColor: '#9ED3DC',
-                backgroundColor: 'rgba(158, 211, 220, 0.2)',
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            },
-            {
-                label: '英文',
-                // 假設低年級沒有英文課 (N/A -> null)
-                data: [null, null, null, null, null, null, null, null, 98, 99, 100, 98, 97, 100, 99, 98, 100, 99, 100],
-                borderColor: '#FEFD99',
-                backgroundColor: 'rgba(254, 253, 153, 0.2)',
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                spanGaps: true
-            },
-            {
-                label: '數學',
-                data: [90, 95, 92, 98, 96, 91, 95, 97, 93, 94, 96, 90, 92, 95, 97, 94, 95, 98, 97],
-                borderColor: '#FCB7C7',
-                backgroundColor: 'rgba(252, 183, 199, 0.2)',
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            },
-            {
-                label: '自然',
-                // 假設低年級沒有自然課 (N/A -> null)
-                data: [null, null, null, null, null, null, null, null, 94, 95, 97, 92, 95, 96, 98, 94, 96, 97, 98],
-                borderColor: '#CA6180',
-                backgroundColor: 'rgba(202, 97, 128, 0.2)',
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                spanGaps: true
-            },
-            {
-                label: '社會',
-                // 假設低年級沒有社會課 (N/A -> null)
-                data: [null, null, null, null, null, null, null, null, 80, 85, 78, 82, 75, 79, 85, 80, 82, 84, 86],
-                borderColor: '#9ca3af', // 灰色系代表較弱
-                backgroundColor: 'rgba(156, 163, 175, 0.2)',
-                borderDash: [5, 5], // 虛線代表需關注
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                spanGaps: true
-            }
-        ]
-    };
+            {/* 核心問題分析區 */}
+            <div className="mb-6 p-5 rounded-xl border-l-4" style={{ backgroundColor: '#fff1f2', borderColor: colors.rose }}>
+              <h3 className="font-bold text-lg mb-2 text-gray-800 flex items-center gap-2">
+                <AlertCircle size={20} color={colors.rose}/> 規劃核心關鍵：3C管理與生活自理
+              </h3>
+              <p className="leading-relaxed text-gray-700">
+                **前因**：Leo 雖然學業表現亮眼（五育均衡），但**生活自理能力與 3C 使用自制力差**。<br/>
+                **後果**：國中階段課業壓力倍增、同儕影響擴大，若進入管理鬆散的環境，極易因沉迷 3C（如蛋仔遊戲）導致成績斷崖式下滑。<br/>
+                **解方**：升學選擇應優先考慮**「能輔助常規管理」的學校**，並在小五至小六階段強制建立「時間管理紀律」。
+              </p>
+            </div>
 
-    const ctx = document.getElementById('scoreChart').getContext('2d');
-    
-    // 設定 Chart.js 全局字體
-    Chart.defaults.font.family = '"Noto Sans TC", sans-serif';
-    
-    new Chart(ctx, {
-        type: 'line',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20,
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    titleColor: '#333',
-                    bodyColor: '#666',
-                    borderColor: '#ddd',
-                    borderWidth: 1,
-                    padding: 10,
-                    boxPadding: 4,
-                    usePointStyle: true
-                }
-            },
-            scales: {
-                y: {
-                    min: 50,
-                    max: 100,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        stepSize: 10
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        maxRotation: 45,
-                        minRotation: 45
-                    }
-                }
-            }
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse shadow-sm">
+                <thead>
+                  <tr className="text-left text-white" style={{ backgroundColor: colors.rose }}>
+                    <th className="p-4 font-bold w-1/5">階段</th>
+                    <th className="p-4 font-bold w-2/5">目標與行動方針 (因)</th>
+                    <th className="p-4 font-bold w-2/5">預期成效 (果)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="p-4 font-bold text-gray-700">近期 (小五~小六)</td>
+                    <td className="p-4 leading-relaxed">
+                      1. **建立代幣制度**：將「蛋仔遊戲時間」與「生活自理任務 (如整理書包、家事)」掛鉤。<br/>
+                      2. **穩固社會基礎**：每週陪讀社會科，繪製簡單圖表。
+                    </td>
+                    <td className="p-4 leading-relaxed">
+                      藉由外部約束力，**逐漸內化為自制力**；確保升國中前，社會科不再是拉分項。
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200 hover:bg-gray-50 bg-pink-50/20">
+                    <td className="p-4 font-bold text-gray-700">升學選擇 (選校策略)</td>
+                    <td className="p-4 leading-relaxed">
+                      1. **私立中學選項**：考慮校風嚴謹、**禁止攜帶手機或嚴格管制 3C** 的私立國中。<br/>
+                      2. **公立數理/語文資優班**：若選公立，務必報考資優班，讓優質同儕帶動學習氛圍。
+                    </td>
+                    <td className="p-4 leading-relaxed">
+                      透過**環境的強制力**，彌補 Leo 自制力不足的缺點，並提供舞台讓他發揮英文與理科專長。
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="p-4 font-bold text-gray-700">遠期 (國一上學期)</td>
+                    <td className="p-4 leading-relaxed">
+                      1. **發揮語文優勢**：推派參加校內外英文演說或作文比賽，建立自信。<br/>
+                      2. **斷捨離 3C**：嚴格執行平日不碰平板/手機，週末限時。
+                    </td>
+                    <td className="p-4 leading-relaxed">
+                      以成就感取代遊戲的多巴胺，讓他能在國中高壓環境中，**維持心理健康與頂尖學業表現**。
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 text-right">
+              <p className="text-sm text-gray-500">
+                參考資料來源：升學輔導策略符合教育部 108 課綱核心素養導向 ( <a href="https://www.k12ea.gov.tw/" target="_blank" rel="noreferrer" className="text-blue-500 underline">教育部國民及學前教育署</a> )
+              </p>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        .animation-fade-in {
+          animation: fadeIn 0.5s ease-in-out;
         }
-    });
-</script>
-
-</body>
-</html>
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}} />
+    </div>
+  );
+}
