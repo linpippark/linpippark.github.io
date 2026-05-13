@@ -81,6 +81,7 @@
         <div id="tab1" class="tab-content active w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
             <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
                 TextShower 
+                <span id="ts-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
             </h2>
             
             <textarea id="ts-input" class="w-full h-80 bg-lightBeige bg-opacity-30 border border-secondaryBlue text-gray-800 p-5 rounded-xl text-lg focus:outline-none focus:ring-4 focus:ring-accentYellow resize-none shadow-inner transition-all leading-relaxed" placeholder="請輸入欲處理的文字..."></textarea>
@@ -103,7 +104,7 @@
         <div id="tab2" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
             <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
                 TextTear 
-                
+                <span id="tt-version" class="text-sm font-normal text-secondaryBlue mb-1"></span>
             </h2>
 
             <div class="flex flex-col gap-2 h-64 md:h-72">
@@ -159,7 +160,14 @@
         // ==========================================
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-       
+        // 產生版本字串
+        const generateVersionString = () => {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            return `v1.${month}.${day}.${minute}`;
+        };
 
         // 共用下載函數
         const downloadFile = (content, filename) => {
@@ -197,7 +205,11 @@
         // ==========================================
         // 初始化載入
         // ==========================================
-       
+        document.addEventListener('DOMContentLoaded', () => {
+            const versionString = generateVersionString();
+            document.getElementById('ts-version').textContent = versionString;
+            document.getElementById('tt-version').textContent = versionString;
+        });
 
         // ==========================================
         // TAB 1: TextShower 邏輯
@@ -265,7 +277,7 @@
         });
 
         // ==========================================
-        // TAB 2: TextTear 邏輯
+        // TAB 2: TextTear 邏輯 (包含更新後的邏輯)
         // ==========================================
         function processTextTear() {
             const inputTextArea = document.getElementById('tt-input');
@@ -313,9 +325,34 @@
                     const groupLabel = `【C${i + 1}】`;
                     part2_grouped_sentences.push(groupLabel);
 
-                    let segments = para.match(/[^；。]+[；。]?/g) || [para];
+                    let rawSegments = para.match(/[^；。]+[；。]?/g) || [para];
+                    let refinedSegments = [];
 
-                    segments.forEach(segment => {
+                    // 更新的邏輯：處理「數字.」開頭並尋找逗號分割
+                    rawSegments.forEach(seg => {
+                        let text = seg.trim();
+                        // 判斷是否為「數字.」開頭的句子 (例如 "1.", "2." 等)
+                        let match = text.match(/^(\d+\.\s*)(.*)/);
+                        if (match) {
+                            let prefixNum = match[1];
+                            let restText = match[2];
+                            let commaIndex = restText.indexOf('，'); // 尋找第一個全形逗號
+                            
+                            if (commaIndex !== -1) {
+                                // 找到逗號，將逗號前半段與後半段分開成為獨立句子
+                                let partA = restText.substring(0, commaIndex);
+                                let partB = restText.substring(commaIndex + 1);
+                                refinedSegments.push(prefixNum + partA);
+                                refinedSegments.push(partB);
+                            } else {
+                                refinedSegments.push(text);
+                            }
+                        } else {
+                            refinedSegments.push(text);
+                        }
+                    });
+
+                    refinedSegments.forEach(segment => {
                         let cleanText = segment.trim();
                         if (cleanText) {
                             cleanText = cleanText.replace(/^\d+\.\s*/, '');
@@ -323,6 +360,7 @@
                             
                             part1_all_sentences.push(formattedSentence);
                             part2_grouped_sentences.push(formattedSentence);
+                            
                             globalCounter++;
                         }
                     });
