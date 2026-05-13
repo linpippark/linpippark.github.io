@@ -328,11 +328,11 @@
                     let rawSegments = para.match(/[^；。]+[；。]?/g) || [para];
                     let refinedSegments = [];
 
-                    // 更新的邏輯：處理「數字.」開頭並尋找逗號分割
+                    // 更新的邏輯：處理「1.」開頭並尋找逗號分割
                     rawSegments.forEach(seg => {
                         let text = seg.trim();
-                        // 判斷是否為「數字.」開頭的句子 (例如 "1.", "2." 等)
-                        let match = text.match(/^(\d+\.\s*)(.*)/);
+                        // 判斷是否為「1.」開頭的句子
+                        let match = text.match(/^(1\.\s*)(.*)/);
                         if (match) {
                             let prefixNum = match[1];
                             let restText = match[2];
