@@ -11,6 +11,9 @@
     <!-- 引入 Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
+    <!-- 引入 SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -107,32 +110,32 @@
         </div>
 
         <!-- Shortest Tenure Highlight -->
-        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="max-w-5xl mx-auto glass-card p-3 mb-6 bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm">
+        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="glass-card p-3 mb-6 mx-auto bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm max-w-5xl">
             <div class="flex items-center mb-2">
                 <div class="bg-[#FF9898] text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow text-sm">
                     <i class="fas fa-bolt"></i>
                 </div>
-                <h3 class="text-base font-bold text-gray-700">離職英雄在職天數最短 (前三名)</h3>
+                <h3 class="text-base font-bold text-gray-700">離職英雄在職天數最短統計 (前三名)</h3>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:pl-11">
-                <div v-for="(stat, index) in shortestTenureStats" :key="index" class="bg-white px-3 py-2 rounded shadow-sm border border-pink-100 flex flex-col justify-center">
+                <div v-for="(stat, index) in shortestTenureStats" :key="index" class="bg-white p-2.5 rounded-lg shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-[10px] font-bold px-2 py-0.5 bg-pink-100 text-[#FF9898] rounded-full">Top {{ index + 1 }}</span>
-                        <span class="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
+                        <span class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
                     </div>
                     <div class="flex items-center justify-between mt-1">
-                        <span class="text-sm font-bold text-gray-800">{{ maskName(stat.name) }}</span>
-                        <span class="text-xs font-bold text-blue-600"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</span>
+                        <div class="text-sm font-bold text-gray-800">{{ maskName(stat.name) }}</div>
+                        <div class="text-xs font-bold text-blue-600 flex items-center"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Tables Section (Stacked vertically and constrained width) -->
-        <div class="flex flex-col gap-6 max-w-5xl mx-auto">
+        <!-- Tables Section (修改這裡，改為單欄並置中縮小寬度) -->
+        <div class="flex flex-col items-center gap-6">
             
             <!-- Onboard Table -->
-            <div class="glass-card overflow-hidden">
+            <div class="glass-card overflow-hidden w-full max-w-5xl">
                 <div class="bg-[#FFD586] text-gray-800 p-3 flex justify-between items-center">
                     <h2 class="text-xl font-bold"><i class="fas fa-door-open mr-2"></i>到職英雄榜</h2>
                     <span class="bg-white px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOnboard.length }} 人</span>
@@ -141,11 +144,11 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-[#FFE99A] text-gray-700 sticky top-0 shadow-sm">
                             <tr>
-                                <th class="p-3 border-b-2 border-white">到職日</th>
-                                <th class="p-3 border-b-2 border-white">姓名</th>
-                                <th class="p-3 border-b-2 border-white">單位</th>
-                                <th class="p-3 border-b-2 border-white">在職天數</th>
-                                <th class="p-3 border-b-2 border-white text-center">備註</th>
+                                <th class="p-3 border-b-2 border-white w-24">到職日</th>
+                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
+                                <th class="p-3 border-b-2 border-white w-20">單位</th>
+                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
+                                <th class="p-3 border-b-2 border-white text-center w-20">備註</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -171,7 +174,7 @@
             </div>
 
             <!-- Offboard Table -->
-            <div class="glass-card overflow-hidden">
+            <div class="glass-card overflow-hidden w-full max-w-5xl">
                 <div class="bg-[#FFAAAA] text-white p-3 flex justify-between items-center">
                     <h2 class="text-xl font-bold"><i class="fas fa-door-closed mr-2"></i>離職英雄榜</h2>
                     <span class="bg-white text-[#FFAAAA] px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOffboard.length }} 人</span>
@@ -180,10 +183,10 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-[#FF9898] text-white sticky top-0 shadow-sm">
                             <tr>
-                                <th class="p-3 border-b-2 border-white">離職日</th>
-                                <th class="p-3 border-b-2 border-white">姓名</th>
-                                <th class="p-3 border-b-2 border-white">單位</th>
-                                <th class="p-3 border-b-2 border-white">在職天數</th>
+                                <th class="p-3 border-b-2 border-white w-24">離職日</th>
+                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
+                                <th class="p-3 border-b-2 border-white w-20">單位</th>
+                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -223,7 +226,7 @@
         data() {
             return {
                 lastUpdated: '',
-                showCharts: false,
+                showCharts: false, // 控制圖表區塊的顯示與隱藏
                 filters: {
                     year: 'all',
                     dept: 'all'
@@ -234,6 +237,9 @@
                 // 圖表實例
                 onboardChartInstance: null,
                 offboardChartInstance: null,
+                
+                // 初始資料載入 (使用自增 ID 以供操作)
+                autoId: 100,
                 
                 // 到職資料
                 onboardList: [
@@ -260,8 +266,8 @@
                     { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一', remark: 'Planning' },
                     { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一', remark: 'MIS' },
                     { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二', remark: 'HR' },
-                    { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '行二', remark: 'HR' },
-                    { id: 51, date: '2026-05-18', originalName: '蔡雅玲', dept: '行二', remark: 'ACC' },
+                    { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '未定', remark: 'HR' },
+                    { id: 51, date: '2026-05-18', originalName: '蔡雅玲', dept: '未定', remark: 'ACC' }
                 ],
                 
                 // 離職資料
@@ -291,7 +297,8 @@
                     { id: 46, date: '2025-12-12', originalName: '張宇豐', dept: '行一' },
                     { id: 47, date: '2026-01-30', originalName: '黃鈺媖', dept: '一組' },
                     { id: 48, date: '2026-02-28', originalName: '張家綺', dept: '行二' },
-                    { id: 49, date: '2026-04-24', originalName: '彭鉯喬', dept: '行二' }
+                    { id: 49, date: '2026-04-24', originalName: '彭鉯喬', dept: '行二' },
+                    { id: 50, date: '2026-05-18', originalName: '茍穎書', dept: '一組' }
                 ]
             }
         },
