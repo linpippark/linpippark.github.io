@@ -35,6 +35,30 @@
         }
         
         body { background-color: #FFFDF9; font-family: 'Helvetica Neue', Helvetica, Arial, 'Microsoft JhengHei', sans-serif; }
+
+        /* 垂直滾動跑馬燈動畫 */
+        .marquee-container {
+            height: 32px; /* 固定高度以顯示單行 */
+            overflow: hidden;
+            position: relative;
+        }
+        .marquee-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            width: 100%;
+            animation: scroll-vertical 15s linear infinite;
+        }
+        /* 滑鼠懸停時暫停動畫 */
+        .marquee-container:hover .marquee-content {
+            animation-play-state: paused;
+        }
+        @keyframes scroll-vertical {
+            0% { top: 32px; }
+            100% { top: -100%; }
+        }
     </style>
 </head>
 <body class="text-gray-700 min-h-screen pb-10">
@@ -48,13 +72,15 @@
     </header>
 
     <!-- Marquee -->
-    <div class="p-2 font-bold overflow-hidden whitespace-nowrap shadow flex items-center text-gray-800" style="background-color: #FFE99A;">
-        <span class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm mr-3 shadow-sm">
+    <div class="p-2 font-bold shadow flex flex-col md:flex-row items-center text-gray-800" style="background-color: #FFE99A;">
+        <div class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm shadow-sm mb-2 md:mb-0 md:mr-4 z-10 relative">
             <i class="fas fa-bullhorn mr-1"></i> 最新動態
-        </span>
-        <marquee behavior="scroll" direction="left" class="flex-grow text-lg tracking-wide">
-            {{ marqueeText }}
-        </marquee>
+        </div>
+        <div class="marquee-container flex-grow w-full text-center">
+            <div class="marquee-content text-lg tracking-wide whitespace-pre-line">
+                {{ marqueeText }}
+            </div>
+        </div>
     </div>
 
     <!-- Main Content Area -->
@@ -368,7 +394,8 @@
                 const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
                 const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
 
-                return `⭐ 本月(${currentMonth}月)到職：${cOnText} ｜ 🌙 上月(${lastMonth}月)到職：${lOnText} ｜ 🚩 本月(${currentMonth}月)離職：${cOffText} ｜ 🍂 上月(${lastMonth}月)離職：${lOffText} ⭐`;
+                // 使用換行符號 \n 來讓 CSS 動畫能分行垂直顯示
+                return `⭐ 本月(${currentMonth}月)到職：${cOnText}\n🌙 上月(${lastMonth}月)到職：${lOnText}\n🚩 本月(${currentMonth}月)離職：${cOffText}\n🍂 上月(${lastMonth}月)離職：${lOffText}`;
             },
             shortestTenureStats() {
                 let validRecords = [];
