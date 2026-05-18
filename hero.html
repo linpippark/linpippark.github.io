@@ -174,7 +174,7 @@
             </div>
 
             <!-- Offboard Table -->
-            <div class="glass-card overflow-hidden w-full max-w-5xl">
+            <div class="glass-card overflow-hidden">
                 <div class="bg-[#FFAAAA] text-white p-3 flex justify-between items-center">
                     <h2 class="text-xl font-bold"><i class="fas fa-door-closed mr-2"></i>離職英雄榜</h2>
                     <span class="bg-white text-[#FFAAAA] px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOffboard.length }} 人</span>
@@ -183,15 +183,16 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-[#FF9898] text-white sticky top-0 shadow-sm">
                             <tr>
-                                <th class="p-3 border-b-2 border-white w-24">離職日</th>
-                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
-                                <th class="p-3 border-b-2 border-white w-20">單位</th>
-                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
+                                <th class="p-3 border-b-2 border-white">離職日</th>
+                                <th class="p-3 border-b-2 border-white">姓名</th>
+                                <th class="p-3 border-b-2 border-white">單位</th>
+                                <th class="p-3 border-b-2 border-white">在職天數</th>
+                                <th class="p-3 border-b-2 border-white text-center">備註</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredOffboard.length === 0">
-                                <td colspan="4" class="text-center p-4 text-gray-400">無符合資料</td>
+                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
                             </tr>
                             <tr v-for="(item, index) in filteredOffboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
                                 <td class="p-3 font-mono text-sm">{{ item.date }}</td>
@@ -201,6 +202,9 @@
                                 </td>
                                 <td class="p-3 text-sm text-[#FF9898] font-bold">
                                     {{ getOffboardTenure(item) }}
+                                </td>
+                                <td class="p-3 text-center text-sm text-gray-500">
+                                    {{ getOffboardRemark(item.originalName) }}
                                 </td>
                             </tr>
                         </tbody>
@@ -364,7 +368,7 @@
                 const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
                 const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
 
-                return `⭐ 本月(${currentMonth}月)到職英雄：${cOnText} ｜ 🌙 上月(${lastMonth}月)到職英雄：${lOnText} ｜ 🚩 本月(${currentMonth}月)離職英雄：${cOffText} ｜ 🍂 上月(${lastMonth}月)離職英雄：${lOffText} ⭐`;
+                return `⭐ 本月(${currentMonth}月)到職：${cOnText} ｜ 🌙 上月(${lastMonth}月)到職：${lOnText} ｜ 🚩 本月(${currentMonth}月)離職：${cOffText} ｜ 🍂 上月(${lastMonth}月)離職：${lOffText} ⭐`;
             },
             shortestTenureStats() {
                 let validRecords = [];
@@ -470,38 +474,12 @@
 
                 return result.join('');
             },
-            // 計算離職英雄的在職天數
-            getOffboardTenure(offboardItem) {
-                // 從到職名單中尋找同名且到職日早於離職日的紀錄
+            // 抓取離職人員對應的到職備註
+            getOffboardRemark(name) {
                 const onboardRecord = this.onboardList.find(
-                    onItem => onItem.originalName === offboardItem.originalName && new Date(onItem.date) <= new Date(offboardItem.date)
+                    onItem => onItem.originalName === name
                 );
-
-                if (!onboardRecord) return '無到職紀錄';
-
-                const start = new Date(onboardRecord.date);
-                const end = new Date(offboardItem.date);
-
-                let years = end.getFullYear() - start.getFullYear();
-                let months = end.getMonth() - start.getMonth();
-                let days = end.getDate() - start.getDate();
-
-                if (days < 0) {
-                    months--;
-                    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
-                    days += prevMonth.getDate();
-                }
-                if (months < 0) {
-                    years--;
-                    months += 12;
-                }
-
-                let result = [];
-                if (years > 0) result.push(`${years}年`);
-                if (months > 0) result.push(`${months}個月`);
-                if (days > 0 || result.length === 0) result.push(`${days}天`);
-
-                return result.join('');
+                return onboardRecord && onboardRecord.remark ? onboardRecord.remark : '';
             },
             // 通用的過濾與排序函數
             filterAndSortList(list) {
