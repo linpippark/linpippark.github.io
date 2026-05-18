@@ -123,8 +123,10 @@
                         <span class="text-[10px] font-bold px-2 py-0.5 bg-pink-100 text-[#FF9898] rounded-full">Top {{ index + 1 }}</span>
                         <span class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
                     </div>
-                    <div class="text-base font-bold text-gray-800 mt-1 mb-0.5">{{ maskName(stat.name) }}</div>
-                    <div class="text-xs font-bold text-blue-600"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
+                    <div class="flex items-center justify-between mt-1">
+                        <div class="text-sm font-bold text-gray-800">{{ maskName(stat.name) }}</div>
+                        <div class="text-xs font-bold text-blue-600 flex items-center"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -147,12 +149,11 @@
                                 <th class="p-3 border-b-2 border-white w-20">單位</th>
                                 <th class="p-3 border-b-2 border-white w-32">在職天數</th>
                                 <th class="p-3 border-b-2 border-white text-center w-20">備註</th>
-                                <th class="p-3 border-b-2 border-white text-center w-24">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredOnboard.length === 0">
-                                <td colspan="6" class="text-center p-4 text-gray-400">無符合資料</td>
+                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
                             </tr>
                             <tr v-for="(item, index) in filteredOnboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
                                 <td class="p-3 font-mono text-sm">{{ item.date }}</td>
@@ -165,10 +166,6 @@
                                 </td>
                                 <td class="p-3 text-center text-sm text-gray-500">
                                     {{ item.remark || '' }}
-                                </td>
-                                <td class="p-3 text-center">
-                                    <button @click="openForm('onboard', item)" class="text-[#FFD586] hover:text-yellow-600 mx-1" title="修改"><i class="fas fa-edit"></i></button>
-                                    <button @click="deleteItem('onboard', item.id)" class="text-[#FFAAAA] hover:text-red-600 mx-1" title="刪除"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         </tbody>
@@ -190,12 +187,11 @@
                                 <th class="p-3 border-b-2 border-white w-24">姓名</th>
                                 <th class="p-3 border-b-2 border-white w-20">單位</th>
                                 <th class="p-3 border-b-2 border-white w-32">在職天數</th>
-                                <th class="p-3 border-b-2 border-white text-center w-24">操作</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-if="filteredOffboard.length === 0">
-                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
+                                <td colspan="4" class="text-center p-4 text-gray-400">無符合資料</td>
                             </tr>
                             <tr v-for="(item, index) in filteredOffboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
                                 <td class="p-3 font-mono text-sm">{{ item.date }}</td>
@@ -205,10 +201,6 @@
                                 </td>
                                 <td class="p-3 text-sm text-[#FF9898] font-bold">
                                     {{ getOffboardTenure(item) }}
-                                </td>
-                                <td class="p-3 text-center">
-                                    <button @click="openForm('offboard', item)" class="text-[#FFD586] hover:text-yellow-600 mx-1" title="修改"><i class="fas fa-edit"></i></button>
-                                    <button @click="deleteItem('offboard', item.id)" class="text-[#FFAAAA] hover:text-red-600 mx-1" title="刪除"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                         </tbody>
@@ -528,32 +520,6 @@
 
                 return result;
             },
-            // 密碼驗證包裝函數
-            async requirePassword(actionCallback) {
-                const { value: password } = await Swal.fire({
-                    title: '系統安全驗證',
-                    text: '請輸入管理員密碼以繼續操作',
-                    input: 'password',
-                    inputPlaceholder: '輸入密碼',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#FF9898',
-                    cancelButtonColor: '#ccc',
-                    confirmButtonText: '確認',
-                    cancelButtonText: '取消'
-                });
-
-                if (password === '123') {
-                    actionCallback();
-                } else if (password !== undefined) {
-                    Swal.fire({
-                        title: '驗證失敗',
-                        text: '密碼不正確',
-                        icon: 'error',
-                        confirmButtonColor: '#FF9898'
-                    });
-                }
-            },
             // 更新時間戳記
             setLastUpdated() {
                 const now = new Date();
@@ -564,107 +530,6 @@
                 const min = String(now.getMinutes()).padStart(2, '0');
                 const ss = String(now.getSeconds()).padStart(2, '0');
                 this.lastUpdated = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
-            },
-            // 打開修改視窗 (修改保留，新增按鈕已隱藏但方法留著可用於修改)
-            async openForm(type, item = null) {
-                const title = item ? `修改${type === 'onboard' ? '到職' : '離職'}英雄` : `新增${type === 'onboard' ? '到職' : '離職'}英雄`;
-                const isOnboard = type === 'onboard';
-                
-                await this.requirePassword(async () => {
-                    const { value: formValues } = await Swal.fire({
-                        title: title,
-                        html:
-                            `<div class="flex flex-col gap-3 text-left px-2">
-                                <label class="text-sm font-bold text-gray-600">日期</label>
-                                <input id="swal-date" type="date" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" value="${item ? item.date : ''}">
-                                <label class="text-sm font-bold text-gray-600 mt-2">姓名</label>
-                                <input id="swal-name" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入姓名" value="${item ? item.originalName : ''}">
-                                <label class="text-sm font-bold text-gray-600 mt-2">單位</label>
-                                <input id="swal-dept" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入單位名稱 (例如: 一組)" value="${item ? item.dept : ''}">
-                                ${isOnboard ? `
-                                <label class="text-sm font-bold text-gray-600 mt-2">備註</label>
-                                <input id="swal-remark" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入備註 (選填)" value="${item && item.remark ? item.remark : ''}">
-                                ` : ''}
-                            </div>`,
-                        focusConfirm: false,
-                        showCancelButton: true,
-                        confirmButtonColor: '#FFD586',
-                        cancelButtonColor: '#ccc',
-                        confirmButtonText: '儲存',
-                        cancelButtonText: '取消',
-                        preConfirm: () => {
-                            const date = document.getElementById('swal-date').value;
-                            const name = document.getElementById('swal-name').value;
-                            const dept = document.getElementById('swal-dept').value;
-                            let remark = '';
-                            if (isOnboard) {
-                                remark = document.getElementById('swal-remark').value;
-                            }
-                            
-                            if (!date || !name || !dept) {
-                                Swal.showValidationMessage('日期、姓名與單位都必須填寫！');
-                            }
-                            return isOnboard ? { date, originalName: name, dept, remark } : { date, originalName: name, dept };
-                        }
-                    });
-
-                    if (formValues) {
-                        const targetList = type === 'onboard' ? this.onboardList : this.offboardList;
-                        if (item) {
-                            // 修改
-                            const index = targetList.findIndex(i => i.id === item.id);
-                            if (index !== -1) {
-                                targetList[index] = { ...targetList[index], ...formValues };
-                            }
-                        } else {
-                            // 新增
-                            this.autoId++;
-                            targetList.push({ id: this.autoId, ...formValues });
-                        }
-                        
-                        this.setLastUpdated();
-                        this.renderCharts();
-                        
-                        Swal.fire({
-                            title: '成功',
-                            text: '資料已儲存！',
-                            icon: 'success',
-                            confirmButtonColor: '#FFD586'
-                        });
-                    }
-                });
-            },
-            // 刪除項目
-            async deleteItem(type, id) {
-                await this.requirePassword(() => {
-                    Swal.fire({
-                        title: '確定要刪除嗎？',
-                        text: "刪除後將無法恢復！",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#FFAAAA',
-                        cancelButtonColor: '#ccc',
-                        confirmButtonText: '確定刪除',
-                        cancelButtonText: '取消'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            if (type === 'onboard') {
-                                this.onboardList = this.onboardList.filter(i => i.id !== id);
-                            } else {
-                                this.offboardList = this.offboardList.filter(i => i.id !== id);
-                            }
-                            this.setLastUpdated();
-                            this.renderCharts();
-                            
-                            Swal.fire({
-                                title: '已刪除',
-                                text: '資料已成功刪除。',
-                                icon: 'success',
-                                confirmButtonColor: '#FFD586'
-                            });
-                        }
-                    });
-                });
             },
             // 繪製統計圖表
             renderCharts() {
