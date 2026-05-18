@@ -11,9 +11,6 @@
     <!-- 引入 Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     
-    <!-- 引入 SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -36,28 +33,27 @@
         
         body { background-color: #FFFDF9; font-family: 'Helvetica Neue', Helvetica, Arial, 'Microsoft JhengHei', sans-serif; }
 
-        /* 垂直滾動跑馬燈動畫 */
+        /* 垂直滾動跑馬燈動畫優化 */
         .marquee-container {
-            height: 32px; /* 固定高度以顯示單行 */
+            height: 40px; 
             overflow: hidden;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .marquee-content {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: absolute;
-            width: 100%;
+            gap: 12px;
             animation: scroll-vertical 15s linear infinite;
         }
-        /* 滑鼠懸停時暫停動畫 */
         .marquee-container:hover .marquee-content {
             animation-play-state: paused;
         }
         @keyframes scroll-vertical {
-            0% { top: 32px; }
-            100% { top: -100%; }
+            0% { transform: translateY(100%); }
+            100% { transform: translateY(-100%); }
         }
     </style>
 </head>
@@ -65,20 +61,20 @@
 
 <div id="app" v-cloak>
     <!-- Header -->
-    <header class="text-white p-4 flex flex-col md:flex-row justify-between items-center shadow-lg sticky top-0 z-50 transition-all" style="background-color: #FF9898;">
-        <h1 class="text-3xl font-extrabold tracking-widest drop-shadow-md mb-3 md:mb-0">
+    <header class="text-white p-4 flex justify-center items-center shadow-lg sticky top-0 z-50 transition-all" style="background-color: #FF9898;">
+        <h1 class="text-3xl font-extrabold tracking-widest drop-shadow-md">
             <i class="fas fa-medal text-[#FFE99A] mr-2"></i>HeroList 英雄榜
         </h1>
     </header>
 
     <!-- Marquee -->
-    <div class="p-2 font-bold shadow flex flex-col md:flex-row items-center text-gray-800" style="background-color: #FFE99A;">
-        <div class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm shadow-sm mb-2 md:mb-0 md:mr-4 z-10 relative">
+    <div class="p-2 font-bold shadow flex items-center text-gray-800" style="background-color: #FFE99A;">
+        <span class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm mr-3 shadow-sm z-10 relative">
             <i class="fas fa-bullhorn mr-1"></i> 最新動態
-        </div>
+        </span>
         <div class="marquee-container flex-grow w-full text-center">
-            <div class="marquee-content text-lg tracking-wide whitespace-pre-line">
-                {{ marqueeText }}
+            <div class="marquee-content text-lg tracking-wide">
+                <div v-for="(line, index) in marqueeLines" :key="index">{{ line }}</div>
             </div>
         </div>
     </div>
@@ -136,7 +132,7 @@
         </div>
 
         <!-- Shortest Tenure Highlight -->
-        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="glass-card p-3 mb-6 mx-auto bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm max-w-5xl">
+        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="max-w-5xl mx-auto glass-card p-3 mb-6 bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm">
             <div class="flex items-center mb-2">
                 <div class="bg-[#FF9898] text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow text-sm">
                     <i class="fas fa-bolt"></i>
@@ -157,7 +153,7 @@
             </div>
         </div>
 
-        <!-- Tables Section (修改這裡，改為單欄並置中縮小寬度) -->
+        <!-- Tables Section (Stacked vertically and constrained width) -->
         <div class="flex flex-col items-center gap-6">
             
             <!-- Onboard Table -->
@@ -200,7 +196,7 @@
             </div>
 
             <!-- Offboard Table -->
-            <div class="glass-card overflow-hidden">
+            <div class="glass-card overflow-hidden w-full max-w-5xl">
                 <div class="bg-[#FFAAAA] text-white p-3 flex justify-between items-center">
                     <h2 class="text-xl font-bold"><i class="fas fa-door-closed mr-2"></i>離職英雄榜</h2>
                     <span class="bg-white text-[#FFAAAA] px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOffboard.length }} 人</span>
@@ -209,11 +205,11 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-[#FF9898] text-white sticky top-0 shadow-sm">
                             <tr>
-                                <th class="p-3 border-b-2 border-white">離職日</th>
-                                <th class="p-3 border-b-2 border-white">姓名</th>
-                                <th class="p-3 border-b-2 border-white">單位</th>
-                                <th class="p-3 border-b-2 border-white">在職天數</th>
-                                <th class="p-3 border-b-2 border-white text-center">備註</th>
+                                <th class="p-3 border-b-2 border-white w-24">離職日</th>
+                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
+                                <th class="p-3 border-b-2 border-white w-20">單位</th>
+                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
+                                <th class="p-3 border-b-2 border-white text-center w-20">備註</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -256,7 +252,7 @@
         data() {
             return {
                 lastUpdated: '',
-                showCharts: false, // 控制圖表區塊的顯示與隱藏
+                showCharts: false,
                 filters: {
                     year: 'all',
                     dept: 'all'
@@ -267,9 +263,6 @@
                 // 圖表實例
                 onboardChartInstance: null,
                 offboardChartInstance: null,
-                
-                // 初始資料載入 (使用自增 ID 以供操作)
-                autoId: 100,
                 
                 // 到職資料
                 onboardList: [
@@ -296,8 +289,8 @@
                     { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一', remark: 'Planning' },
                     { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一', remark: 'MIS' },
                     { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二', remark: 'HR' },
-                    { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '未定', remark: 'HR' },
-                    { id: 51, date: '2026-05-18', originalName: '蔡雅玲', dept: '未定', remark: 'ACC' }
+                    { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '行二', remark: 'HR' },
+                    { id: 51, date: '2026-05-18', originalName: '蔡雅玲', dept: '行二', remark: 'ACC' }
                 ],
                 
                 // 離職資料
@@ -328,7 +321,7 @@
                     { id: 47, date: '2026-01-30', originalName: '黃鈺媖', dept: '一組' },
                     { id: 48, date: '2026-02-28', originalName: '張家綺', dept: '行二' },
                     { id: 49, date: '2026-04-24', originalName: '彭鉯喬', dept: '行二' },
-                    { id: 50, date: '2026-05-18', originalName: '茍穎書', dept: '一組' }
+                    { id: 52, date: '2026-05-18', originalName: '茍穎書', dept: '一組' }
                 ]
             }
         },
@@ -346,9 +339,8 @@
             filteredOffboard() {
                 return this.filterAndSortList(this.offboardList);
             },
-            marqueeText() {
+            marqueeLines() {
                 const now = new Date();
-                // 為了展示邏輯，這裡以系統實際時間為基準抓取當月/上月
                 const currentMonth = now.getMonth() + 1;
                 const currentYear = now.getFullYear();
                 
@@ -359,7 +351,6 @@
                     lastMonthYear--;
                 }
 
-                // 抓取離職名單
                 const currentMonthOffNames = this.offboardList
                     .filter(item => {
                         const d = new Date(item.date);
@@ -374,7 +365,6 @@
                     })
                     .map(item => this.maskName(item.originalName));
 
-                // 抓取到職名單
                 const currentMonthOnNames = this.onboardList
                     .filter(item => {
                         const d = new Date(item.date);
@@ -394,19 +384,22 @@
                 const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
                 const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
 
-                // 使用換行符號 \n 來讓 CSS 動畫能分行垂直顯示
-                return `⭐ 本月(${currentMonth}月)到職：${cOnText}\n🌙 上月(${lastMonth}月)到職：${lOnText}\n🚩 本月(${currentMonth}月)離職：${cOffText}\n🍂 上月(${lastMonth}月)離職：${lOffText}`;
+                // 改為回傳陣列，讓垂直滾動動畫依序顯示
+                return [
+                    `⭐ 本月(${currentMonth}月)到職：${cOnText}`,
+                    `🌙 上月(${lastMonth}月)到職：${lOnText}`,
+                    `🚩 本月(${currentMonth}月)離職：${cOffText}`,
+                    `🍂 上月(${lastMonth}月)離職：${lOffText}`
+                ];
             },
             shortestTenureStats() {
                 let validRecords = [];
 
-                // 僅檢查已離職的英雄，尋找在職天數最短的紀錄
                 this.offboardList.forEach(item => {
-                    // 尋找對應的到職紀錄 (必須有到職紀錄才能計算天數)
                     const onboardRecord = this.onboardList.find(
                         onItem => onItem.originalName === item.originalName && new Date(onItem.date) <= new Date(item.date)
                     );
-                    if (!onboardRecord) return; // 無到職紀錄則跳過
+                    if (!onboardRecord) return;
 
                     const start = new Date(onboardRecord.date);
                     start.setHours(0, 0, 0, 0);
@@ -427,17 +420,13 @@
 
                 if (validRecords.length === 0) return null;
 
-                // 依在職天數升冪排序 (天數少的在前面)
                 validRecords.sort((a, b) => a.diffDays - b.diffDays);
-
-                // 取前三名，如果平手，原陣列排序在前的優先
                 return validRecords.slice(0, 3);
             }
         },
         watch: {
             filters: {
                 handler() {
-                    // 只有在圖表顯示的狀態下才重新繪製，節省效能
                     if (this.showCharts) {
                         this.renderCharts();
                     }
@@ -446,17 +435,14 @@
             }
         },
         methods: {
-            // 切換統計表顯示狀態
             toggleCharts() {
                 this.showCharts = !this.showCharts;
-                // 如果是打開的狀態，等待 DOM 渲染完成後再畫圖表
                 if (this.showCharts) {
                     this.$nextTick(() => {
                         this.renderCharts();
                     });
                 }
             },
-            // 姓名去識別化
             maskName(name) {
                 if (!name) return '';
                 if (name.length === 2) return name[0] + 'Ｏ';
@@ -467,9 +453,7 @@
                 }
                 return name;
             },
-            // 計算年資
             getTenureStatus(dateStr, name) {
-                // 如果該英雄出現在離職名單中，則無需統計
                 const hasOffboarded = this.offboardList.some(item => item.originalName === name);
                 if (hasOffboarded) {
                     return '無需統計(已離職)';
@@ -501,6 +485,38 @@
 
                 return result.join('');
             },
+            // 這是遺失的計算離職英雄在職天數函式，已補上
+            getOffboardTenure(offboardItem) {
+                const onboardRecord = this.onboardList.find(
+                    onItem => onItem.originalName === offboardItem.originalName && new Date(onItem.date) <= new Date(offboardItem.date)
+                );
+
+                if (!onboardRecord) return '無到職紀錄';
+
+                const start = new Date(onboardRecord.date);
+                const end = new Date(offboardItem.date);
+
+                let years = end.getFullYear() - start.getFullYear();
+                let months = end.getMonth() - start.getMonth();
+                let days = end.getDate() - start.getDate();
+
+                if (days < 0) {
+                    months--;
+                    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+                    days += prevMonth.getDate();
+                }
+                if (months < 0) {
+                    years--;
+                    months += 12;
+                }
+
+                let result = [];
+                if (years > 0) result.push(`${years}年`);
+                if (months > 0) result.push(`${months}個月`);
+                if (days > 0 || result.length === 0) result.push(`${days}天`);
+
+                return result.join('');
+            },
             // 抓取離職人員對應的到職備註
             getOffboardRemark(name) {
                 const onboardRecord = this.onboardList.find(
@@ -508,7 +524,6 @@
                 );
                 return onboardRecord && onboardRecord.remark ? onboardRecord.remark : '';
             },
-            // 通用的過濾與排序函數
             filterAndSortList(list) {
                 let result = list.filter(item => {
                     const yearMatch = this.filters.year === 'all' || item.date.startsWith(this.filters.year);
@@ -526,7 +541,6 @@
 
                 return result;
             },
-            // 更新時間戳記
             setLastUpdated() {
                 const now = new Date();
                 const yyyy = now.getFullYear();
@@ -537,24 +551,21 @@
                 const ss = String(now.getSeconds()).padStart(2, '0');
                 this.lastUpdated = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
             },
-            // 繪製統計圖表
             renderCharts() {
-                if (!this.showCharts) return; // 如果圖表區塊是隱藏的，就不執行繪製以避免報錯
+                if (!this.showCharts) return;
                 
                 const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
                 
-                // 處理資料函數
                 const processData = (list) => {
                     let data2025 = new Array(12).fill(0);
                     let data2026 = new Array(12).fill(0);
                     
                     list.forEach(item => {
-                        // 如果有單位篩選條件，且不符合，則跳過不計入圖表
                         if (this.filters.dept !== 'all' && item.dept !== this.filters.dept) return;
                         
                         const d = new Date(item.date);
                         const year = d.getFullYear();
-                        const monthIndex = d.getMonth(); // 0-11
+                        const monthIndex = d.getMonth(); 
                         
                         if (year === 2025) data2025[monthIndex]++;
                         if (year === 2026) data2026[monthIndex]++;
@@ -565,7 +576,6 @@
                 const onData = processData(this.onboardList);
                 const offData = processData(this.offboardList);
 
-                // 準備 Datasets，根據年份篩選條件動態顯示
                 const getDatasets = (dataMap, color1, color2) => {
                     let datasets = [];
                     if (this.filters.year === 'all' || this.filters.year === '2025') {
@@ -587,7 +597,6 @@
                     return datasets;
                 };
 
-                // 設定共用選項
                 const chartOptions = {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -599,7 +608,6 @@
                     }
                 };
 
-                // 到職圖表更新
                 if (this.onboardChartInstance) this.onboardChartInstance.destroy();
                 const ctxOn = document.getElementById('onboardChart').getContext('2d');
                 this.onboardChartInstance = new Chart(ctxOn, {
@@ -611,7 +619,6 @@
                     options: chartOptions
                 });
 
-                // 離職圖表更新
                 if (this.offboardChartInstance) this.offboardChartInstance.destroy();
                 const ctxOff = document.getElementById('offboardChart').getContext('2d');
                 this.offboardChartInstance = new Chart(ctxOff, {
@@ -627,14 +634,11 @@
         mounted() {
             this.setLastUpdated();
 
-            // 鎖定滑鼠右鍵選單
             document.addEventListener('contextmenu', event => {
                 event.preventDefault();
             });
 
-            // 鎖定特定鍵盤按鍵 (Alt/Option, Shift, Windows/Command)
             document.addEventListener('keydown', event => {
-                // metaKey 包含 Windows 鍵與 Mac 的 Command 鍵
                 if (event.altKey || event.shiftKey || event.metaKey) {
                     event.preventDefault();
                 }
