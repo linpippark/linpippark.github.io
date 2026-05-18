@@ -61,7 +61,7 @@
     <div class="container mx-auto mt-6 px-4">
         
         <!-- Controls: Filters & Sort -->
-        <div class="glass-card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between bg-white">
+        <div class="glass-card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between bg-white max-w-5xl mx-auto">
             <div class="flex flex-wrap gap-4 items-center">
                 <div class="flex items-center">
                     <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-filter"></i> 篩選年份：</label>
@@ -94,7 +94,7 @@
         </div>
 
         <!-- Charts Section -->
-        <div v-if="showCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 transition-all duration-500">
+        <div v-if="showCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 transition-all duration-500 max-w-5xl mx-auto">
             <div class="glass-card p-4">
                 <h2 class="text-xl font-bold text-center text-[#FF9898] mb-2"><i class="fas fa-chart-bar mr-2"></i>到職英雄統計</h2>
                 <div class="relative h-64">
@@ -110,21 +110,21 @@
         </div>
 
         <!-- Shortest Tenure Highlight -->
-        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="glass-card p-4 mb-6 bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm">
-            <div class="flex items-center mb-3">
-                <div class="bg-[#FF9898] text-white rounded-full h-10 w-10 flex items-center justify-center mr-4 shadow">
+        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="glass-card p-3 mb-6 mx-auto bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm max-w-5xl">
+            <div class="flex items-center mb-2">
+                <div class="bg-[#FF9898] text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow text-sm">
                     <i class="fas fa-bolt"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-700">離職英雄在職天數最短統計 (前三名)</h3>
+                <h3 class="text-base font-bold text-gray-700">離職英雄在職天數最短統計 (前三名)</h3>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:pl-14">
-                <div v-for="(stat, index) in shortestTenureStats" :key="index" class="bg-white p-3 rounded-lg shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:pl-11">
+                <div v-for="(stat, index) in shortestTenureStats" :key="index" class="bg-white p-2.5 rounded-lg shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-bold px-2 py-1 bg-pink-100 text-[#FF9898] rounded-full">Top {{ index + 1 }}</span>
-                        <span class="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 bg-pink-100 text-[#FF9898] rounded-full">Top {{ index + 1 }}</span>
+                        <span class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
                     </div>
-                    <div class="text-lg font-bold text-gray-800 mt-2 mb-1">{{ maskName(stat.name) }}</div>
-                    <div class="text-sm font-bold text-blue-600"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
+                    <div class="text-base font-bold text-gray-800 mt-1 mb-0.5">{{ maskName(stat.name) }}</div>
+                    <div class="text-xs font-bold text-blue-600"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
                 </div>
             </div>
         </div>
@@ -222,7 +222,7 @@
     <!-- 頁尾版權宣告 -->
     <footer class="text-center py-6 mt-8 text-sm text-gray-500 font-medium">
         <p>Copyright &copy; 2026 Pip_Lin 版權所有</p>
-        <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v1.4.23</p>
+        <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v1.5.18</p>
         <p class="text-xs text-gray-400 mt-2"><i class="fas fa-sync-alt mr-1"></i>最後更新日期：{{ lastUpdated }}</p>
     </footer>
 </div>
