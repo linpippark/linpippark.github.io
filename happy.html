@@ -3,562 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Happy Hours & Happy Work - 人事請假分析儀表板</title>
+    <title>Happy Hours & Happy Work - HR Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary: #5B7E3C; /* 綠色 */
-            --secondary: #FFD65A; /* 黃色 */
-            --accent: #FF9D23; /* 橘色 */
-            --danger: #EA5252; /* 紅色 */
-            --bg-light: #f3f4f6;
+            --color-green: #5B7E3C;
+            --color-yellow: #FFD65A;
+            --color-orange: #FF9D23;
+            --color-red: #EA5252;
+            --bg-color: #f1f5f9;
         }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-light);
-            color: #333;
-        }
-        .text-primary { color: var(--primary); }
-        .text-accent { color: var(--accent); }
-        .bg-primary { background-color: var(--primary); }
-        .bg-secondary { background-color: var(--secondary); }
-        .bg-accent { background-color: var(--accent); }
-        .bg-danger { background-color: var(--danger); }
-        
-        .border-primary { border-color: var(--primary); }
-        
-        /* 漸層按鈕 */
-        .btn-toggle {
-            transition: all 0.3s ease;
-        }
-        .btn-toggle.active {
-            background-color: var(--primary);
-            color: white;
-            box-shadow: 0 4px 6px -1px rgba(91, 126, 60, 0.4);
-        }
-        
-        /* 卡片懸浮效果 */
-        .dashboard-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            border-top: 4px solid var(--primary);
-        }
-        .dashboard-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
-        .dashboard-card.wolf { border-top-color: var(--accent); }
-        .dashboard-card.chill { border-top-color: var(--danger); }
 
-        /* 日曆樣式 */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
-        .calendar-day {
-            aspect-ratio: 1;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            padding: 4px;
-            font-size: 0.8rem;
-            position: relative;
-            background-color: white;
+
+        .text-primary-green { color: var(--color-green); }
+        .text-primary-yellow { color: var(--color-yellow); }
+        .text-primary-orange { color: var(--color-orange); }
+        .text-primary-red { color: var(--color-red); }
+        .bg-primary-green { background-color: var(--color-green); }
+        .bg-primary-yellow { background-color: var(--color-yellow); }
+        .bg-primary-orange { background-color: var(--color-orange); }
+        .bg-primary-red { background-color: var(--color-red); }
+
+        /* Glassmorphism styling */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .calendar-day-header {
-            text-align: center;
-            font-weight: bold;
-            color: var(--primary);
-            padding: 4px 0;
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .leave-badge {
-            display: block;
-            font-size: 0.7rem;
-            padding: 2px 4px;
+
+        /* View Toggle Buttons */
+        .toggle-btn {
+            padding: 0.6rem 1.8rem;
             border-radius: 9999px;
-            margin-top: 2px;
-            color: white;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .leave-wolf { background-color: var(--accent); }
-        .leave-chill { background-color: var(--danger); }
-        .leave-business { background-color: var(--secondary); color: #333;}
+
+        .toggle-btn.active {
+            background-color: var(--color-green);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(91, 126, 60, 0.4);
+        }
+
+        .toggle-btn.inactive {
+            background-color: rgba(255, 255, 255, 0.7);
+            color: #64748b;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .toggle-btn.inactive:hover {
+            color: var(--color-green);
+            background-color: rgba(255, 255, 255, 1);
+            border-color: rgba(91, 126, 60, 0.2);
+        }
+
+        /* Calendar Adjustments */
+        #calendar-container {
+            min-height: 700px;
+        }
+        .fc { font-family: inherit; }
+        .fc .fc-toolbar-title { font-weight: 800; color: var(--color-green); font-size: 1.5rem; }
+        .fc-theme-standard .fc-scrollgrid { border-radius: 1rem; overflow: hidden; border: none; box-shadow: 0 0 0 1px rgba(0,0,0,0.05); }
+        .fc .fc-button-primary { 
+            background-color: var(--color-green); 
+            border-color: var(--color-green); 
+            text-transform: capitalize; 
+            font-weight: 600; 
+            border-radius: 0.5rem;
+        }
+        .fc .fc-button-primary:hover { background-color: #4a6631; border-color: #4a6631; }
+        .fc .fc-button-primary:not(:disabled).fc-button-active, .fc .fc-button-primary:not(:disabled):active {
+            background-color: #3b5227; border-color: #3b5227;
+        }
+        .fc-day-today { background-color: rgba(255, 214, 90, 0.1) !important; }
+        .fc-event { border: none; border-radius: 4px; padding: 2px 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: transform 0.2s; }
+        .fc-event:hover { transform: scale(1.02); }
+
+        .fade-in { animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(15px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        .hidden-view { display: none !important; }
+
+        /* Fancy Header Gradient */
+        .header-gradient {
+            background: linear-gradient(135deg, var(--color-green) 0%, #3b5227 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header-gradient::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,214,90,0.15) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+            pointer-events: none;
+        }
+
+        /* Stats Table */
+        .stats-table th { background-color: rgba(91, 126, 60, 0.05); color: var(--color-green); font-weight: 600; }
+        .stats-table tr { border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s; }
+        .stats-table tr:hover { background-color: #f8fafc; }
+        .stats-table td { padding: 1rem; color: #475569; }
     </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-    <header class="bg-white shadow-sm p-6 mb-6 border-b-4 border-primary sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-3xl font-extrabold text-primary flex items-center gap-3">
-                <i class="fas fa-mug-hot text-accent"></i> 
-                Happy Hours & Happy Work
-            </h1>
-            <div class="flex items-center gap-3 flex-wrap justify-center">
-                <div class="flex bg-gray-200 rounded-lg p-1">
-                    <button id="btnListView" class="btn-toggle active px-6 py-2 rounded-md font-medium" onclick="switchView('list')">
-                        <i class="fas fa-list mr-2"></i> 總覽與列表
-                    </button>
-                    <button id="btnCalendarView" class="btn-toggle px-6 py-2 rounded-md font-medium text-gray-600" onclick="switchView('calendar')">
-                        <i class="far fa-calendar-alt mr-2"></i> 日曆視圖
-                    </button>
-                </div>
-                <button onclick="exportToTxt()" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium transition shadow-sm text-sm flex items-center">
-                    <i class="fas fa-file-export mr-2"></i> 匯出明細
+    <!-- Header Section -->
+    <header class="header-gradient shadow-lg pb-16 pt-10 px-6 sm:px-10 mb-8 rounded-b-3xl">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-2 drop-shadow-sm">
+                    <i class="fa-solid fa-mug-hot mr-3 text-primary-yellow"></i>Happy Hours & Happy Work
+                </h1>
+                <p class="text-green-100 font-medium text-lg ml-1">Team Attendance & Persona Dashboard</p>
+            </div>
+            
+            <div class="flex gap-4 p-2 bg-white/10 backdrop-blur-md rounded-full shadow-inner">
+                <button id="btn-export" class="toggle-btn inactive !bg-indigo-500/90 !text-white hover:!bg-indigo-600 !border-none shadow-sm" onclick="exportToTXT()">
+                    <i class="fa-solid fa-download"></i> 匯出明細
+                </button>
+                <button id="btn-general" class="toggle-btn active" onclick="switchView('general')">
+                    <i class="fa-solid fa-chart-pie"></i> 統計報表
+                </button>
+                <button id="btn-calendar" class="toggle-btn inactive" onclick="switchView('calendar')">
+                    <i class="fa-regular fa-calendar-days"></i> 出勤日曆
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 pb-12">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 pb-20 relative z-10">
         
-        <div id="listView" class="space-y-6 block">
-            <!-- 總計數據區 -->
+        <!-- ================= GENERAL VIEW ================= -->
+        <div id="view-general" class="fade-in space-y-8">
+            
+            <!-- Persona Analysis Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 狼人資料 -->
-                <div class="dashboard-card wolf bg-white rounded-xl shadow-md p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-user-tie text-accent"></i> 同仁：狼人
-                        </h2>
-                        <span class="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm font-bold">Total: <span id="wolfTotal">0</span>H</span>
+                <!-- 狼人 Persona -->
+                <div class="glass-card p-6 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-primary-orange opacity-10 rounded-bl-full"></div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-primary-orange text-2xl shadow-sm">
+                            <i class="fa-solid fa-user-ninja"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start">
+                                <h2 class="text-2xl font-bold text-gray-800">狼人 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">客</span></h2>
+                                <div class="text-right">
+                                    <span class="text-xs text-gray-500 block">全年特休</span>
+                                    <span class="text-lg font-bold text-primary-green">30 天</span>
+                                </div>
+                            </div>
+                            <p class="text-primary-orange font-semibold mt-1">「策略型資深員工」</p>
+                        </div>
                     </div>
-                    <div id="wolfSummary" class="space-y-3 mb-6">
-                        <!-- 動態插入月份統計 -->
+                    <p class="text-gray-600 leading-relaxed">
+                        身為擁有 30 天特休的資深員工，狼人目前僅使用了約 8 天。他善於利用週四與週五請半天或一天，巧妙延長週末假期。這種請假模式顯示出他深諳工作與生活的平衡之道，不急著把假休完，而是細水長流地將特休視為「調節劑」。是個懂得提前規劃、有效率且自律的工作者。
+                    </p>
+                </div>
+
+                <!-- 爽人 Persona -->
+                <div class="glass-card p-6 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-primary-yellow opacity-20 rounded-bl-full"></div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-2xl shadow-sm">
+                            <i class="fa-solid fa-umbrella-beach"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-start">
+                                <h2 class="text-2xl font-bold text-gray-800">爽人 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">秘</span></h2>
+                                <div class="text-right">
+                                    <span class="text-xs text-gray-500 block">全年特休</span>
+                                    <span class="text-lg font-bold text-primary-red">7 天</span>
+                                </div>
+                            </div>
+                            <p class="text-yellow-600 font-semibold mt-1">「享樂型體驗派」</p>
+                        </div>
                     </div>
-                    <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
-                        <h3 class="font-bold text-accent mb-2"><i class="fas fa-brain"></i> 職場人格分析</h3>
-                        <p class="text-sm text-gray-700 leading-relaxed">
-                            <strong>特徵：</strong> 請假頻率高但時數短（常請半天4H），且高度集中在<b>星期四、星期五</b>。<br>
-                            <strong>分析：</strong> 狼人屬於「<b>週末延長型（Work-Life Integrator）</b>」人格。他們懂得利用零碎時間來延長週末的放鬆感。星期四或五請半天，能有效緩解一週的工作疲勞。這類員工通常很重視生活品質，工作效率可能不低，因為他們需要趕快把事情做完才能安心休假。他們需要的是彈性與明確的目標導向管理。
-                        </p>
+                    <p class="text-gray-600 leading-relaxed">
+                        雖然全年僅有 7 天特休，但爽人前五個月的請假總量（近 12 天）已經超標！這顯示他非常樂於使用事假或其他假別來安排連續多日的長假（如四月份）。這類人格活在當下，傾向於追求深度體驗與高品質的生活享受，寧可犧牲部分薪水，也要獲得身心靈的滿足與自由。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Main Bar Chart -->
+                <div class="glass-card p-6 lg:col-span-2">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                        <i class="fa-solid fa-chart-column mr-2 text-primary-green"></i> 每月請假與出勤狀況對比 (2026)
+                    </h3>
+                    <div class="relative h-80 w-full">
+                        <canvas id="monthlyChart"></canvas>
                     </div>
                 </div>
 
-                <!-- 爽人資料 -->
-                <div class="dashboard-card chill bg-white rounded-xl shadow-md p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                            <i class="fas fa-user-astronaut text-danger"></i> 同仁：爽人
-                        </h2>
-                        <span class="bg-danger/10 text-danger px-3 py-1 rounded-full text-sm font-bold">Total: <span id="chillTotal">0</span>H</span>
+                <!-- Donut Chart -->
+                <div class="glass-card p-6 flex flex-col">
+                    <h3 class="text-xl font-bold text-gray-800 mb-2 flex items-center">
+                        <i class="fa-solid fa-chart-pie mr-2 text-primary-red"></i> 總請假時數佔比
+                    </h3>
+                    <p class="text-sm text-gray-500 mb-4">1月至5月累計</p>
+                    <div class="relative flex-grow flex items-center justify-center">
+                        <canvas id="totalLeaveChart"></canvas>
                     </div>
-                    <div id="chillSummary" class="space-y-3 mb-6">
-                         <!-- 動態插入月份統計 -->
-                    </div>
-                    <div class="bg-red-50 p-4 rounded-lg border border-red-100">
-                        <h3 class="font-bold text-danger mb-2"><i class="fas fa-brain"></i> 職場人格分析</h3>
-                        <p class="text-sm text-gray-700 leading-relaxed">
-                            <strong>特徵：</strong> 請假天數多，常一次請全天（8H），且有<b>連續請假</b>的現象（如4/8-4/10連續三天，加上六日變成五天長假）。<br>
-                            <strong>分析：</strong> 爽人屬於「<b>深度充電型（Deep Disconnecter）</b>」人格。比起狼人的少量多餐，爽人更傾向於累積假期進行一次性的深度休息。當他們休假時，通常希望完全脫離工作。這類員工可能在承擔大型專案後需要較長的恢復期。作為HR或主管，需注意其代理人制度是否完善，並觀察是否為專案壓力過大導致的逃避性休假。
-                        </p>
+                    <div class="mt-4 flex justify-center gap-6">
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">狼人總計</p>
+                            <p class="text-xl font-bold text-primary-orange" id="total-leave-wolf">0H</p>
+                            <p class="text-xs text-gray-400 mt-1">特休 30 天</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">爽人總計</p>
+                            <p class="text-xl font-bold text-yellow-600" id="total-leave-chill">0H</p>
+                            <p class="text-xs text-gray-400 mt-1">特休 7 天</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 圖表與每月比較區 -->
-            <div class="dashboard-card bg-white rounded-xl shadow-md p-6 mt-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-chart-bar text-primary mr-2"></i> 每月出勤狀況比較 (特休/事病假 vs 公出)</h2>
-                <div class="text-sm text-gray-500 mb-4">
-                    * 假設每月基礎工作天數約為 20 天 (160小時)。出席率計算：(160 - 特休時數) / 160。公出視為出勤。
+            <!-- Detailed Stats Table -->
+            <div class="glass-card p-0 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-table-list mr-2 text-primary-green"></i> 每月詳細統計數據</h3>
                 </div>
-                
-                <div class="w-full h-80">
-                    <canvas id="leaveChart"></canvas>
-                </div>
-                
-                <div class="mt-6 overflow-x-auto">
-                    <table class="min-w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse stats-table">
+                        <thead>
                             <tr>
-                                <th scope="col" class="px-6 py-3">月份</th>
-                                <th scope="col" class="px-6 py-3 text-center">基準工時</th>
-                                <th scope="col" class="px-6 py-3 text-center text-accent">狼人 (請假/公出)</th>
-                                <th scope="col" class="px-6 py-3 text-center text-danger">爽人 (請假/公出)</th>
-                                <th scope="col" class="px-6 py-3 text-center">狼人出席率</th>
-                                <th scope="col" class="px-6 py-3 text-center">爽人出席率</th>
+                                <th class="p-4 text-center">月份</th>
+                                <th class="p-4 text-center">總工作時數</th>
+                                <th class="p-4 text-center border-l border-gray-200">狼人請假 (含公出)</th>
+                                <th class="p-4 text-center border-l border-gray-200">爽人請假 (含公出)</th>
+                                <th class="p-4 text-center border-l border-gray-200">狼人實際出勤</th>
+                                <th class="p-4 text-center border-l border-gray-200">爽人實際出勤</th>
                             </tr>
                         </thead>
-                        <tbody id="comparisonTableBody">
-                            <!-- 動態插入表格內容 -->
+                        <tbody id="stats-table-body">
+                            <!-- Populated by JS -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <div id="calendarView" class="hidden space-y-6">
-            <div class="dashboard-card bg-white rounded-xl shadow-md p-6">
+        <!-- ================= CALENDAR VIEW ================= -->
+        <div id="view-calendar" class="hidden-view fade-in">
+            <div class="glass-card p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800"><i class="far fa-calendar-alt text-primary mr-2"></i> 2026年 請假行事曆</h2>
-                    <div class="flex gap-4 text-sm">
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-accent inline-block"></span> 狼人請假</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-danger inline-block"></span> 爽人請假</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-secondary inline-block"></span> 公出</span>
+                    <h3 class="text-2xl font-bold text-gray-800"><i class="fa-regular fa-calendar-check mr-2 text-primary-green"></i> 2026 員工出勤日曆</h3>
+                    <div class="flex gap-4 text-sm font-medium">
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-primary-orange mr-2"></span>狼人 (請假)</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#EA5252] mr-2"></span>狼人 (公出)</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></span>爽人 (請假)</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#5B7E3C] mr-2"></span>爽人 (公出)</span>
                     </div>
                 </div>
-                
-                <!-- 月份導航 (簡化版，展示1-5月) -->
-                <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
-                    <button class="px-4 py-2 bg-primary text-white rounded-md text-sm font-bold" onclick="renderCalendar(1)">一月</button>
-                    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm" onclick="renderCalendar(2)">二月</button>
-                    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm" onclick="renderCalendar(3)">三月</button>
-                    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm" onclick="renderCalendar(4)">四月</button>
-                    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm" onclick="renderCalendar(5)">五月</button>
-                </div>
-
-                <div id="calendarTitle" class="text-xl font-bold text-center mb-4 text-gray-700">2026年 1月</div>
-                
-                <div class="calendar-grid">
-                    <div class="calendar-day-header">日</div>
-                    <div class="calendar-day-header">一</div>
-                    <div class="calendar-day-header">二</div>
-                    <div class="calendar-day-header">三</div>
-                    <div class="calendar-day-header">四</div>
-                    <div class="calendar-day-header">五</div>
-                    <div class="calendar-day-header">六</div>
-                </div>
-                <div id="calendarBody" class="calendar-grid mt-2">
-                    <!-- 動態插入日曆格子 -->
-                </div>
+                <div id="calendar-container"></div>
             </div>
         </div>
 
     </main>
 
     <script>
-        // --- 1. 資料結構化 ---
-        // 將文字資料轉換為可操作的物件陣列
-        const wolfData = [
-            { month: 1, date: '01/07', day: '三', hours: 8, type: 'leave' },
-            { month: 1, date: '01/09', day: '五', hours: 4, type: 'leave' },
-            { month: 1, date: '01/16', day: '五', hours: 8, type: 'leave' },
-            { month: 1, date: '01/22', day: '四', hours: 8, type: 'leave' },
-            { month: 1, date: '01/30', day: '五', hours: 4, type: 'leave' },
-            { month: 2, date: '02/05', day: '四', hours: 4, type: 'leave' },
-            { month: 2, date: '02/12', day: '四', hours: 4, type: 'leave' },
-            { month: 3, date: '03/06', day: '五', hours: 8, type: 'leave' },
-            { month: 3, date: '03/25', day: '三', hours: 4, type: 'leave' },
-            { month: 4, date: '04/02', day: '四', hours: 3, type: 'leave' },
-            { month: 4, date: '04/15', day: '三', hours: 8, type: 'leave' },
-            { month: 4, date: '04/24', day: '五', hours: 8, type: 'business' }, // 公出
-            { month: 5, date: '05/07', day: '四', hours: 1, type: 'leave' },
-        ];
+        // Data Structure based on User Prompt
+        // Assuming Year 2026 to match the day of week as closely as possible
+        
+        // Base working hours per month (Standard 5-day week, 8h/day, Jan-May 2026)
+        const monthlyWorkHours = {
+            '01': 176, // 22 days
+            '02': 160, // 20 days
+            '03': 176, // 22 days
+            '04': 176, // 22 days
+            '05': 168  // 21 days
+        };
 
-        const chillData = [
-            { month: 1, date: '01/05', day: '二', hours: 8, type: 'leave' },
-            { month: 1, date: '01/21', day: '二', hours: 4, type: 'leave' },
-            { month: 1, date: '01/30', day: '五', hours: 4, type: 'leave' },
-            { month: 2, date: '02/11', day: '三', hours: 8, type: 'leave' },
-            { month: 2, date: '02/26', day: '四', hours: 8, type: 'leave' },
-            { month: 3, date: '03/02', day: '一', hours: 8, type: 'leave' },
-            { month: 3, date: '03/03', day: '二', hours: 8, type: 'leave' },
-            { month: 3, date: '03/04', day: '三', hours: 1, type: 'leave' },
-            { month: 3, date: '03/12', day: '四', hours: 8, type: 'business' }, // 公出
-            { month: 3, date: '03/19', day: '四', hours: 2, type: 'leave' },
-            { month: 3, date: '03/26', day: '四', hours: 8, type: 'leave' },
-            { month: 4, date: '04/08', day: '三', hours: 8, type: 'leave' },
-            { month: 4, date: '04/09', day: '四', hours: 8, type: 'leave' },
-            { month: 4, date: '04/10', day: '五', hours: 8, type: 'leave' },
-            { month: 4, date: '04/13', day: '一', hours: 8, type: 'leave' },
-            { month: 4, date: '04/23', day: '四', hours: 4, type: 'leave' },
-            { month: 5, date: '05/19', day: '二', hours: 8, type: 'leave' },
-        ];
-
-        // 輔助函數：計算天數和小時 (假設一天8小時)
-        function formatHoursToDays(totalHours) {
-            const days = Math.floor(totalHours / 8);
-            const hours = totalHours % 8;
-            if (days === 0) return `${hours}小時`;
-            if (hours === 0) return `${days}天`;
-            return `${days}天又${hours}小時`;
-        }
-
-        // --- 2. 處理資料並渲染卡片 ---
-        function processPersonData(data, containerId, totalId, colorClass) {
-            const summary = {};
-            let grandTotal = 0;
-
-            // 初始化 1-5 月
-            for(let i=1; i<=5; i++) {
-                summary[i] = { leave: 0, business: 0, records: [] };
-            }
-
-            data.forEach(item => {
-                if (item.type === 'leave') {
-                    summary[item.month].leave += item.hours;
-                    grandTotal += item.hours;
-                } else {
-                    summary[item.month].business += item.hours;
-                }
-                summary[item.month].records.push(item);
-            });
-
-            document.getElementById(totalId).textContent = grandTotal;
-
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            for (let month = 1; month <= 5; month++) {
-                const s = summary[month];
-                if (s.leave > 0 || s.business > 0) {
-                    const monthDiv = document.createElement('div');
-                    monthDiv.className = 'border-b border-gray-100 pb-2 last:border-0';
+        const employees = {
+            '狼人': {
+                color: '#FF9D23', // Orange
+                errandColor: '#EA5252', // Red for Errand
+                records: [
+                    { date: '2026-01-07', hours: 8, isErrand: false },
+                    { date: '2026-01-09', hours: 4, isErrand: false },
+                    { date: '2026-01-16', hours: 8, isErrand: false },
+                    { date: '2026-01-22', hours: 8, isErrand: false },
+                    { date: '2026-01-30', hours: 4, isErrand: false },
                     
-                    let recordsHtml = s.records.map(r => {
-                        const isBusiness = r.type === 'business';
-                        return `<span class="inline-block bg-gray-100 rounded px-2 py-1 text-xs m-1 ${isBusiness ? 'border border-secondary' : ''}">
-                                    ${r.date}(${r.day}) ${r.hours}H ${isBusiness ? '<span class="text-secondary font-bold">(公出)</span>' : ''}
-                                </span>`;
-                    }).join('');
-
-                    monthDiv.innerHTML = `
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-700">${month}月</span>
-                            <div class="text-right">
-                                <span class="text-sm font-semibold text-${colorClass}">${formatHoursToDays(s.leave)}</span>
-                                ${s.business > 0 ? `<span class="text-xs text-gray-500 ml-2">公出: ${formatHoursToDays(s.business)}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap">${recordsHtml}</div>
-                    `;
-                    container.appendChild(monthDiv);
-                }
-            }
-            return summary;
-        }
-
-        const wolfSummary = processPersonData(wolfData, 'wolfSummary', 'wolfTotal', 'accent');
-        const chillSummary = processPersonData(chillData, 'chillSummary', 'chillTotal', 'danger');
-
-        // --- 3. 每月出勤狀況分析與圖表 ---
-        const BASE_HOURS = 160; // 假設每月 20 個工作天 = 160 小時
-        const months = ['一月', '二月', '三月', '四月', '五月'];
-        
-        const wolfLeaveHours = [];
-        const chillLeaveHours = [];
-        const wolfBusinessHours = [];
-        const chillBusinessHours = [];
-        
-        const tableBody = document.getElementById('comparisonTableBody');
-
-        for (let i = 1; i <= 5; i++) {
-            const wL = wolfSummary[i].leave;
-            const wB = wolfSummary[i].business;
-            const cL = chillSummary[i].leave;
-            const cB = chillSummary[i].business;
-
-            wolfLeaveHours.push(wL);
-            wolfBusinessHours.push(wB);
-            chillLeaveHours.push(cL);
-            chillBusinessHours.push(cB);
-
-            // 計算出席率 (請假扣除，公出不算請假)
-            const wAttendance = ((BASE_HOURS - wL) / BASE_HOURS * 100).toFixed(1);
-            const cAttendance = ((BASE_HOURS - cL) / BASE_HOURS * 100).toFixed(1);
-
-            const row = document.createElement('tr');
-            row.className = 'bg-white border-b';
-            row.innerHTML = `
-                <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${i}月</th>
-                <td class="px-6 py-4 text-center">${BASE_HOURS}H</td>
-                <td class="px-6 py-4 text-center"><span class="text-accent font-bold">${wL}H</span> / <span class="text-gray-500">${wB}H</span></td>
-                <td class="px-6 py-4 text-center"><span class="text-danger font-bold">${cL}H</span> / <span class="text-gray-500">${cB}H</span></td>
-                <td class="px-6 py-4 text-center font-bold ${wAttendance < 90 ? 'text-red-500' : 'text-green-600'}">${wAttendance}%</td>
-                <td class="px-6 py-4 text-center font-bold ${cAttendance < 90 ? 'text-red-500' : 'text-green-600'}">${cAttendance}%</td>
-            `;
-            tableBody.appendChild(row);
-        }
-
-        // 繪製 Chart.js
-        const ctx = document.getElementById('leaveChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: months,
-                datasets: [
-                    {
-                        label: '狼人 (特休/事病)',
-                        data: wolfLeaveHours,
-                        backgroundColor: '#FF9D23', // accent
-                        stack: 'Stack 0',
-                    },
-                    {
-                        label: '狼人 (公出)',
-                        data: wolfBusinessHours,
-                        backgroundColor: '#FFD65A', // secondary
-                        stack: 'Stack 0',
-                    },
-                    {
-                        label: '爽人 (特休/事病)',
-                        data: chillLeaveHours,
-                        backgroundColor: '#EA5252', // danger
-                        stack: 'Stack 1',
-                    },
-                    {
-                        label: '爽人 (公出)',
-                        data: chillBusinessHours,
-                        backgroundColor: '#FFD65A',
-                        stack: 'Stack 1',
-                    }
+                    { date: '2026-02-05', hours: 4, isErrand: false },
+                    { date: '2026-02-12', hours: 4, isErrand: false },
+                    
+                    { date: '2026-03-06', hours: 8, isErrand: false },
+                    { date: '2026-03-25', hours: 4, isErrand: false },
+                    
+                    { date: '2026-04-02', hours: 3, isErrand: false },
+                    { date: '2026-04-15', hours: 8, isErrand: false },
+                    { date: '2026-04-24', hours: 8, isErrand: true }, // 公出
+                    
+                    { date: '2026-05-07', hours: 1, isErrand: false }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top' },
-                    tooltip: { mode: 'index', intersect: false }
-                },
-                scales: {
-                    x: { stacked: true },
-                    y: { 
-                        stacked: true,
-                        title: { display: true, text: '時數 (H)' }
+            '爽人': {
+                color: '#eab308', // Tailwind Yellow-500 (#eab308) for better contrast than light yellow #FFD65A
+                errandColor: '#5B7E3C', // Green for Errand
+                records: [
+                    { date: '2026-01-05', hours: 8, isErrand: false },
+                    { date: '2026-01-21', hours: 4, isErrand: false },
+                    { date: '2026-01-30', hours: 4, isErrand: false },
+                    
+                    { date: '2026-02-11', hours: 8, isErrand: false },
+                    { date: '2026-02-26', hours: 8, isErrand: false },
+                    
+                    { date: '2026-03-02', hours: 8, isErrand: false },
+                    { date: '2026-03-03', hours: 8, isErrand: false },
+                    { date: '2026-03-04', hours: 1, isErrand: false },
+                    { date: '2026-03-12', hours: 8, isErrand: true }, // 公出
+                    { date: '2026-03-19', hours: 2, isErrand: false },
+                    { date: '2026-03-26', hours: 8, isErrand: false },
+                    
+                    { date: '2026-04-08', hours: 8, isErrand: false },
+                    { date: '2026-04-09', hours: 8, isErrand: false },
+                    { date: '2026-04-10', hours: 8, isErrand: false },
+                    { date: '2026-04-13', hours: 8, isErrand: false },
+                    { date: '2026-04-23', hours: 4, isErrand: false },
+                    { date: '2026-05-19', hours: 8, isErrand: false }
+                ]
+            }
+        };
+
+        const months = ['01', '02', '03', '04', '05'];
+        const monthNames = ['1月', '2月', '3月', '4月', '5月'];
+
+        // Aggregate Data processing
+        let statsData = {
+            '狼人': { leave: [0,0,0,0,0], errand: [0,0,0,0,0] },
+            '爽人': { leave: [0,0,0,0,0], errand: [0,0,0,0,0] }
+        };
+
+        let totalLeaveWolf = 0;
+        let totalLeaveChill = 0;
+
+        function processData() {
+            Object.keys(employees).forEach(emp => {
+                employees[emp].records.forEach(rec => {
+                    const monthIndex = parseInt(rec.date.split('-')[1]) - 1;
+                    if (monthIndex >= 0 && monthIndex <= 4) {
+                        if (rec.isErrand) {
+                            statsData[emp].errand[monthIndex] += rec.hours;
+                        } else {
+                            statsData[emp].leave[monthIndex] += rec.hours;
+                        }
+                        
+                        if(emp === '狼人') totalLeaveWolf += rec.hours;
+                        if(emp === '爽人') totalLeaveChill += rec.hours;
                     }
-                }
-            }
-        });
+                });
+            });
 
-        // --- 4. 視圖切換 ---
-        function switchView(view) {
-            const listView = document.getElementById('listView');
-            const calendarView = document.getElementById('calendarView');
-            const btnList = document.getElementById('btnListView');
-            const btnCal = document.getElementById('btnCalendarView');
-
-            if (view === 'list') {
-                listView.classList.remove('hidden');
-                calendarView.classList.add('hidden');
-                btnList.classList.add('active');
-                btnList.classList.remove('text-gray-600', 'bg-transparent');
-                btnCal.classList.remove('active');
-                btnCal.classList.add('text-gray-600', 'bg-transparent');
-            } else {
-                listView.classList.add('hidden');
-                calendarView.classList.remove('hidden');
-                btnCal.classList.add('active');
-                btnCal.classList.remove('text-gray-600', 'bg-transparent');
-                btnList.classList.remove('active');
-                btnList.classList.add('text-gray-600', 'bg-transparent');
-                
-                // 預設渲染一月
-                renderCalendar(1);
-            }
+            // Update Total Leave UI
+            document.getElementById('total-leave-wolf').innerText = totalLeaveWolf + 'H';
+            document.getElementById('total-leave-chill').innerText = totalLeaveChill + 'H';
         }
 
-        // --- 5. 日曆渲染邏輯 ---
-        function renderCalendar(month) {
-            const calendarBody = document.getElementById('calendarBody');
-            const calendarTitle = document.getElementById('calendarTitle');
-            calendarBody.innerHTML = '';
-            calendarTitle.textContent = `2026年 ${month}月`;
+        function renderTable() {
+            const tbody = document.getElementById('stats-table-body');
+            tbody.innerHTML = '';
 
-            // 更新按鈕樣式
-            const buttons = document.querySelectorAll('#calendarView button');
-            buttons.forEach((btn, idx) => {
-                if (idx === month - 1) {
-                    btn.className = 'px-4 py-2 bg-primary text-white rounded-md text-sm font-bold';
-                } else {
-                    btn.className = 'px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-sm';
+            months.forEach((m, idx) => {
+                const totalWork = monthlyWorkHours[m];
+                
+                const wolfLeave = statsData['狼人'].leave[idx];
+                const wolfErrand = statsData['狼人'].errand[idx];
+                const wolfTotalL = wolfLeave + wolfErrand;
+                const wolfAttend = totalWork - wolfTotalL;
+
+                const chillLeave = statsData['爽人'].leave[idx];
+                const chillErrand = statsData['爽人'].errand[idx];
+                const chillTotalL = chillLeave + chillErrand;
+                const chillAttend = totalWork - chillTotalL;
+
+                const formatCell = (leave, errand) => {
+                    if (leave === 0 && errand === 0) return '<span class="text-gray-400">-</span>';
+                    let html = `<span class="font-bold text-gray-700">${leave + errand}H</span> <span class="text-xs text-gray-500 block mt-1">`;
+                    if (leave > 0) html += `休 ${leave}H `;
+                    if (errand > 0) html += `<span class="text-primary-red">公 ${errand}H</span>`;
+                    html += `</span>`;
+                    return html;
+                };
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-4 text-center font-bold text-gray-700">${monthNames[idx]}</td>
+                    <td class="p-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-sm font-semibold">${totalWork}H</span></td>
+                    <td class="p-4 text-center border-l border-gray-100 bg-orange-50/30">${formatCell(wolfLeave, wolfErrand)}</td>
+                    <td class="p-4 text-center border-l border-gray-100 bg-yellow-50/50">${formatCell(chillLeave, chillErrand)}</td>
+                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-primary-green">${wolfAttend}H</td>
+                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-primary-green">${chillAttend}H</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderCharts() {
+            // Setup Bar Chart
+            const ctxBar = document.getElementById('monthlyChart').getContext('2d');
+            
+            const wolfTotalLeavePerMonth = statsData['狼人'].leave.map((l, i) => l + statsData['狼人'].errand[i]);
+            const chillTotalLeavePerMonth = statsData['爽人'].leave.map((l, i) => l + statsData['爽人'].errand[i]);
+
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: monthNames,
+                    datasets: [
+                        {
+                            label: '狼人請假時數',
+                            data: wolfTotalLeavePerMonth,
+                            backgroundColor: '#FF9D23',
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        },
+                        {
+                            label: '爽人請假時數',
+                            data: chillTotalLeavePerMonth,
+                            backgroundColor: '#eab308',
+                            borderRadius: 6,
+                            barPercentage: 0.6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Inter', weight: '600' } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            padding: 12,
+                            titleFont: { size: 14, family: 'Inter' },
+                            bodyFont: { size: 13, family: 'Inter' },
+                            callbacks: { label: function(context) { return context.dataset.label + ': ' + context.parsed.y + 'H'; } }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { dash: [4, 4] }, ticks: { stepSize: 8, callback: function(val){return val+'H'} } },
+                        x: { grid: { display: false } }
+                    }
                 }
             });
 
-            // 取得該月天數和第一天是星期幾 (2026年)
-            const daysInMonth = new Date(2026, month, 0).getDate();
-            const firstDay = new Date(2026, month - 1, 1).getDay();
-
-            // 填充空白天數
-            for (let i = 0; i < firstDay; i++) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'calendar-day bg-gray-50 border-transparent';
-                calendarBody.appendChild(emptyDiv);
-            }
-
-            // 填充實際天數
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'calendar-day';
-                
-                // 標示週末
-                const currentDayOfWeek = new Date(2026, month - 1, day).getDay();
-                if (currentDayOfWeek === 0 || currentDayOfWeek === 6) {
-                    dayDiv.classList.add('bg-gray-100');
-                }
-
-                let html = `<span class="absolute top-1 left-1 ${currentDayOfWeek===0||currentDayOfWeek===6?'text-red-400':''}">${day}</span><div class="mt-4 space-y-1">`;
-
-                // 檢查是否有請假記錄
-                const dateStr = `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`;
-                
-                const wolfRecord = wolfData.find(r => r.date === dateStr);
-                if (wolfRecord) {
-                    const bgClass = wolfRecord.type === 'business' ? 'leave-business' : 'leave-wolf';
-                    const text = wolfRecord.type === 'business' ? `狼人:公出${wolfRecord.hours}H` : `狼人:${wolfRecord.hours}H`;
-                    html += `<span class="leave-badge ${bgClass}" title="${text}">${text}</span>`;
-                }
-
-                const chillRecord = chillData.find(r => r.date === dateStr);
-                if (chillRecord) {
-                    const bgClass = chillRecord.type === 'business' ? 'leave-business' : 'leave-chill';
-                    const text = chillRecord.type === 'business' ? `爽人:公出${chillRecord.hours}H` : `爽人:${chillRecord.hours}H`;
-                    html += `<span class="leave-badge ${bgClass}" title="${text}">${text}</span>`;
-                }
-
-                html += `</div>`;
-                dayDiv.innerHTML = html;
-                calendarBody.appendChild(dayDiv);
-            }
-        }
-
-        // --- 6. 匯出 TXT 功能 ---
-        function exportToTxt() {
-            let content = "=== Happy Hours & Happy Work 人事請假明細 ===\r\n";
-            content += "匯出時間：" + new Date().toLocaleString() + "\r\n\r\n";
-
-            function buildTextForPerson(name, data, totalId) {
-                let text = `【同仁：${name}】\r\n`;
-                const totalHours = document.getElementById(totalId).textContent;
-                text += `總計時數：${totalHours}H (${formatHoursToDays(parseInt(totalHours))})\r\n`;
-                text += "----------------------------------------\r\n";
-                
-                // 按月份分組
-                const months = {};
-                data.forEach(item => {
-                    if (!months[item.month]) months[item.month] = [];
-                    months[item.month].push(item);
-                });
-
-                for (let i = 1; i <= 12; i++) {
-                    if (months[i] && months[i].length > 0) {
-                        text += `[${i}月]\r\n`;
-                        months[i].forEach(item => {
-                            const typeStr = item.type === 'business' ? '(公出)' : '';
-                            text += `  - ${item.date}(${item.day}) ${item.hours}H ${typeStr}\r\n`;
-                        });
-                        text += "\r\n";
+            // Setup Donut Chart
+            const ctxDonut = document.getElementById('totalLeaveChart').getContext('2d');
+            new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['狼人', '爽人'],
+                    datasets: [{
+                        data: [totalLeaveWolf, totalLeaveChill],
+                        backgroundColor: ['#FF9D23', '#eab308'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function(context) { return ' ' + context.parsed + 'H'; } } }
                     }
                 }
-                return text;
-            }
+            });
+        }
 
-            content += buildTextForPerson('狼人', wolfData, 'wolfTotal');
-            content += buildTextForPerson('爽人', chillData, 'chillTotal');
+        let calendarInstance = null;
 
-            // 建立 Blob 與下載連結
+        function initCalendar() {
+            if (calendarInstance) return; // Already initialized
+
+            const calendarEl = document.getElementById('calendar-container');
+            const events = [];
+
+            Object.keys(employees).forEach(emp => {
+                employees[emp].records.forEach(rec => {
+                    events.push({
+                        title: `${emp} ${rec.hours}H ${rec.isErrand ? '(公出)' : ''}`,
+                        start: rec.date,
+                        backgroundColor: rec.isErrand ? employees[emp].errandColor : employees[emp].color,
+                        borderColor: rec.isErrand ? employees[emp].errandColor : employees[emp].color,
+                        allDay: true,
+                        extendedProps: { isErrand: rec.isErrand, hours: rec.hours }
+                    });
+                });
+            });
+
+            calendarInstance = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                initialDate: '2026-03-01', // Set to middle of the data
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,dayGridWeek'
+                },
+                locale: 'zh-tw',
+                events: events,
+                height: '100%',
+                eventContent: function(arg) {
+                    let iconHtml = arg.event.extendedProps.isErrand ? '<i class="fa-solid fa-briefcase mr-1 opacity-80"></i>' : '<i class="fa-solid fa-bed mr-1 opacity-80"></i>';
+                    return { html: `<div class="p-1 w-full truncate shadow-sm rounded flex items-center">${iconHtml} <span class="font-bold">${arg.event.title}</span></div>` };
+                }
+            });
+
+            calendarInstance.render();
+        }
+
+        // Export to TXT Logic
+        function exportToTXT() {
+            let content = "Happy Hours & Happy Work - 員工請假與公出明細\n";
+            content += "========================================\n\n";
+
+            Object.keys(employees).forEach(emp => {
+                content += `員工: ${emp}\n`;
+                content += `----------------------------------------\n`;
+                let totalLeave = 0;
+                let totalErrand = 0;
+                
+                employees[emp].records.forEach(rec => {
+                    const type = rec.isErrand ? "公出" : "請假";
+                    content += `日期: ${rec.date} | 時數: ${rec.hours}H | 類型: ${type}\n`;
+                    if (rec.isErrand) {
+                        totalErrand += rec.hours;
+                    } else {
+                        totalLeave += rec.hours;
+                    }
+                });
+                content += `----------------------------------------\n`;
+                content += `總請假時數: ${totalLeave}H\n`;
+                content += `總公出時數: ${totalErrand}H\n`;
+                content += `========================================\n\n`;
+            });
+
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = '人事請假明細_狼人與爽人.txt';
+            a.download = '員工出勤明細_2026.txt';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        // View Toggling Logic
+        function switchView(viewName) {
+            const btnGeneral = document.getElementById('btn-general');
+            const btnCalendar = document.getElementById('btn-calendar');
+            const viewGeneral = document.getElementById('view-general');
+            const viewCalendar = document.getElementById('view-calendar');
+
+            if (viewName === 'general') {
+                btnGeneral.className = 'toggle-btn active';
+                btnCalendar.className = 'toggle-btn inactive';
+                viewGeneral.classList.remove('hidden-view');
+                viewCalendar.classList.add('hidden-view');
+            } else {
+                btnGeneral.className = 'toggle-btn inactive';
+                btnCalendar.className = 'toggle-btn active';
+                viewGeneral.classList.add('hidden-view');
+                viewCalendar.classList.remove('hidden-view');
+                
+                // Need to initialize or render calendar after it becomes visible to fix sizing issues
+                if (!calendarInstance) {
+                    initCalendar();
+                } else {
+                    calendarInstance.render();
+                }
+            }
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            processData();
+            renderTable();
+            renderCharts();
+            
+            // Note: Calendar is initialized on first switch to avoid size glitch when hidden
+        });
+
     </script>
 </body>
 </html>
