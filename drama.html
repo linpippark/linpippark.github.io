@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最新上映電視劇推薦查詢系統 | StreamScope 影視導航</title>
+  <!-- Google Fonts: Outfit for titles, Inter for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="logo">
+        <i class="fa-solid fa-play-css logo-icon"></i>
+        <span>StreamScope <small>影視導航</small></span>
+      </div>
+      <nav class="nav-links">
+        <a href="#" class="active"><i class="fa-solid fa-house"></i> 首頁</a>
+        <a href="#recommendations"><i class="fa-solid fa-fire"></i> 熱門推薦</a>
+        <a href="#all-shows"><i class="fa-solid fa-list"></i> 劇集總覽</a>
+      </nav>
+      <div class="header-right">
+        <button class="sync-settings-btn" id="open-sync-settings" title="實時數據同步">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>實時同步</span>
+        </button>
+        <div class="search-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="global-search" placeholder="搜尋劇名、演員或類型...">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Carousel Segment (Hot TV Series) -->
+  <section class="hero-carousel-section" id="recommendations">
+    <div class="carousel-container">
+      <div class="carousel-slides" id="carousel-slides-wrapper">
+        <!-- Slides will be dynamically injected by app.js -->
+      </div>
+      
+      <!-- Carousel Indicators/Dots -->
+      <div class="carousel-nav">
+        <button class="carousel-btn prev-btn" id="carousel-prev" aria-label="上一個"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="carousel-dots" id="carousel-dots-wrapper">
+          <!-- Dots will be dynamically injected by app.js -->
+        </div>
+        <button class="carousel-btn next-btn" id="carousel-next" aria-label="下一個"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content Area -->
+  <main class="main-content container" id="all-shows">
+    <div class="section-header">
+      <div class="title-area">
+        <h2><i class="fa-solid fa-clapperboard"></i> 劇集推薦與查詢系統</h2>
+        <p>提供 100% 真實的最新播映資訊（目前時間：2026年5月）</p>
+      </div>
+    </div>
+
+    <!-- Filter Bar Container -->
+    <div class="filter-bar-container">
+      <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-globe"></i> 國別篩選:</span>
+        <div class="filter-options" id="country-filters">
+          <button class="filter-chip active" data-country="all">全部地區</button>
+          <button class="filter-chip" data-country="US">美國劇</button>
+          <button class="filter-chip" data-country="KR">韓國劇</button>
+          <button class="filter-chip" data-country="JP">日本劇</button>
+          <button class="filter-chip" data-country="EU">歐洲劇</button>
+          <button class="filter-chip" data-country="TH">泰國劇</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-calendar-days"></i> 上映檔期:</span>
+        <div class="filter-options" id="month-filters">
+          <button class="filter-chip active" data-month="all">全部檔期</button>
+          <button class="filter-chip" data-month="current">本月上映 (2026/05)</button>
+          <button class="filter-chip" data-month="upcoming">下月即將上映 (2026/06)</button>
+          <button class="filter-chip" data-month="late2026">2026年底前 (下半年)</button>
+          <button class="filter-chip" data-month="year2027">2027年即將上映</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Filters Summary -->
+    <div class="active-filters-summary" id="filters-summary" style="display: none;">
+      <span>正在篩選：</span>
+      <div class="summary-chips" id="summary-chips-container"></div>
+      <button class="clear-filters-btn" id="clear-filters"><i class="fa-solid fa-rotate-left"></i> 重設篩選</button>
+    </div>
+
+    <!-- TV Series Cards Grid -->
+    <div class="cards-grid" id="shows-grid">
+      <!-- Cards will be dynamically injected by app.js -->
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="no-results" style="display: none;">
+      <i class="fa-solid fa-video-slash"></i>
+      <h3>找不到符合條件的劇集</h3>
+      <p>請嘗試調整您的關鍵字或篩選條件</p>
+    </div>
+  </main>
+
+  <!-- Detailed Modal Popup -->
+  <div class="modal-overlay" id="detail-modal">
+    <div class="modal-content glassmorphism">
+      <button class="close-modal-btn" id="close-modal" aria-label="關閉"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-body" id="modal-body-content">
+        <!-- Content will be injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Trailer Player Modal -->
+  <div class="modal-overlay" id="trailer-modal">
+    <div class="trailer-modal-content glassmorphism">
+      <button class="close-modal-btn" id="close-trailer" aria-label="關閉預告"><i class="fa-solid fa-xmark"></i></button>
+      <div class="video-container">
+        <iframe id="trailer-iframe" src="" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Sync Settings Modal -->
+  <div class="modal-overlay" id="sync-settings-modal">
+    <div class="settings-modal-content glassmorphism">
+      <button class="close-modal-btn" id="close-settings" aria-label="關閉設定"><i class="fa-solid fa-xmark"></i></button>
+      <div class="settings-header">
+        <h3><i class="fa-solid fa-arrows-rotate"></i> 實時數據同步設定</h3>
+        <p>啟用 TMDb 雲端同步，獲取最新、不需維護的即時影視資訊。</p>
+      </div>
+      <div class="settings-body">
+        <div class="setting-item toggle-item">
+          <div class="setting-info">
+            <span class="setting-title">開啟 TMDb 雲端實時同步</span>
+            <span class="setting-desc">啟用後系統將透過 API 直接連接 The Movie Database 獲取最新即時播映檔期。</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="tmdb-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="setting-item input-item" id="tmdb-key-container">
+          <label for="tmdb-key-input" class="setting-title">TMDb v3 API 金鑰 (API Key)</label>
+          <div class="input-with-button">
+            <input type="password" id="tmdb-key-input" placeholder="輸入您的 TMDb v3 API 金鑰...">
+            <button class="toggle-password-btn" id="toggle-key-visibility" type="button">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <span class="setting-desc">實時同步需要免費的 TMDb API 金鑰。<a href="https://www.themoviedb.org/signup" target="_blank" class="accent-link">點此註冊 TMDb 帳戶</a> 並在設定中的 API 頁面免費申請金鑰。</span>
+        </div>
+
+        <div class="sync-status-box" id="sync-status">
+          <div class="status-indicator offline"></div>
+          <div class="status-text">
+            <strong id="sync-status-title">目前狀態：本地快取模式</strong>
+            <span id="sync-status-desc">使用專屬精選高品質 Traditional Chinese 電視劇數據（共 24 部劇）。</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-footer">
+        <button class="btn btn-secondary" id="cancel-settings">取消</button>
+        <button class="btn btn-primary" id="save-settings">儲存並套用</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <div class="footer-brand">
+        <i class="fa-solid fa-play-css logo-icon"></i>
+        <span>StreamScope</span>
+      </div>
+      <p>© 2026 StreamScope 影視導航. 所有數據經由 100% 事實查核，即時提供美、韓、日、歐、泰劇集最新動態。</p>
+    </div>
+  </footer>
+
+  <!-- Core Javascript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
