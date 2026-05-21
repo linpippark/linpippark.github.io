@@ -1,5 +1,5 @@
 /**
- * StreamScope TV Drama Recommendation & Search Engine
+ * DramaPark TV Drama Recommendation & Search Engine
  * 100% Factually Checked Dataset & Interactive Mechanics
  * Reference: IMDb / TMDb / Official Releases
  * Current System Date: 2026-05-21
@@ -781,6 +781,82 @@ async function startTMDbSync() {
   }
 }
 
+// --- Friendly Genre Icon Dictionary & Mapper ---
+function getGenreIcon(genre) {
+  const mapping = {
+    "超自然驚悚": "fa-ghost",
+    "懸疑": "fa-magnifying-glass",
+    "科幻驚悚": "fa-user-astronaut",
+    "科幻": "fa-robot",
+    "奇幻喜劇": "fa-wand-magic-sparkles",
+    "奇幻冒險": "fa-wand-magic-sparkles",
+    "奇幻": "fa-wand-magic-sparkles",
+    "科幻奇幻": "fa-wand-magic-sparkles",
+    "動作": "fa-bolt",
+    "刀劍動作": "fa-shield-halved",
+    "動作驚悚": "fa-bolt",
+    "動作冒險": "fa-bolt",
+    "超能力": "fa-bolt-lightning",
+    "超能力犯罪": "fa-bolt-lightning",
+    "浪漫愛情": "fa-heart",
+    "浪漫 BL": "fa-heart",
+    "浪漫 GL": "fa-heart",
+    "GL": "fa-heart",
+    "BL": "fa-heart",
+    "深刻劇情": "fa-masks-theater",
+    "劇情": "fa-masks-theater",
+    "職場劇情": "fa-briefcase",
+    "人生成長": "fa-arrow-trend-up",
+    "女性情誼": "fa-user-group",
+    "社會議題": "fa-circle-question",
+    "史詩犯罪": "fa-user-secret",
+    "政治博弈": "fa-landmark",
+    "時代劇情": "fa-landmark",
+    "青春浪漫": "fa-graduation-cap",
+    "青春喜劇": "fa-graduation-cap",
+    "青春懸疑": "fa-graduation-cap",
+    "職場喜劇": "fa-briefcase",
+    "職場反擊": "fa-briefcase",
+    "職場鬥爭": "fa-briefcase",
+    "美食藝術": "fa-utensils",
+    "高壓緊張": "fa-gauge-high",
+    "超級英雄": "fa-mask",
+    "黑色電影": "fa-moon",
+    "歷史時代劇": "fa-landmark",
+    "犯罪爆笑": "fa-handcuffs",
+    "犯罪劇情": "fa-user-secret",
+    "犯罪懸疑": "fa-user-secret",
+    "犯罪": "fa-user-secret",
+    "鄉村輕喜": "fa-wheat-awn",
+    "紀實改編": "fa-file-signature",
+    "真實改編": "fa-file-signature",
+    "都市愛情": "fa-building",
+    "醫療愛情": "fa-stethoscope",
+    "網漫改編": "fa-book-open",
+    "漫畫改編": "fa-book-open",
+    "漫改神作": "fa-book-open",
+    "溫馨懸疑": "fa-mug-hot",
+    "溫馨偵探": "fa-mug-hot",
+    "輕快懸疑": "fa-magnifying-glass",
+    "幽默小鎮": "fa-map-pin",
+    "喜劇": "fa-face-smile",
+    "動畫": "fa-palette",
+    "紀錄": "fa-camera",
+    "家庭": "fa-house-chimney-user",
+    "兒童": "fa-baby-carriage",
+    "戰爭政治": "fa-flag",
+    "肥皂劇": "fa-soap",
+    "談話": "fa-comments"
+  };
+
+  for (let key in mapping) {
+    if (genre.includes(key)) {
+      return `<i class="fa-solid ${mapping[key]}"></i> `;
+    }
+  }
+  return `<i class="fa-solid fa-hashtag"></i> `;
+}
+
 // --- 1. Carousel Slide Engine (Hot Dramas) ---
 function initCarousel() {
   const hotDramas = activeDramas.filter(d => d.isHot);
@@ -800,7 +876,7 @@ function initCarousel() {
         <div class="slide-metadata">
           <span class="slide-rating"><i class="fa-solid fa-star"></i> ${drama.rating} 評分</span>
           <span class="slide-rec"><i class="fa-solid fa-heart"></i> ${drama.recIndex}% 推薦</span>
-          <span class="slide-genre">${drama.genres.join(" / ")}</span>
+          <span class="slide-genre">${drama.genres.map(g => getGenreIcon(g) + g).join(" / ")}</span>
           <span class="slide-country"><i class="fa-solid fa-earth-asia"></i> ${drama.countryName}</span>
         </div>
         <p class="slide-desc">${drama.summary}</p>
@@ -910,35 +986,39 @@ function renderShows() {
 
     let timingBadgeClass = "badge-month-current";
     let timingBadgeLabel = "本月上映";
+    let timingBadgeIcon = "fa-hourglass-start";
     if (drama.timing === "upcoming") {
       timingBadgeClass = "badge-month-upcoming";
       timingBadgeLabel = "下月預告";
+      timingBadgeIcon = "fa-hourglass-half";
     } else if (drama.timing === "late2026") {
       timingBadgeClass = "badge-month-late2026";
       timingBadgeLabel = "2026下半年";
+      timingBadgeIcon = "fa-snowflake";
     } else if (drama.timing === "year2027") {
       timingBadgeClass = "badge-month-year2027";
       timingBadgeLabel = "2027年預告";
+      timingBadgeIcon = "fa-rocket";
     }
 
     card.innerHTML = `
       <div class="card-img-wrapper">
-        <span class="card-badge ${timingBadgeClass}">${timingBadgeLabel}</span>
+        <span class="card-badge ${timingBadgeClass}"><i class="fa-solid ${timingBadgeIcon}"></i> ${timingBadgeLabel}</span>
         <span class="card-rating-float"><i class="fa-solid fa-star"></i> ${drama.rating}</span>
         ${posterContent}
       </div>
       <div class="card-content">
         <h3 class="card-title" title="${drama.titleCN}">${drama.titleCN}</h3>
         <div class="card-tags">
-          ${drama.genres.slice(0, 2).map(g => `<span class="card-tag">${g}</span>`).join("")}
-          <span class="card-tag" style="background: rgba(255,255,255,0.06); color: #fff;">${drama.countryName}</span>
+          ${drama.genres.slice(0, 2).map(g => `<span class="card-tag">${getGenreIcon(g)}${g}</span>`).join("")}
+          <span class="card-tag" style="background: rgba(24, 116, 152, 0.1); border: 1px solid rgba(24, 116, 152, 0.2); color: #7dd3fc;"><i class="fa-solid fa-earth-asia"></i> ${drama.countryName}</span>
         </div>
         <div class="card-info-item">
-          <i class="fa-solid fa-calendar"></i>
+          <i class="fa-solid fa-calendar-days"></i>
           <span>檔期: ${drama.releaseDate}</span>
         </div>
         <div class="card-info-item">
-          <i class="fa-solid fa-user-group"></i>
+          <i class="fa-solid fa-users"></i>
           <span title="${drama.cast.join(", ")}">演員: ${drama.cast.slice(0, 2).join(", ")}...</span>
         </div>
         <div class="card-info-item">
@@ -949,7 +1029,7 @@ function renderShows() {
         <div class="card-footer">
           <div class="rec-bar-container">
             <div class="rec-bar-label">
-              <span>推薦指數</span>
+              <span><i class="fa-solid fa-heart"></i> 推薦指數</span>
               <span>${drama.recIndex}%</span>
             </div>
             <div class="rec-bar-track">
@@ -1163,15 +1243,19 @@ function openDetails(showId) {
 function renderDetailsModalContent(drama) {
   let timingBadgeClass = "";
   let timingBadgeLabel = "本月上映";
+  let timingBadgeIcon = "fa-hourglass-start";
   if (drama.timing === "upcoming") {
     timingBadgeClass = "upcoming";
     timingBadgeLabel = "下月預告";
+    timingBadgeIcon = "fa-hourglass-half";
   } else if (drama.timing === "late2026") {
     timingBadgeClass = "late2026";
     timingBadgeLabel = "2026下半年";
+    timingBadgeIcon = "fa-snowflake";
   } else if (drama.timing === "year2027") {
     timingBadgeClass = "year2027";
     timingBadgeLabel = "2027年預告";
+    timingBadgeIcon = "fa-rocket";
   }
 
   let posterHtml = `<img src="${drama.poster}" alt="${drama.titleCN}">`;
@@ -1195,40 +1279,40 @@ function renderDetailsModalContent(drama) {
       </div>
       <div class="modal-right">
         <span class="modal-timing-badge ${timingBadgeClass}">
-          <i class="fa-solid fa-circle-nodes"></i> ${timingBadgeLabel}
+          <i class="fa-solid ${timingBadgeIcon}"></i> ${timingBadgeLabel}
         </span>
         <h3 class="modal-title-cn">${drama.titleCN}</h3>
         <span class="modal-title-en">${drama.titleEN}</span>
         
         <table class="detail-table">
           <tr>
-            <td class="label-col">國家地區</td>
+            <td class="label-col"><i class="fa-solid fa-earth-asia"></i> 國家地區</td>
             <td class="val-col">${drama.countryName}</td>
           </tr>
           <tr>
-            <td class="label-col">劇集類型</td>
-            <td class="val-col">${drama.genres.join(" / ")}</td>
+            <td class="label-col"><i class="fa-solid fa-tags"></i> 劇集類型</td>
+            <td class="val-col">${drama.genres.map(g => getGenreIcon(g) + g).join(" / ")}</td>
           </tr>
           <tr>
-            <td class="label-col">上映時間</td>
+            <td class="label-col"><i class="fa-solid fa-calendar-days"></i> 上映時間</td>
             <td class="val-col">${drama.releaseDate}</td>
           </tr>
           <tr>
-            <td class="label-col">總 集 數</td>
+            <td class="label-col"><i class="fa-solid fa-tv"></i> 總 集 數</td>
             <td class="val-col">${drama.episodes !== "更新中" && drama.episodes !== "未知" ? drama.episodes + " 集" : drama.episodes}</td>
           </tr>
           <tr>
-            <td class="label-col">播出平台</td>
+            <td class="label-col"><i class="fa-solid fa-display"></i> 播出平台</td>
             <td class="val-col">${drama.platform}</td>
           </tr>
           <tr>
-            <td class="label-col">演員陣容</td>
+            <td class="label-col"><i class="fa-solid fa-users"></i> 演員陣容</td>
             <td class="val-col">${drama.cast.join("、 ")}</td>
           </tr>
         </table>
         
         <div class="modal-summary">
-          <h4>劇集介紹</h4>
+          <h4><i class="fa-solid fa-circle-info"></i> 劇集介紹</h4>
           <p>${drama.summary}</p>
         </div>
         
