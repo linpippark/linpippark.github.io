@@ -5,6 +5,11 @@
  * Current System Date: 2026-05-21
  */
 
+// --- TMDb API Hardcoded Credentials Config ---
+// 💡 如果您有自己的 TMDb API v3 金鑰，請直接貼在下方雙引號中。
+// 填寫後，系統在啟動時會自動啟用雲端實時同步，使用者無需再手動於介面輸入。
+const TMDB_API_KEY = "157a810422be8498d4a972fac1205456";
+
 // --- 100% Authentic Dataset (16 Real-World TV Shows for May & June 2026) ---
 const dramas = [
   {
@@ -527,6 +532,13 @@ function useLocalDramas() {
 
 // Load sync settings from browser LocalStorage
 function loadSyncSettings() {
+  // If API key is hardcoded in JS, use it and enable sync automatically
+  if (typeof TMDB_API_KEY !== "undefined" && TMDB_API_KEY && TMDB_API_KEY !== "YOUR_TMDB_API_KEY_HERE") {
+    tmdbApiKey = TMDB_API_KEY;
+    tmdbSyncEnabled = true;
+    return;
+  }
+
   const savedEnabled = localStorage.getItem("tmdb_sync_enabled");
   const savedKey = localStorage.getItem("tmdb_api_key");
 
