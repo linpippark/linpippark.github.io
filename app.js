@@ -104,7 +104,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=The+Bear+Season+5+Official+Trailer",
     summary: "榮獲多項艾美獎的現象級神劇迎來最終章第五季。卡米（Carmy）與他的廚藝團隊在經歷了米其林星級的洗禮與個人情感的崩潰後，將面臨餐廳生死存亡的終極考驗。高頻率的剪輯、極度真實的廚房衝突與溫暖的人性光輝依然是本季焦點。",
-    isHot: false,
+    isHot: true,
     platform: "FX / Hulu"
   },
   {
@@ -123,7 +123,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Spider-Noir+Nicolas+Cage+Official+Trailer",
     summary: "講述在 1930 年代紐約，一位年邁且生活落魄的私家偵探（由奧斯卡影帝尼可拉斯·凱吉飾演），作為城市中唯一的超級英雄，在黑白交織的犯罪網中掙扎求生的黑色硬漢故事。極致講究的黑白光影美學與硬派動作設計，是本劇的最大亮點。",
-    isHot: false,
+    isHot: true,
     platform: "MGM+ / Prime Video"
   },
   {
@@ -142,7 +142,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Song+of+the+Samurai+HBO+Max+Trailer",
     summary: "改編自經典幕末漫畫《新選組默示錄》。講述江戶時代末期，新選組隊士們在動盪不安的京都中，為了守護信仰與心中的正義而揮刀戰鬥的壯烈時代悲歌。由 HBO Max 聯合出品，武打場面宏大且極致考究。",
-    isHot: false,
+    isHot: true,
     platform: "HBO Max / U-NEXT"
   },
   {
@@ -161,7 +161,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Fifties+Professionals+Kdrama+Trailer",
     summary: "講述三位年過半百、看似落魄但各自身懷絕技的中年男子，因一場意外的巨額洗錢案被重新召集，展開一場爆笑又驚險的世紀反擊。申河均、吳正世、許城泰三位影帝級戲骨同台飆戲，張力十足。",
-    isHot: false,
+    isHot: true,
     platform: "Genie TV / ENA"
   },
   {
@@ -332,7 +332,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Lanterns+HBO+Official+Trailer",
     summary: "改編自 DC 漫畫經典 IP《綠光戰警》，這部 HBO 頂級科幻懸疑大作以雙主角形式展開。新任綠光戰警約翰·史都華與傳奇綠光戰警哈爾·喬丹在地球深處調查一宗離奇命案，卻意外扯出了威脅整個宇宙的驚天陰謀。風格偏向《無間警探》般陰暗硬派。",
-    isHot: false,
+    isHot: true,
     platform: "HBO / Max"
   },
   {
@@ -351,7 +351,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=A+Shop+for+Killers+Season+2+Disney+Trailer",
     summary: "備受期待的爆品韓劇《殺手接班人》第二季強勢回歸！接續第一季叔叔鄭進灣驚天復活的震撼結論，鄭智安正式接掌了神秘且致命的武器購物網站。隨著各國頂尖殺手與地下勢力再次蠢蠢欲動，叔姪倆將攜手在槍林彈雨中揭開購物網背後的終極真相。",
-    isHot: false,
+    isHot: true,
     platform: "Disney+"
   },
   {
@@ -370,7 +370,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Made+in+Korea+Kdrama+Disney+Trailer",
     summary: "由影帝玄彬與鄭雨盛巔峰交鋒的史詩級巨作《韓國製造》推出第二季。背景橫跨動盪的 1970 年代，描繪一個充滿野心與財富激盪的時代。身懷滔天權慾的男人與挺身對抗他的正義檢察官，將展開更加慘烈無情的生死較量。",
-    isHot: false,
+    isHot: true,
     platform: "Disney+"
   },
   {
@@ -408,7 +408,7 @@ const dramas = [
     poster: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=500&q=80",
     trailer: "https://www.youtube.com/results?search_query=Severance+Season+3+Apple+TV+Trailer",
     summary: "榮獲多項大獎的現象級燒腦神劇《人生切割術》強勢續訂第三季。在第二季結尾打破內外人格界限的驚天逃亡後，馬克（Mark）與他的小組成員在盧盟工業內部展開了更具威脅的反擊，試圖徹底拆毀這座控制他們心智的龐大反烏托邦帝國。",
-    isHot: false,
+    isHot: true,
     platform: "Apple TV+"
   },
   {
@@ -473,6 +473,7 @@ const dramas = [
 // --- State Management ---
 let currentCountryFilter = "all";
 let currentMonthFilter = "all";
+let currentPlatformFilter = "all";
 let currentSearchQuery = "";
 let currentCarouselIndex = 0;
 let carouselInterval = null;
@@ -489,11 +490,13 @@ const carouselPrevBtn = document.getElementById("carousel-prev");
 const carouselNextBtn = document.getElementById("carousel-next");
 
 const showsGrid = document.getElementById("shows-grid");
+const hotShowsGrid = document.getElementById("hot-shows-grid");
 const noResultsElement = document.getElementById("no-results");
 const globalSearchInput = document.getElementById("global-search");
 
 const countryFiltersContainer = document.getElementById("country-filters");
 const monthFiltersContainer = document.getElementById("month-filters");
+const platformFiltersContainer = document.getElementById("platform-filters");
 
 const filtersSummaryElement = document.getElementById("filters-summary");
 const summaryChipsContainer = document.getElementById("summary-chips-container");
@@ -527,6 +530,7 @@ function useLocalDramas() {
   activeDramas = JSON.parse(JSON.stringify(dramas));
   initCarousel();
   renderShows();
+  renderHotShows();
   updateSyncStatusUI(false);
 }
 
@@ -759,11 +763,11 @@ async function startTMDbSync() {
       throw new Error("TMDb 未返回任何劇集數據");
     }
 
-    // Select Top 4 most popular shows from current/upcoming sets for the Carousel
+    // Select Top 10 most popular shows from current/upcoming sets for the Carousel
     const currentAndUpcoming = tempDramas.filter(d => d.timing === "current" || d.timing === "upcoming");
     currentAndUpcoming.sort((a, b) => b.popularity - a.popularity);
     
-    const hotIds = currentAndUpcoming.slice(0, 4).map(d => d.id);
+    const hotIds = currentAndUpcoming.slice(0, 10).map(d => d.id);
     tempDramas.forEach(d => {
       if (hotIds.includes(d.id)) {
         d.isHot = true;
@@ -773,6 +777,7 @@ async function startTMDbSync() {
     activeDramas = tempDramas;
     initCarousel();
     renderShows();
+    renderHotShows();
     updateSyncStatusUI(false);
   } catch (error) {
     console.error("TMDb Synchronization Error:", error);
@@ -963,7 +968,36 @@ function renderShows() {
       drama.genres.some(g => g.toLowerCase().includes(query)) ||
       drama.cast.some(actor => actor.toLowerCase().includes(query));
 
-    return matchesCountry && matchesTiming && matchesSearch;
+    // Platform Filter
+    let matchesPlatform = true;
+    if (currentPlatformFilter !== "all") {
+      const platformStr = (drama.platform || "").toLowerCase();
+      if (currentPlatformFilter === "netflix") {
+        matchesPlatform = platformStr.includes("netflix");
+      } else if (currentPlatformFilter === "disney") {
+        matchesPlatform = platformStr.includes("disney");
+      } else if (currentPlatformFilter === "prime") {
+        matchesPlatform = platformStr.includes("prime") || platformStr.includes("amazon");
+      } else if (currentPlatformFilter === "hbo") {
+        matchesPlatform = platformStr.includes("hbo") || platformStr.includes("max");
+      } else if (currentPlatformFilter === "hulu") {
+        matchesPlatform = platformStr.includes("hulu");
+      } else if (currentPlatformFilter === "apple") {
+        matchesPlatform = platformStr.includes("apple");
+      } else if (currentPlatformFilter === "others") {
+        const isMajor = platformStr.includes("netflix") || 
+                        platformStr.includes("disney") || 
+                        platformStr.includes("prime") || 
+                        platformStr.includes("amazon") || 
+                        platformStr.includes("hbo") || 
+                        platformStr.includes("max") || 
+                        platformStr.includes("hulu") || 
+                        platformStr.includes("apple");
+        matchesPlatform = !isMajor;
+      }
+    }
+
+    return matchesCountry && matchesTiming && matchesSearch && matchesPlatform;
   });
 
   // Empty State Check
@@ -1046,6 +1080,80 @@ function renderShows() {
   updateFilterSummaryBanner();
 }
 
+// --- 2b. Hot Shows Grid Rendering System ---
+function renderHotShows() {
+  if (!hotShowsGrid) return;
+  hotShowsGrid.innerHTML = "";
+
+  const hotDramas = activeDramas.filter(d => d.isHot);
+
+  hotDramas.forEach(drama => {
+    const card = document.createElement("div");
+    card.className = "show-card";
+    card.addEventListener("click", () => openDetails(drama.id));
+
+    let posterContent = `<img src="${drama.poster}" alt="${drama.titleCN}" loading="lazy">`;
+
+    let timingBadgeClass = "badge-month-current";
+    let timingBadgeLabel = "本月上映";
+    let timingBadgeIcon = "fa-hourglass-start";
+    if (drama.timing === "upcoming") {
+      timingBadgeClass = "badge-month-upcoming";
+      timingBadgeLabel = "下月預告";
+      timingBadgeIcon = "fa-hourglass-half";
+    } else if (drama.timing === "late2026") {
+      timingBadgeClass = "badge-month-late2026";
+      timingBadgeLabel = "2026下半年";
+      timingBadgeIcon = "fa-snowflake";
+    } else if (drama.timing === "year2027") {
+      timingBadgeClass = "badge-month-year2027";
+      timingBadgeLabel = "2027年預告";
+      timingBadgeIcon = "fa-rocket";
+    }
+
+    card.innerHTML = `
+      <div class="card-img-wrapper">
+        <span class="card-badge ${timingBadgeClass}"><i class="fa-solid ${timingBadgeIcon}"></i> ${timingBadgeLabel}</span>
+        <span class="card-rating-float"><i class="fa-solid fa-star"></i> ${drama.rating}</span>
+        ${posterContent}
+      </div>
+      <div class="card-content">
+        <h3 class="card-title" title="${drama.titleCN}">${drama.titleCN}</h3>
+        <div class="card-tags">
+          ${drama.genres.slice(0, 2).map(g => `<span class="card-tag">${getGenreIcon(g)}${g}</span>`).join("")}
+          <span class="card-tag" style="background: rgba(24, 116, 152, 0.1); border: 1px solid rgba(24, 116, 152, 0.2); color: #7dd3fc;"><i class="fa-solid fa-earth-asia"></i> ${drama.countryName}</span>
+        </div>
+        <div class="card-info-item">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>檔期: ${drama.releaseDate}</span>
+        </div>
+        <div class="card-info-item">
+          <i class="fa-solid fa-users"></i>
+          <span title="${drama.cast.join(", ")}">演員: ${drama.cast.slice(0, 2).join(", ")}...</span>
+        </div>
+        <div class="card-info-item">
+          <i class="fa-solid fa-tv"></i>
+          <span>規格: 共 ${drama.episodes} 集 / ${drama.platform}</span>
+        </div>
+        
+        <div class="card-footer">
+          <div class="rec-bar-container">
+            <div class="rec-bar-label">
+              <span><i class="fa-solid fa-heart"></i> 推薦指數</span>
+              <span>${drama.recIndex}%</span>
+            </div>
+            <div class="rec-bar-track">
+              <div class="rec-bar-fill" style="width: ${drama.recIndex}%"></div>
+            </div>
+          </div>
+          <span class="rec-index-pct">${getStarsIcon(drama.rating)}</span>
+        </div>
+      </div>
+    `;
+    hotShowsGrid.appendChild(card);
+  });
+}
+
 // Generate stars visual for recommendation index
 function getStarsIcon(rating) {
   if (rating >= 9.0) return "★★★★★";
@@ -1075,6 +1183,18 @@ function setupFilterListeners() {
     });
   });
 
+  // Streaming Platform filter chips
+  if (platformFiltersContainer) {
+    platformFiltersContainer.querySelectorAll(".filter-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        platformFiltersContainer.querySelector(".filter-chip.active").classList.remove("active");
+        chip.classList.add("active");
+        currentPlatformFilter = chip.getAttribute("data-platform");
+        renderShows();
+      });
+    });
+  }
+
   // Reset filter button
   clearFiltersBtn.addEventListener("click", () => {
     resetFilters();
@@ -1084,6 +1204,7 @@ function setupFilterListeners() {
 function resetFilters() {
   currentCountryFilter = "all";
   currentMonthFilter = "all";
+  currentPlatformFilter = "all";
   currentSearchQuery = "";
   globalSearchInput.value = "";
 
@@ -1092,6 +1213,11 @@ function resetFilters() {
 
   monthFiltersContainer.querySelector(".filter-chip.active").classList.remove("active");
   monthFiltersContainer.querySelector('[data-month="all"]').classList.add("active");
+
+  if (platformFiltersContainer) {
+    platformFiltersContainer.querySelector(".filter-chip.active").classList.remove("active");
+    platformFiltersContainer.querySelector('[data-platform="all"]').classList.add("active");
+  }
 
   renderShows();
 }
@@ -1114,6 +1240,20 @@ function updateFilterSummaryBanner() {
       "year2027": "2027年即將上映"
     };
     createSummaryTag(monthLabels[currentMonthFilter]);
+    hasActiveFilter = true;
+  }
+
+  if (currentPlatformFilter !== "all") {
+    const platformNames = {
+      "netflix": "Netflix",
+      "disney": "Disney+",
+      "prime": "Prime Video",
+      "hbo": "HBO / Max",
+      "hulu": "Hulu",
+      "apple": "Apple TV+",
+      "others": "其他平台"
+    };
+    createSummaryTag(platformNames[currentPlatformFilter]);
     hasActiveFilter = true;
   }
 
