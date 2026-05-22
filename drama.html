@@ -41,7 +41,7 @@
   </header>
 
   <!-- Hero Carousel Segment (Hot TV Series) -->
-  <section class="hero-carousel-section" id="recommendations">
+  <section class="hero-carousel-section" id="hero-banner">
     <div class="carousel-container">
       <div class="carousel-slides" id="carousel-slides-wrapper">
         <!-- Slides will be dynamically injected by app.js -->
@@ -54,6 +54,21 @@
           <!-- Dots will be dynamically injected by app.js -->
         </div>
         <button class="carousel-btn next-btn" id="carousel-next" aria-label="下一個"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hot Recommendations Grid Section -->
+  <section class="hot-recommendations-section" id="recommendations">
+    <div class="container">
+      <div class="section-header">
+        <div class="title-area">
+          <h2><i class="fa-solid fa-fire text-rose" style="color: var(--accent-rose);"></i> 熱門推薦專區</h2>
+          <p>主編精選與熱門討論度極高的最新上映話題電視劇</p>
+        </div>
+      </div>
+      <div class="cards-grid" id="hot-shows-grid">
+        <!-- Hot cards will be dynamically injected by app.js -->
       </div>
     </div>
   </section>
@@ -89,6 +104,20 @@
           <button class="filter-chip" data-month="upcoming"><i class="fa-solid fa-hourglass-half"></i> 下月即將上映 (2026/06)</button>
           <button class="filter-chip" data-month="late2026"><i class="fa-solid fa-snowflake"></i> 2026年底前 (下半年)</button>
           <button class="filter-chip" data-month="year2027"><i class="fa-solid fa-rocket"></i> 2027年即將上映</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label"><i class="fa-solid fa-circle-play"></i> 播放平台:</span>
+        <div class="filter-options" id="platform-filters">
+          <button class="filter-chip active" data-platform="all"><i class="fa-solid fa-tv"></i> 全部平台</button>
+          <button class="filter-chip" data-platform="netflix"><i class="fa-solid fa-play" style="color: #EB5353;"></i> Netflix</button>
+          <button class="filter-chip" data-platform="disney"><i class="fa-solid fa-circle-play" style="color: #187498;"></i> Disney+</button>
+          <button class="filter-chip" data-platform="prime"><i class="fa-solid fa-video" style="color: #F9D923;"></i> Prime Video</button>
+          <button class="filter-chip" data-platform="hbo"><i class="fa-solid fa-ticket" style="color: #36AE7C;"></i> HBO / Max</button>
+          <button class="filter-chip" data-platform="hulu"><i class="fa-solid fa-clapperboard" style="color: #36AE7C;"></i> Hulu</button>
+          <button class="filter-chip" data-platform="apple"><i class="fa-brands fa-apple"></i> Apple TV+</button>
+          <button class="filter-chip" data-platform="others"><i class="fa-solid fa-ellipsis"></i> 其他平台</button>
         </div>
       </div>
     </div>
