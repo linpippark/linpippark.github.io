@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 國小智慧魔法考題挑戰賽</title>
+    <!-- 引入圓潤活潑的學院英文字型與繁中字型 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Noto+Sans+TC:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入精美生動的 SweetAlert2 彈窗庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- 引入超強字串壓縮庫，將 JSON 題庫壓縮成超短 URL 分享連結 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Fredoka', 'Nunito', 'Noto Sans TC', '微軟正黑體', sans-serif; 
+            background-color: #f3f7fa;
+            /* 國小課本常用的數學格線點陣背景 */
+            background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px), radial-gradient(#cbd5e1 1.5px, #f3f7fa 1.5px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+
+        .hidden { display: none; }
+
+        /* 課本手繪虛線與陰影質感 */
+        .academy-card {
+            border: 3px solid #475569;
+            box-shadow: 6px 6px 0px 0px #475569;
+            transition: all 0.2s ease;
+        }
+        .academy-card:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px 0px #475569;
+        }
+
+        /* 撕紙/筆記本左側打洞線條 */
+        .notebook-line {
+            position: relative;
+        }
+        .notebook-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 20px;
+            width: 2px;
+            background-color: #f87171;
+            opacity: 0.5;
+        }
+
+        /* 3D 立體按鈕 (國小玩具與學習軟體風格) */
+        .btn-3d-gold {
+            background: linear-gradient(to bottom, #fbbf24, #f59e0b);
+            border: 3px solid #475569;
+            box-shadow: 0 6px 0 0 #475569;
+            transform: translateY(0);
+            transition: all 0.1s ease;
+        }
+        .btn-3d-gold:hover {
+            background: linear-gradient(to bottom, #fcd34d, #fbbf24);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 0 #475569;
+        }
+        .btn-3d-gold:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 0 #475569;
+        }
+
+        .btn-3d-green {
+            background: linear-gradient(to bottom, #34d399, #059669);
+            border: 3px solid #475569;
+            box-shadow: 0 6px 0 0 #475569;
+            transform: translateY(0);
+            transition: all 0.1s ease;
+        }
+        .btn-3d-green:hover {
+            background: linear-gradient(to bottom, #6ee7b7, #10b981);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 0 #475569;
+        }
+        .btn-3d-green:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 0 #475569;
+        }
+
+        .btn-3d-red {
+            background: linear-gradient(to bottom, #f87171, #dc2626);
+            border: 3px solid #475569;
+            box-shadow: 0 6px 0 0 #475569;
+            transform: translateY(0);
+            transition: all 0.1s ease;
+        }
+        .btn-3d-red:hover {
+            background: linear-gradient(to bottom, #fca5a5, #ef4444);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 0 #475569;
+        }
+        .btn-3d-red:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 0 #475569;
+        }
+
+        /* 答題選項懸停及選中酷炫效果 */
+        .option-label {
+            border: 2px solid #cbd5e1;
+            transition: all 0.15s ease;
+        }
+        .option-label:hover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: translateX(4px);
+        }
+        .option-input:checked + .option-box {
+            background-color: #3b82f6;
+            border-color: #1d4ed8;
+            transform: scale(1.1);
+        }
+        .option-input:checked ~ .option-text {
+            color: #1d4ed8;
+            font-weight: bold;
+        }
+        .option-input:checked ~ .option-card-bg {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 緞帶/絲帶效果 */
+        .ribbon {
+            position: relative;
+            background: #10b981;
+            color: #fff;
+        }
+        .ribbon:before, .ribbon:after {
+            content: '';
+            position: absolute;
+            border-style: solid;
+        }
+        
+        /* 畢業證書古典花紋 */
+        .diploma-border {
+            border: 15px double #d97706;
+            background-color: #fdfbf7;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen py-10">
+
+    <div class="max-w-4xl mx-auto px-4">
+        <!-- 頂部學術大 Banner -->
+        <header class="bg-amber-50 border-4 border-slate-700 rounded-3xl p-6 mb-8 text-center relative shadow-[8px_8px_0px_0px_#475569]">
+            <!-- 裝飾小貼紙 -->
+            <div class="absolute -top-5 -left-5 bg-yellow-400 border-2 border-slate-700 text-slate-800 font-bold px-3 py-1 rounded-lg transform -rotate-12 text-sm shadow-md">
+                ⭐ 歡樂學習
+            </div>
+            <div class="absolute -top-5 -right-5 bg-rose-400 border-2 border-slate-700 text-white font-bold px-3 py-1 rounded-lg transform rotate-12 text-sm shadow-md">
+                🎯 智慧大考驗
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-extrabold text-blue-600 mb-3 flex items-center justify-center gap-2 flex-wrap">
+                <span>🎓 魔法學院智慧測驗</span>
+                <span id="subjectHeaderTitle" class="bg-blue-100 text-blue-800 text-2xl font-black px-4 py-1.5 rounded-2xl border-2 border-blue-300 shadow-sm animate-pulse hidden"></span>
+            </h1>
+            
+            <!-- 資訊徽章列 -->
+            <div class="flex flex-wrap justify-center gap-3 mt-4">
+                <span class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 font-bold rounded-full text-sm shadow-sm">
+                    ⏳ 限時：30分鐘
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-4 py-1.5 bg-sky-100 border-2 border-sky-400 text-sky-800 font-bold rounded-full text-sm shadow-sm">
+                    📝 題數：<span id="totalQuestionsCount" class="font-black text-base">--</span> 題
+                </span>
+            </div>
+
+            <!-- 動態課本範圍緞帶 -->
+            <div id="textbookVersionContainer" class="hidden mt-4 inline-flex items-center gap-2 px-6 py-2 bg-emerald-500 border-2 border-slate-700 text-white font-bold rounded-xl shadow-md transform -rotate-1">
+                <span class="text-lg">📖</span>
+                <span id="textbookVersionText" class="text-sm">教材範圍：</span>
+            </div>
+        </header>
+
+        <!-- 第一步：匯入題庫（課桌風藏書盒） -->
+        <section id="setupSection" class="bg-white border-4 border-slate-700 rounded-3xl p-6 md:p-8 mb-8 relative shadow-[8px_8px_0px_0px_#475569]">
+            <h2 class="text-2xl font-black mb-4 text-slate-700 flex items-center gap-2 border-b-4 border-dashed border-slate-200 pb-3">
+                <span>📦 第一步：裝載考卷魔法書</span>
+            </h2>
+            <p class="mb-4 text-sm text-slate-500 font-medium">請將 AI 產生的 JSON 題庫複製，貼到下方的「魔法羊皮紙」中，然後大聲唸出咒語並點擊開始！</p>
+            
+            <div class="relative mb-6">
+                <!-- 左側筆記本打洞效果 -->
+                <div class="absolute left-3 top-3 bottom-3 flex flex-col justify-between w-4 pointer-events-none opacity-20">
+                    <div class="w-3 h-3 rounded-full bg-slate-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-slate-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-slate-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-slate-800"></div>
+                    <div class="w-3 h-3 rounded-full bg-slate-800"></div>
+                </div>
+                <textarea id="jsonInput" class="w-full h-48 pl-10 pr-4 py-4 border-4 border-slate-700 bg-amber-50/20 text-slate-700 font-mono text-sm rounded-2xl focus:ring-4 focus:ring-amber-300 focus:outline-none placeholder-slate-400 shadow-inner" placeholder='[\n  {\n    "id": 1,\n    "question": "題目...",\n    "options": ["A", "B", "C", "D"],\n    "answer": 0,\n    "explanation": "詳解...",\n    "subject": "五年級下學期國語科",\n    "textbook_version": "康軒版五年級下學期國語 - 第七課 題西林壁"\n  }\n]'></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="startExam()" class="flex-grow btn-3d-gold text-slate-800 font-black text-xl py-4 px-6 rounded-2xl cursor-pointer">
+                    🚀 啟動魔法！載入考卷開始挑戰
+                </button>
+                <button onclick="generateShareLink()" class="btn-3d-green text-white font-black text-lg py-4 px-6 rounded-2xl cursor-pointer flex items-center justify-center gap-2">
+                    🔗 產生學生專屬分享連結
+                </button>
+            </div>
+            
+            <div id="setupError" class="mt-4 p-4 bg-rose-50 border-2 border-rose-400 text-rose-700 text-sm font-bold rounded-xl hidden flex items-center gap-2">
+                ⚠️ <span id="errorText">格式錯誤，請檢查！</span>
+            </div>
+        </section>
+
+        <!-- 考試挑戰區 -->
+        <section id="examSection" class="hidden">
+            <!-- 懸浮計時器 (可愛小鬧鐘) -->
+            <div class="sticky top-4 z-50 bg-amber-100 border-4 border-slate-700 px-6 py-3 mb-8 shadow-[4px_4px_0px_0px_#475569] rounded-2xl flex justify-between items-center transform -rotate-1">
+                <span class="font-black text-slate-700 flex items-center gap-1.5">
+                    ⏰ 倒數鐘聲響起：
+                </span>
+                <span id="timerDisplay" class="text-3xl font-black text-red-500 tracking-wider">30:00</span>
+            </div>
+
+            <!-- 考題容器 -->
+            <div id="questionsContainer" class="space-y-8"></div>
+
+            <!-- 交卷大按鈕 -->
+            <div class="mt-10 text-center">
+                <button onclick="submitExam()" id="submitBtn" class="btn-3d-green text-white font-black py-5 px-16 rounded-full text-2xl shadow-xl hover:scale-105 active:scale-95 transition-all">
+                    👑 完成挑戰！榮耀交卷
+                </button>
+            </div>
+        </section>
+
+        <!-- 測驗結果 (皇家畢業授勳證書) -->
+        <section id="resultSection" class="hidden diploma-border rounded-3xl p-8 md:p-12 text-center shadow-[12px_12px_0px_0px_#475569] relative border-slate-700">
+            <!-- 裝飾緞帶 -->
+            <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-rose-500 border-4 border-slate-700 text-white font-black px-8 py-3 rounded-full text-xl shadow-lg">
+                🏆 榮譽成就報告
+            </div>
+
+            <div class="mt-6 mb-8">
+                <h2 class="text-4xl font-black text-slate-800 mb-2">魔法學力鑑定證書</h2>
+                <p class="text-slate-500 font-bold">恭喜你順利通過了本次智慧魔法測驗的挑戰！</p>
+            </div>
+
+            <!-- 正確率大面板 -->
+            <div class="block mx-auto bg-amber-50 border-4 border-dashed border-amber-400 rounded-full w-52 h-52 flex flex-col justify-center items-center mb-8 shadow-inner transform rotate-3">
+                <span class="text-slate-500 font-black text-xs uppercase tracking-wider">答題正確率</span>
+                <div class="text-5xl font-black text-blue-600 animate-bounce mt-2" id="scoreDisplay">0%</div>
+                <span id="correctDetails" class="text-xs text-amber-600 font-bold mt-1">-- 題中對 -- 題</span>
+            </div>
+
+            <p class="text-2xl font-black text-slate-700 mb-10 max-w-md mx-auto leading-relaxed" id="resultMessage">
+                表現得太棒了！
+            </p>
+
+            <button onclick="location.reload()" class="btn-3d-gold text-slate-800 font-black py-3.5 px-10 rounded-2xl text-lg">
+                🔄 再次挑戰下一關
+            </button>
+        </section>
+
+        <!-- 歷史戰績榜 (魔法歷險足跡) -->
+        <section id="historySection" class="bg-white border-4 border-slate-700 rounded-3xl p-6 mb-8 relative shadow-[8px_8px_0px_0px_#475569] mt-8">
+            <h2 class="text-2xl font-black mb-4 text-slate-700 flex items-center gap-2 border-b-4 border-dashed border-slate-200 pb-3">
+                <span>📜 歷次魔法冒險戰績（最近5次）</span>
+            </h2>
+            
+            <!-- 每一科目的平均答題正確率區塊 -->
+            <div id="subjectAveragesContainer" class="hidden mb-6 bg-slate-50 border-2 border-slate-300 rounded-2xl p-4">
+                <h3 class="text-sm font-black text-slate-500 mb-3 flex items-center gap-1.5">
+                    <span>📊 每一科目的平均答題正確率：</span>
+                </h3>
+                <div id="subjectAveragesList" class="flex flex-wrap gap-3">
+                    <!-- 動態渲染每一科的平均正確率 -->
+                </div>
+            </div>
+
+            <div id="historyList" class="space-y-3">
+                <p class="text-slate-400 font-bold text-center py-4">目前還沒有魔法冒險紀錄喔！快去載入題庫開始挑戰吧！🚀</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        let examData = [];
+        let timerInterval;
+        let timeRemaining = 30 * 60; // 30 minutes in seconds
+        let currentSubject = "智慧綜合科";
+
+        // 智慧型教材範圍區間估算演算法
+        function getExamRangeString(examData) {
+            if (!examData || examData.length === 0) return "";
+            
+            let prefix = "";
+            
+            // 中文數字轉阿拉伯數字對照表
+            const cnNumMap = {
+                '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10,
+                '十一': 11, '十二': 12, '十三': 13, '十四': 14, '十五': 15,
+                '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
+                '11': 11, '12': 12, '13': 13, '14': 14, '15': 15
+            };
+            
+            // 阿拉伯數字轉中文數字對照表
+            const cnNumList = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五'];
+
+            let minNum = Infinity;
+            let maxNum = -Infinity;
+            let unitType = "課"; // 默認單位（例如 課 或 單元）
+
+            examData.forEach(q => {
+                if (q.textbook_version) {
+                    const parts = q.textbook_version.split('-');
+                    if (parts.length >= 2) {
+                        prefix = parts[0].trim();
+                        const detail = parts[1].trim();
+                        
+                        // 支援「第X課」與「第X單元」
+                        const match = detail.match(/第\s*([一二三四五六七八九十百1-9０-９]+)\s*(課|單元)/);
+                        if (match) {
+                            const numStr = match[1];
+                            unitType = match[2];
+                            
+                            let num = parseInt(numStr);
+                            if (isNaN(num)) {
+                                num = cnNumMap[numStr] || 0;
+                            }
+                            
+                            if (num > 0) {
+                                if (num < minNum) minNum = num;
+                                if (num > maxNum) maxNum = num;
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (minNum !== Infinity && maxNum !== -Infinity && prefix) {
+                const minStr = cnNumList[minNum] || minNum;
+                const maxStr = cnNumList[maxNum] || maxNum;
+                
+                if (minNum === maxNum) {
+                    return `${prefix} - 第${minStr}${unitType}`;
+                } else {
+                    return `${prefix} - 第${minStr}${unitType} 至 第${maxStr}${unitType}`;
+                }
+            }
+            
+            // Fallback: 如果無法解析區間，直接返回第一個題目的教科書版本字串
+            for (let i = 0; i < examData.length; i++) {
+                if (examData[i].textbook_version) {
+                    return examData[i].textbook_version;
+                }
+            }
+            return "";
+        }
+
+        function startExam() {
+            const jsonText = document.getElementById('jsonInput').value;
+            const errorMsg = document.getElementById('setupError');
+            const errorText = document.getElementById('errorText');
+            
+            try {
+                examData = JSON.parse(jsonText);
+                if (!Array.isArray(examData) || examData.length === 0) {
+                    throw new Error("題庫格式不對，必須是一個包含題目的陣列。");
+                }
+                
+                // 動態更新總題數
+                document.getElementById('totalQuestionsCount').textContent = examData.length;
+                
+                // 讀取第一個包含 subject 的題目
+                let subjectInfo = "";
+                for (let i = 0; i < examData.length; i++) {
+                    if (examData[i].subject) {
+                        subjectInfo = examData[i].subject;
+                        break;
+                    }
+                }
+                
+                // 動態更新最上方的科目內容
+                const subjectTitleEl = document.getElementById('subjectHeaderTitle');
+                if (subjectInfo && subjectTitleEl) {
+                    subjectTitleEl.textContent = subjectInfo;
+                    subjectTitleEl.classList.remove('hidden');
+                    currentSubject = subjectInfo; // 寫入全域變數
+                } else if (subjectTitleEl) {
+                    subjectTitleEl.classList.add('hidden');
+                    currentSubject = "智慧綜合科";
+                }
+                
+                // 動態更新教材版本與考科範圍區間
+                const examRangeStr = getExamRangeString(examData);
+                const versionContainer = document.getElementById('textbookVersionContainer');
+                const versionText = document.getElementById('textbookVersionText');
+                if (examRangeStr && versionContainer && versionText) {
+                    versionText.textContent = "考題範圍：" + examRangeStr;
+                    versionContainer.classList.remove('hidden');
+                } else if (versionContainer) {
+                    versionContainer.classList.add('hidden');
+                }
+                
+                // 隱藏設定區，顯示挑戰區
+                document.getElementById('setupSection').classList.add('hidden');
+                document.getElementById('examSection').classList.remove('hidden');
+                
+                renderQuestions();
+                startTimer();
+                window.scrollTo(0, 0);
+
+            } catch (e) {
+                errorText.textContent = "JSON 格式錯誤，請檢查括號與逗號。詳細錯誤：" + e.message;
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+
+            examData.forEach((q, index) => {
+                // 每張考卷卡片隨機加入微弱歪斜度，看起來像散落的真實考卷，生動有趣！
+                const tiltClasses = ['tilted-card-left', 'tilted-card-right', ''];
+                const randomTilt = tiltClasses[index % tiltClasses.length];
+
+                // 檢查是否有教材版本資訊，有的話在題目下方渲染一個美美的課本範圍小書籤標籤
+                const textbookBadge = q.textbook_version 
+                    ? `<div class="mt-2 mb-4 text-xs font-bold text-blue-600 bg-blue-50 border-2 border-dashed border-blue-300 rounded-xl px-3 py-1 inline-flex items-center gap-1">
+                         <span>📖 課本對應：</span>
+                         <span class="text-blue-800">${q.textbook_version}</span>
+                       </div>` 
+                    : '';
+
+                const questionHTML = `
+                    <div class="bg-white border-4 border-slate-700 rounded-3xl p-6 md:p-8 relative shadow-[8px_8px_0px_0px_#475569] notebook-line pl-12 md:pl-16 ${randomTilt}" id="qCard_${index}">
+                        <!-- 左側小紅線裝飾線已由 notebook-line 實現，此處加上題目編號小圓扣 -->
+                        <div class="absolute left-3 top-6 bg-blue-500 border-2 border-slate-700 text-white rounded-full w-8 h-8 flex items-center justify-center font-black text-sm shadow">
+                            ${index + 1}
+                        </div>
+
+                        <h3 class="text-lg md:text-xl font-black text-slate-800 leading-snug mb-2">
+                            ${q.question}
+                        </h3>
+                        
+                        ${textbookBadge}
+
+                        <div class="space-y-3 mt-4">
+                            ${q.options.map((opt, optIndex) => `
+                                <label class="option-label relative flex items-center p-3.5 border-2 border-slate-200 rounded-2xl cursor-pointer bg-slate-50/50">
+                                    <input type="radio" name="q_${index}" value="${optIndex}" class="option-input hidden">
+                                    
+                                    <!-- 自定義可愛的小圓圈單選鈕 -->
+                                    <div class="option-box w-6 h-6 rounded-full border-2 border-slate-300 flex-shrink-0 flex items-center justify-center bg-white mr-3 transition-all">
+                                        <div class="w-2.5 h-2.5 rounded-full bg-white"></div>
+                                    </div>
+                                    
+                                    <span class="option-text text-slate-700 font-semibold text-base transition-colors">${opt}</span>
+                                    
+                                    <!-- 被選中時的整片卡片背景渲染 -->
+                                    <div class="option-card-bg absolute inset-0 rounded-2xl -z-10 border-2 border-transparent transition-all pointer-events-none"></div>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div id="explanation_${index}" class="hidden mt-6 p-5 bg-amber-50 border-2 border-amber-300 border-l-8 border-l-amber-500 rounded-2xl shadow-inner font-medium text-slate-700"></div>
+                    </div>
+                `;
+                container.innerHTML += questionHTML;
+            });
+        }
+
+        function startTimer() {
+            const display = document.getElementById('timerDisplay');
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                
+                display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeRemaining <= 300) { // 剩五分鐘，心跳警告！
+                    display.classList.remove('text-red-500');
+                    display.classList.add('text-red-700', 'animate-pulse');
+                }
+
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    Swal.fire({
+                        title: '⏰ 叮咚叮咚！時間到囉！',
+                        text: '測驗時間已結束，魔法學院要幫你自動交卷囉！',
+                        icon: 'info',
+                        confirmButtonText: '查看成績 🏆',
+                        confirmButtonColor: '#10b981',
+                        allowOutsideClick: false,
+                        customClass: {
+                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                        }
+                    }).then(() => {
+                        submitExam();
+                    });
+                }
+            }, 1000);
+        }
+
+        function submitExam() {
+            // 檢查是否全部題目都已填寫
+            let unanswered = [];
+            examData.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q_${index}"]:checked`);
+                if (!selected) {
+                    unanswered.push(index + 1); // 轉為 1-indexed 的題號
+                }
+            });
+
+            if (unanswered.length > 0) {
+                // 如果有未填寫的題目，跳出可愛的 SweetAlert2 警示
+                Swal.fire({
+                    title: '⚠️ 哎呀！還沒寫完喔！',
+                    html: `你還有題目沒有作答喔！<br><br><b>未作答題號：</b>第 <span class="text-rose-500 font-bold">${unanswered.join(', ')}</span> 題。<br><br>請全部寫完再來交卷挑戰吧！💪`,
+                    icon: 'warning',
+                    confirmButtonText: '繼續作答 📝',
+                    confirmButtonColor: '#3b82f6',
+                    customClass: {
+                        popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                    }
+                }).then(() => {
+                    // 平滑滾動到第一題未作答的卡片，高亮它
+                    const firstUnansweredCard = document.getElementById(`qCard_${unanswered[0] - 1}`);
+                    if (firstUnansweredCard) {
+                        firstUnansweredCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstUnansweredCard.style.borderColor = '#ef4444';
+                        setTimeout(() => {
+                            firstUnansweredCard.style.borderColor = '';
+                        }, 2000);
+                    }
+                });
+                return; // 終止交卷
+            }
+
+            clearInterval(timerInterval);
+            document.getElementById('submitBtn').classList.add('hidden');
+            
+            let correctCount = 0;
+
+            examData.forEach((q, index) => {
+                const selected = document.querySelector(`input[name="q_${index}"]:checked`);
+                const qCard = document.getElementById(`qCard_${index}`);
+                const expDiv = document.getElementById(`explanation_${index}`);
+                
+                const selectedVal = selected ? parseInt(selected.value) : -1;
+                
+                // 展開詳解面板
+                expDiv.classList.remove('hidden');
+                
+                if (selectedVal === q.answer) {
+                    correctCount++;
+                    qCard.classList.remove('border-slate-700');
+                    qCard.classList.add('border-emerald-500', 'bg-emerald-50/10');
+                    expDiv.classList.add('bg-emerald-50', 'border-emerald-300', 'border-l-emerald-500');
+                    expDiv.innerHTML = `
+                        <div class="flex items-center gap-2 mb-2 text-emerald-600 font-extrabold text-lg">
+                            <span>🎉 答對了！你太厲害了！</span>
+                        </div>
+                        <p class="text-sm text-slate-600 leading-relaxed">${q.explanation}</p>
+                    `;
+                } else {
+                    qCard.classList.remove('border-slate-700');
+                    qCard.classList.add('border-rose-500', 'bg-rose-50/10');
+                    expDiv.classList.add('bg-rose-50', 'border-rose-300', 'border-l-rose-500');
+                    const correctText = q.options[q.answer];
+                    expDiv.innerHTML = `
+                        <div class="flex items-center gap-2 mb-2 text-rose-600 font-extrabold text-lg">
+                            <span>💡 答錯了，沒關係，看解析再挑戰！</span>
+                        </div>
+                        <p class="font-bold text-slate-800 mb-2">正確答案是：<span class="text-emerald-600 font-black">${correctText}</span></p>
+                        <p class="text-sm text-slate-600 leading-relaxed">${q.explanation}</p>
+                    `;
+                }
+                
+                // 鎖定單選按鈕
+                const inputs = document.querySelectorAll(`input[name="q_${index}"]`);
+                inputs.forEach(input => input.disabled = true);
+            });
+
+            // 動態計算答題正確率與詳情
+            const accuracy = Math.round((correctCount / examData.length) * 100);
+
+            // 顯示皇家結果證書
+            document.getElementById('resultSection').classList.remove('hidden');
+            document.getElementById('scoreDisplay').textContent = accuracy + "%";
+            document.getElementById('correctDetails').textContent = `${examData.length} 題中答對 ${correctCount} 題`;
+            
+            const msg = document.getElementById('resultMessage');
+            if (accuracy >= 90) {
+                msg.innerHTML = "🏆 <span class='text-amber-500 font-black'>天啊！你簡直是學習大魔法師！</span><br>正確率高達九成以上，幾乎完美的挑戰！繼續保持這個超強的學習神力喔！";
+            } else if (accuracy >= 80) {
+                msg.innerHTML = "🌟 <span class='text-blue-500 font-black'>表現極佳，是一位優秀的冒險家！</span><br>答題非常流暢，概念很清晰！再加把勁，正確率就封頂囉！";
+            } else if (accuracy >= 60) {
+                msg.innerHTML = "📚 <span class='text-emerald-500 font-black'>挑戰成功，及格囉！</span><br>你順利通過了考驗，但還有進步空間。快把剛剛答錯題目的魔法解析讀懂吧！";
+            } else {
+                msg.innerHTML = "💪 <span class='text-rose-500 font-black'>這次只是熱身，下次一定會更強！</span><br>別氣餒！仔細把每一題的詳解解析看懂，相信你下次一定能一飛沖天！";
+            }
+
+            // 儲存本次挑戰戰績
+            saveRecordToHistory(currentSubject, accuracy);
+
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // 載入南一數學期末考範例題庫 (含 CORS 雙重備份防護)
+        function loadSampleQuestions() {
+            const backupQuestions = [
+              {
+                "id": 1,
+                "question": "小明把 3/8 公斤的糖果平分裝成小袋，請問 3/8 化為小數是多少公斤？",
+                "options": ["0.375", "0.38", "0.125", "0.3"],
+                "answer": 0,
+                "explanation": "分數化為小數的方法是分子除以分母。計算過程：3 ÷ 8 = 0.375，故 3/8 換算成小數為 0.375 公斤。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第六單元 6-3 分數和小數互換"
+              },
+              {
+                "id": 2,
+                "question": "一輛大貨車的載重量是 4.5 公噸，請問這輛大貨車的載重量是多少公斤？",
+                "options": ["450 公斤", "45000 公斤", "4500 公斤", "45 公斤"],
+                "answer": 2,
+                "explanation": "公噸和公斤的換算率為：1 公噸 = 1000 公斤。計算過程：4.5 × 1000 = 4500，所以 4.5 公噸等於 4500 公斤。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第七單元 7-2 公噸和公斤的換算及應用"
+              },
+              {
+                "id": 3,
+                "question": "有一座國家公園的面積是 12 平方公里，請問這座國家公園的面積是多少公頃？",
+                "options": ["120 公頃", "1200 公頃", "12000 公頃", "1.2 公頃"],
+                "answer": 1,
+                "explanation": "大單位的面積換算率為：1 平方公里 = 100 公頃。計算過程：12 × 100 = 1200，故 12 平方公里等於 1200 公頃。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第七單元 7-6 平方公尺、公畝、公頃和平方公里的換算及應用"
+              },
+              {
+                "id": 4,
+                "question": "有一個平行四邊形農地，底是 24 公尺、高是 15 公尺，請問這塊農地的面積是多少平方公尺？",
+                "options": ["360 平方公尺", "180 平方公尺", "78 平方公尺", "390 平方公尺"],
+                "answer": 0,
+                "explanation": "平行四邊形的面積公式為：底 × 高。計算過程：24 × 15 = 360 平方公尺。注意平行四邊形面積不需要除以 2。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第八單元 8-1 平行四邊形的面積和高"
+              },
+              {
+                "id": 5,
+                "question": "有一個梯形花圃，上底是 8 公尺、下底是 12 公尺、高是 6 公尺，請問這個花圃的面積是多少平方公尺？",
+                "options": ["120 平方公尺", "240 平方公尺", "60 平方公尺", "30 平方公尺"],
+                "answer": 2,
+                "explanation": "梯形的面積公式為：(上底 + 下底) × 高 ÷ 2。計算過程：(8 + 12) × 6 ÷ 2 = 20 × 6 ÷ 2 = 120 ÷ 2 = 60 平方公尺。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第八單元 8-3 梯形的面積和高"
+              },
+              {
+                "id": 6,
+                "question": "小英每天練習彈鋼琴 1 小時 20 分鐘，一星期（7天）下來，她一共練習了多少時間？",
+                "options": ["7 小時 20 分鐘", "8 小時 40 分鐘", "9 小時 20 分鐘", "9 小時 40 分鐘"],
+                "answer": 2,
+                "explanation": "時間的乘法計算。計算過程：(1時 20分) × 7 = 7時 140分。因為 60 分鐘 = 1 小時，140 分鐘可換算為 2 小時 20 分鐘，進位後得到 9 小時 20 分鐘。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第九單元 9-1 時間的乘法"
+              },
+              {
+                "id": 7,
+                "question": "學校舉辦登山拉力賽，小強跑完全程共花了 2 小時 15 分鐘，他中途在 3 個打卡點平均停留。若每次停留時間相同，請問他平均在一個打卡點停留多少時間？",
+                "options": ["45 分鐘", "75 分鐘", "15 分鐘", "25 分鐘"],
+                "answer": 0,
+                "explanation": "時間的除法計算。將時間化為單一單位較好計算：2 小時 15 分鐘 = 120 分鐘 + 15 分鐘 = 135 分鐘。計算過程：135 分鐘 ÷ 3 = 45 分鐘。因此平均在一個打卡點停留 45 分鐘。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第九單元 9-2 時間的除法"
+              },
+              {
+                "id": 8,
+                "question": "在長方體的構成要素中，關於「面與面」的垂直和平行關係，下列哪一個敘述是「正確」的？",
+                "options": ["長方體中，任何兩個相鄰的面都互相平行", "長方體中，任何兩個相對的面都互相垂直", "長方體中，任何兩個相對的面都互相平行", "長方體中，只有兩個面互相垂直"],
+                "answer": 2,
+                "explanation": "在正方體或長方體中，相對的面互為平行關係（共有3組平行面）；而相鄰的面則互為垂直關係（每個面都與相鄰的4個面垂直）。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第十單元 10-3 面與面的垂直和平行關係"
+              },
+              {
+                "id": 9,
+                "question": "有一個正方體紙盒，邊長是 8 公分，請問這個正方體紙盒的「表面積」是多少平方公分？",
+                "options": ["384 平方公分", "512 平方公分", "64 平方公分", "256 平方公分"],
+                "answer": 0,
+                "explanation": "正方體有 6 個相同的正方形面。單一正方形面面積 = 8 × 8 = 64 平方公分。總表面積 = 64 × 6 = 384 平方公分。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第十單元 10-5 正方體和長方體的表面積"
+              },
+              {
+                "id": 10,
+                "question": "有一個長方體禮盒，長是 10 公分、寬是 6 公分、高是 5 公分，請問這個長方體禮盒的「表面積」是多少平方公分？",
+                "options": ["300 平方公分", "280 平方公分", "140 平方公分", "160 平方公分"],
+                "answer": 1,
+                "explanation": "長方體表面積公式為：(長×寬 + 寬×高 + 長×高) × 2。計算過程：10×6 + 6×5 + 10×5) × 2 = (60 + 30 + 50) × 2 = 140 × 2 = 280 平方公分。",
+                "subject": "五年級下學期數學科",
+                "textbook_version": "南一版五年級下學期數學 - 第十單元 10-5 正方體和長方體的表面積"
+              }
+            ];
+
+            const inputArea = document.getElementById('jsonInput');
+            if (!inputArea) return;
+
+            // 優先嘗試從本機檔案讀取
+            fetch('sample_questions.json')
+                .then(response => {
+                    if (!response.ok) throw new Error("讀取失敗");
+                    return response.json();
+                })
+                .then(data => {
+                    inputArea.value = JSON.stringify(data, null, 2);
+                    Swal.fire({
+                        title: '✨ 魔法裝載成功！',
+                        text: '已成功從 sample_questions.json 讀取並填入南一版數學期末考範例題庫！',
+                        icon: 'success',
+                        confirmButtonText: '開始挑戰 🚀',
+                        confirmButtonColor: '#3b82f6',
+                        customClass: {
+                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                        }
+                    });
+                })
+                .catch(err => {
+                    // 若受限於本地瀏覽器 CORS 限制，自動啟動無痛內置備用題庫
+                    inputArea.value = JSON.stringify(backupQuestions, null, 2);
+                    Swal.fire({
+                        title: '✨ 內置魔法裝載成功！',
+                        text: '已自動載入內置備份的南一版數學期末考範例題庫（100% 同步大綱規格）！',
+                        icon: 'success',
+                        confirmButtonText: '開始挑戰 🚀',
+                        confirmButtonColor: '#3b82f6',
+                        customClass: {
+                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                        }
+                    });
+                });
+        }
+
+        // 儲存紀錄到 localStorage
+        function saveRecordToHistory(subject, score) {
+            let history = [];
+            try {
+                const stored = localStorage.getItem('magicExamHistory');
+                if (stored) {
+                    history = JSON.parse(stored);
+                }
+            } catch (e) {
+                history = [];
+            }
+            
+            const now = new Date();
+            const dateString = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            
+            const newRecord = {
+                subject: subject,
+                score: score,
+                date: dateString
+            };
+            
+            history.unshift(newRecord); // 最新紀錄排最前面
+            if (history.length > 5) {
+                history = history.slice(0, 5); // 只留最近5次
+            }
+            
+            localStorage.setItem('magicExamHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        // 渲染歷史戰績榜
+        function renderHistory() {
+            const historyList = document.getElementById('historyList');
+            if (!historyList) return;
+            
+            let history = [];
+            try {
+                const stored = localStorage.getItem('magicExamHistory');
+                if (stored) {
+                    history = JSON.parse(stored);
+                }
+            } catch (e) {
+                history = [];
+            }
+            
+            // 計算每一科目的平均答題正確率
+            const subjectStats = {};
+            history.forEach(record => {
+                const sub = record.subject || "智慧綜合科";
+                if (!subjectStats[sub]) {
+                    subjectStats[sub] = { sum: 0, count: 0 };
+                }
+                subjectStats[sub].sum += record.score;
+                subjectStats[sub].count += 1;
+            });
+
+            const averagesContainer = document.getElementById('subjectAveragesContainer');
+            const averagesList = document.getElementById('subjectAveragesList');
+            
+            if (averagesContainer && averagesList) {
+                const subjects = Object.keys(subjectStats);
+                if (subjects.length > 0) {
+                    averagesContainer.classList.remove('hidden');
+                    let avgHtml = '';
+                    subjects.forEach(sub => {
+                        const stats = subjectStats[sub];
+                        const avg = Math.round(stats.sum / stats.count);
+                        
+                        // 各學科專屬配色標籤，呈現精緻魔法風
+                        let colorClass = 'bg-slate-100 border-slate-300 text-slate-700';
+                        if (sub.includes('國語')) {
+                            colorClass = 'bg-rose-50 border-rose-300 text-rose-700';
+                        } else if (sub.includes('數學')) {
+                            colorClass = 'bg-amber-50 border-amber-300 text-amber-700';
+                        } else if (sub.includes('自然')) {
+                            colorClass = 'bg-emerald-50 border-emerald-300 text-emerald-700';
+                        } else if (sub.includes('社會')) {
+                            colorClass = 'bg-indigo-50 border-indigo-300 text-indigo-700';
+                        } else if (sub.includes('英文')) {
+                            colorClass = 'bg-sky-50 border-sky-300 text-sky-700';
+                        }
+                        
+                        avgHtml += `
+                            <div class="border-2 rounded-2xl px-4 py-2 flex items-center gap-2 shadow-sm ${colorClass}">
+                                <span class="font-extrabold text-sm">${sub}</span>
+                                <span class="font-black text-lg bg-white/80 border border-current/20 px-2 py-0.5 rounded-xl">${avg}%</span>
+                                <span class="text-xs opacity-60">(${stats.count}次)</span>
+                            </div>
+                        `;
+                    });
+                    averagesList.innerHTML = avgHtml;
+                } else {
+                    averagesContainer.classList.add('hidden');
+                }
+            }
+            
+            if (history.length === 0) {
+                if (averagesContainer) averagesContainer.classList.add('hidden');
+                historyList.innerHTML = `<p class="text-slate-400 font-bold text-center py-4">目前還沒有魔法冒險紀錄喔！快去載入題庫開始挑戰吧！🚀</p>`;
+                return;
+            }
+            
+            // 找出最高分
+            const maxScore = Math.max(...history.map(r => r.score));
+            
+            let html = '<div class="grid gap-3 md:grid-cols-1">';
+            history.forEach((record, index) => {
+                const isMax = record.score === maxScore && maxScore >= 0;
+                
+                const cardBg = isMax 
+                    ? 'bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-transparent border-amber-400 shadow-md shadow-amber-500/5' 
+                    : 'bg-white border-slate-300';
+                
+                const badge = isMax 
+                    ? `<span class="inline-flex items-center gap-1 bg-amber-400 border-2 border-slate-700 text-slate-800 font-black text-xs px-2.5 py-1 rounded-full shadow-sm animate-bounce">
+                         🥇 傳奇最高分
+                       </span>` 
+                    : `<span class="inline-flex items-center bg-slate-100 border-2 border-slate-300 text-slate-600 font-bold text-xs px-2.5 py-1 rounded-full shadow-sm">
+                         🎖️ 挑戰成功
+                       </span>`;
+
+                html += `
+                    <div class="border-2 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-4 transition duration-200 hover:scale-[1.01] ${cardBg} ${isMax ? 'border-amber-400' : 'border-slate-300'} relative overflow-hidden">
+                        ${isMax ? '<div class="absolute top-0 right-0 w-16 h-16 bg-amber-400/10 rounded-full blur-lg"></div>' : ''}
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${isMax ? '🏆' : '📝'}</span>
+                            <div>
+                                <h4 class="font-black text-slate-800 text-base md:text-lg">${record.subject}</h4>
+                                <span class="text-xs text-slate-400 font-bold flex items-center gap-1 mt-0.5">
+                                    📅 冒險時間：${record.date}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 ml-auto">
+                            ${badge}
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 font-black uppercase block">正確率</span>
+                                <span class="text-2xl md:text-3xl font-black ${isMax ? 'text-amber-500' : 'text-blue-500'}">${record.score}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            historyList.innerHTML = html;
+        }
+
+        // 產生學生專屬壓縮分享連結
+        function generateShareLink() {
+            const jsonText = document.getElementById('jsonInput').value;
+            const errorMsg = document.getElementById('setupError');
+            const errorText = document.getElementById('errorText');
+            
+            if (errorMsg) errorMsg.classList.add('hidden');
+            
+            try {
+                const parsed = JSON.parse(jsonText);
+                if (!Array.isArray(parsed) || parsed.length === 0) {
+                    throw new Error("題庫格式不對，必須是一個包含題目的陣列。");
+                }
+                
+                // 壓縮 JSON 內容
+                const compressed = LZString.compressToEncodedURIComponent(jsonText);
+                
+                // 拼接完整 URL
+                let shareUrl = window.location.href.split('?')[0] + '?quiz=' + compressed;
+                
+                Swal.fire({
+                    title: '🔗 學生專屬分享連結已生成！',
+                    html: `
+                        <p class="text-sm text-slate-500 font-bold mb-4">將此連結傳送給台中的學生，他們點開即可直接進行線上測驗，不需複製貼上！</p>
+                        <input id="shareLinkInput" type="text" class="w-full p-3 border-2 border-slate-300 rounded-xl bg-slate-50 font-mono text-xs text-slate-600 text-center select-all focus:outline-none mb-2" value="${shareUrl}" readonly>
+                    `,
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: '📋 複製連結',
+                    cancelButtonText: '關閉',
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#475569',
+                    customClass: {
+                        popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const copyInput = document.getElementById('shareLinkInput');
+                        if (copyInput) {
+                            copyInput.select();
+                            copyInput.setSelectionRange(0, 99999);
+                            navigator.clipboard.writeText(copyInput.value)
+                                .then(() => {
+                                    Swal.fire({
+                                        title: '🎉 複製成功！',
+                                        text: '分享連結已複製到您的剪貼簿，趕快傳給學生吧！',
+                                        icon: 'success',
+                                        timer: 1500,
+                                        showConfirmButton: false,
+                                        customClass: {
+                                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                                        }
+                                    });
+                                })
+                                .catch(() => {
+                                    Swal.fire({
+                                        title: '⚠️ 複製失敗',
+                                        text: '請手動選取輸入框內的連結並進行複製！',
+                                        icon: 'warning',
+                                        customClass: {
+                                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                                        }
+                                    });
+                                });
+                        }
+                    }
+                });
+            } catch (e) {
+                if (errorText && errorMsg) {
+                    errorText.textContent = "JSON 格式錯誤，請檢查括號與逗號。詳細錯誤：" + e.message;
+                    errorMsg.classList.remove('hidden');
+                }
+                Swal.fire({
+                    title: '⚠️ 題庫解析失敗',
+                    text: '請確認魔法羊皮紙內的 JSON 格式完全正確後再生成連結！',
+                    icon: 'error',
+                    confirmButtonText: '我知道了',
+                    confirmButtonColor: '#ef4444',
+                    customClass: {
+                        popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                    }
+                });
+            }
+        }
+
+        // 頁面載入時先渲染一次戰績榜，並偵測 URL 魔法參數
+        window.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            
+            // 讀取網址的 quiz 參數
+            const urlParams = new URLSearchParams(window.location.search);
+            const compressedQuiz = urlParams.get('quiz');
+            if (compressedQuiz) {
+                try {
+                    // 解壓縮題庫
+                    const decompressed = LZString.decompressFromEncodedURIComponent(compressedQuiz);
+                    if (decompressed) {
+                        const jsonInput = document.getElementById('jsonInput');
+                        if (jsonInput) {
+                            jsonInput.value = decompressed;
+                        }
+                        
+                        Swal.fire({
+                            title: '✨ 偵測到遠端考卷魔法！',
+                            text: '正在為您自動解鎖並加載這份神祕考卷...',
+                            icon: 'info',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            customClass: {
+                                popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                            }
+                        }).then(() => {
+                            startExam();
+                        });
+                    }
+                } catch (e) {
+                    Swal.fire({
+                        title: '⚠️ 魔法解鎖失敗',
+                        text: '這份考卷的分享連結可能已損毀或格式不正確！',
+                        icon: 'error',
+                        confirmButtonText: '回到首頁',
+                        confirmButtonColor: '#ef4444',
+                        customClass: {
+                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
