@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>114學年-南一(一下)數學線上期末測驗系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx-js-style) for styled Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand1: '#9FA1FF', // Purple
+                        brand2: '#B5BAFF', // Light Purple
+                        brand3: '#AEE2FF', // Light Blue
+                        brand4: '#D9F9DF', // Light Green
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; }
+        .smooth-scroll { scroll-behavior: smooth; }
+        /* Custom Checkbox Style for "Mark for later" */
+        .mark-checkbox { accent-color: #9FA1FF; width: 1.5rem; height: 1.5rem; }
+        .radio-custom { accent-color: #AEE2FF; width: 1.2rem; height: 1.2rem; }
+        .highlight-focus { animation: pulseBg 2s ease-out; }
+        @keyframes pulseBg {
+            0% { background-color: #fff0f0; }
+            50% { background-color: #ffcccc; }
+            100% { background-color: white; }
+        }
+        /* Sticky footer styling */
+        #stats-footer { box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-brand4 min-h-screen pb-24 smooth-scroll text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-brand1 text-white p-4 shadow-md sticky top-0 z-40 flex justify-between items-center flex-wrap">
+        <h1 class="text-xl md:text-2xl font-bold">114學年-南一(一下)數學線上期末測驗系統</h1>
+        <div id="timer-display" class="text-xl font-bold bg-white text-brand1 px-4 py-1 rounded-full hidden">
+            剩餘時間：<span id="time-left">40:00</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto p-4 md:p-6 mt-4 bg-white rounded-2xl shadow-lg border-4 border-brand2 relative">
+        
+        <!-- Intro Screen -->
+        <div id="intro-screen" class="text-center py-10">
+            <h2 class="text-3xl font-bold text-brand1 mb-6">歡迎挑戰期末測驗！</h2>
+            <p class="text-lg mb-2">測驗範圍：6.幾月幾日、7.錢幣、8.二位數的加減、9.做紀錄</p>
+            <p class="text-lg mb-8">總共 50 題，滿分 100 分。測驗時間 40 分鐘。</p>
+            <button onclick="startExam()" class="bg-brand3 hover:bg-blue-300 text-gray-800 font-bold py-4 px-10 rounded-full text-2xl shadow-lg transition transform hover:scale-105">
+                開始作答
+            </button>
+            <p class="text-sm text-gray-500 mt-6">資料來源：臺灣地區國小一年級下學期南一版歷屆考古題彙整</p>
+
+            <!-- Teacher / Parent Area -->
+            <div class="mt-12 text-left">
+                <button onclick="toggleTeacherArea()" class="text-brand1 font-bold underline mb-2 focus:outline-none">
+                    老師/家長專區 (點擊展開)
+                </button>
+                <div id="teacher-area" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p class="text-sm text-gray-600 mb-4">此區域受密碼保護 (1234)。您可以備份或匯入 JSON 題庫。</p>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="authAction(downloadQuestions)" class="bg-brand1 text-white px-4 py-2 rounded shadow hover:bg-purple-600">下載題庫 (JSON)</button>
+                        <label class="bg-brand2 text-gray-800 px-4 py-2 rounded shadow hover:bg-purple-400 cursor-pointer">
+                            上傳題庫 (JSON)
+                            <input type="file" id="upload-json" accept=".json" class="hidden" onchange="authAction(() => handleFileUpload(event))">
+                        </label>
+                        <button onclick="authAction(showAllAnswers)" class="bg-orange-400 text-white px-4 py-2 rounded shadow hover:bg-orange-500">顯示所有解答</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Container -->
+        <div id="exam-container" class="hidden">
+            <div id="questions-area" class="space-y-8 mb-10">
+                <!-- Questions will be injected here -->
+            </div>
+            
+            <div id="result-area" class="hidden text-center bg-brand4 border-2 border-green-300 p-6 rounded-xl mb-6">
+                <h3 class="text-3xl font-bold text-green-700 mb-2">測驗結束！</h3>
+                <p class="text-2xl mb-4">你的分數是：<span id="final-score" class="font-bold text-red-500 text-5xl"></span> 分</p>
+                <button onclick="exportExcel()" class="bg-brand1 text-white font-bold py-3 px-8 rounded-full shadow hover:bg-purple-600">
+                    下載錯題整理 (Excel)
+                </button>
+            </div>
+
+            <div class="text-center mt-8 pb-10" id="submit-section">
+                <button onclick="submitExam()" class="bg-brand1 hover:bg-purple-600 text-white font-bold py-4 px-12 rounded-full text-xl shadow-lg transition transform hover:scale-105">
+                    繳卷送出
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sticky Footer for Stats -->
+    <footer id="stats-footer" class="hidden fixed bottom-0 left-0 w-full bg-white border-t-4 border-brand2 p-3 z-30 flex justify-start items-center gap-6 overflow-x-auto text-lg font-bold">
+        <div class="text-green-600">已答：<span id="stat-answered">0</span> 題</div>
+        <div class="text-red-500 cursor-pointer hover:underline" onclick="scrollToFirstUnanswered()" title="點擊跳轉到未答題">未答：<span id="stat-unanswered">50</span> 題</div>
+        <div class="text-orange-500">稍後作答：<span id="stat-marked">0</span> 題</div>
+    </footer>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform scale-95 transition-all text-center border-4 border-brand1">
+            <h3 id="modal-title" class="text-2xl font-bold mb-4 text-gray-800">提示</h3>
+            <p id="modal-msg" class="text-lg mb-6 text-gray-600"></p>
+            <div id="modal-input-container" class="hidden mb-6">
+                <input type="password" id="modal-password" class="border-2 border-gray-300 rounded px-4 py-2 w-full text-center text-xl tracking-widest" placeholder="請輸入密碼">
+            </div>
+            <div class="flex justify-center gap-4" id="modal-buttons">
+                <!-- Buttons injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 題庫資料 (50題) ---
+        let questionBank = [
+            // 單元6: 幾月幾日
+            { id: 1, unit: "6.幾月幾日", type: "mc", q: "一年有幾個月？", options: ["10個月", "11個月", "12個月", "13個月"], ans: 2, exp: "一年固定有12個月。" },
+            { id: 2, unit: "6.幾月幾日", type: "tf", q: "每個月的天數都一樣多。", options: ["對", "錯"], ans: 1, exp: "不對，有的月有31天(大月)，有的月有30天(小月)，2月只有28或29天。" },
+            { id: 3, unit: "6.幾月幾日", type: "mc", q: "昨天是5月4日，今天是幾月幾日？", options: ["5月3日", "5月5日", "5月6日", "4月5日"], ans: 1, exp: "昨天是4日，今天就是5日。" },
+            { id: 4, unit: "6.幾月幾日", type: "mc", q: "今天是星期三，明天是星期幾？", options: ["星期二", "星期四", "星期五", "星期六"], ans: 1, exp: "三的下一天是四。" },
+            { id: 5, unit: "6.幾月幾日", type: "mc", q: "今年的兒童節是哪一天？", options: ["1月1日", "4月4日", "5月1日", "10月10日"], ans: 1, exp: "兒童節在4月4日。" },
+            { id: 6, unit: "6.幾月幾日", type: "tf", q: "一個星期有7天。", options: ["對", "錯"], ans: 0, exp: "星期一到星期日共7天。" },
+            { id: 7, unit: "6.幾月幾日", type: "mc", q: "小明每個星期六和星期日放假，他一個星期放假幾天？", options: ["1天", "2天", "3天", "4天"], ans: 1, exp: "星期六、星期日共2天。" },
+            { id: 8, unit: "6.幾月幾日", type: "mc", q: "7月有幾天？", options: ["28天", "29天", "30天", "31天"], ans: 3, exp: "7月是大月，有31天。" },
+            { id: 9, unit: "6.幾月幾日", type: "tf", q: "教師節在九月。", options: ["對", "錯"], ans: 0, exp: "教師節是9月28日。" },
+            { id: 10, unit: "6.幾月幾日", type: "mc", q: "下面哪一個節日先到？", options: ["元旦(1月1日)", "兒童節(4月4日)", "中秋節(農曆8月)"], ans: 0, exp: "1月1日是一年的第一天。" },
+            { id: 11, unit: "6.幾月幾日", type: "mc", q: "明天的明天是星期五，今天是星期幾？", options: ["星期二", "星期三", "星期四"], ans: 1, exp: "明天是星期四，所以今天是星期三。" },
+            { id: 12, unit: "6.幾月幾日", type: "tf", q: "8月大，9月也是大月。", options: ["對", "錯"], ans: 1, exp: "8月有31天(大)，9月只有30天(小)。" },
+
+            // 單元7: 錢幣
+            { id: 13, unit: "7.錢幣", type: "mc", q: "1個50元硬幣可以換幾個10元硬幣？", options: ["1個", "5個", "10個", "50個"], ans: 1, exp: "50裡面有5個10。" },
+            { id: 14, unit: "7.錢幣", type: "mc", q: "3個10元和4個1元合起來是多少元？", options: ["34元", "43元", "7元", "12元"], ans: 0, exp: "3個10是30，加上4個1是34。" },
+            { id: 15, unit: "7.錢幣", type: "mc", q: "買一瓶25元的牛奶，全部付5元硬幣，要付幾個？", options: ["3個", "4個", "5個", "6個"], ans: 2, exp: "5, 10, 15, 20, 25，共5個。" },
+            { id: 16, unit: "7.錢幣", type: "tf", q: "1個10元硬幣和10個1元硬幣一樣多。", options: ["對", "錯"], ans: 0, exp: "10個1元合起來就是10元。" },
+            { id: 17, unit: "7.錢幣", type: "mc", q: "小華有50元，買了一盒30元的蠟筆，還剩下多少元？", options: ["10元", "20元", "30元", "80元"], ans: 1, exp: "50 - 30 = 20。" },
+            { id: 18, unit: "7.錢幣", type: "mc", q: "妹妹買了一包餅乾18元，她給老闆2個10元，老闆要找她多少元？", options: ["1元", "2元", "3元", "不用找"], ans: 1, exp: "2個10元是20元。20 - 18 = 2。" },
+            { id: 19, unit: "7.錢幣", type: "tf", q: "付錢時，拿出1個50元比拿出6個10元還要多。", options: ["對", "錯"], ans: 1, exp: "錯，6個10元是60元，比50元多。" },
+            { id: 20, unit: "7.錢幣", type: "mc", q: "哥哥想買一個45元的玩具，他錢包裡有4個10元，還差幾元才夠買？", options: ["1元", "4元", "5元", "10元"], ans: 2, exp: "4個10元是40元。45 - 40 = 5元。" },
+            { id: 21, unit: "7.錢幣", type: "mc", q: "下列哪一種組合剛好是15元？", options: ["1個10元,1個5元", "3個5元", "以上皆是"], ans: 2, exp: "10+5=15，5+5+5=15，兩者都對。" },
+            { id: 22, unit: "7.錢幣", type: "tf", q: "撲滿裡有2個50元，也就是有100元。", options: ["對", "錯"], ans: 0, exp: "50 + 50 = 100。" },
+            { id: 23, unit: "7.錢幣", type: "mc", q: "買兩杯15元的飲料，要付多少元？", options: ["15元", "20元", "30元", "35元"], ans: 2, exp: "15 + 15 = 30。" },
+            { id: 24, unit: "7.錢幣", type: "mc", q: "小美有3個5元，小亮有1個10元和4個1元，誰的錢比較多？", options: ["小美", "小亮", "一樣多"], ans: 0, exp: "小美15元，小亮14元，小美多。" },
+            { id: 25, unit: "7.錢幣", type: "mc", q: "把100元換成10元硬幣，可以換幾個？", options: ["5個", "10個", "15個"], ans: 1, exp: "10個10元是100元。" },
+
+            // 單元8: 二位數的加減
+            { id: 26, unit: "8.二位數的加減", type: "mc", q: "24 + 15 = ?", options: ["38", "39", "40", "49"], ans: 1, exp: "個位4+5=9，十位2+1=3，合起來39。" },
+            { id: 27, unit: "8.二位數的加減", type: "mc", q: "58 - 23 = ?", options: ["35", "36", "45", "81"], ans: 0, exp: "個位8-3=5，十位5-2=3，合起來35。" },
+            { id: 28, unit: "8.二位數的加減", type: "tf", q: "36 + 12 的答案是 48。", options: ["對", "錯"], ans: 0, exp: "6+2=8, 3+1=4，答案為48。" },
+            { id: 29, unit: "8.二位數的加減", type: "mc", q: "操場上有25個男生和32個女生，操場上共有幾個人？", options: ["55", "57", "67"], ans: 1, exp: "25 + 32 = 57。" },
+            { id: 30, unit: "8.二位數的加減", type: "mc", q: "一盒巧克力有45顆，吃掉了14顆，還剩下幾顆？", options: ["21", "31", "59"], ans: 1, exp: "45 - 14 = 31。" },
+            { id: 31, unit: "8.二位數的加減", type: "tf", q: "55 - 25 = 20", options: ["對", "錯"], ans: 1, exp: "55 - 25 = 30，所以錯。" },
+            { id: 32, unit: "8.二位數的加減", type: "mc", q: "紅氣球有42顆，藍氣球比紅氣球多15顆，藍氣球有幾顆？", options: ["27", "47", "57"], ans: 2, exp: "42 + 15 = 57。" },
+            { id: 33, unit: "8.二位數的加減", type: "mc", q: "池塘裡原本有68隻青蛙，跳走了22隻，現在剩幾隻？", options: ["46", "48", "90"], ans: 0, exp: "68 - 22 = 46。" },
+            { id: 34, unit: "8.二位數的加減", type: "mc", q: "34 + ( ) = 46，括號裡應填入多少？", options: ["10", "12", "14"], ans: 1, exp: "46 - 34 = 12。" },
+            { id: 35, unit: "8.二位數的加減", type: "mc", q: "98 - ( ) = 53，括號裡應填入多少？", options: ["45", "55", "65"], ans: 0, exp: "98 - 53 = 45。" },
+            { id: 36, unit: "8.二位數的加減", type: "tf", q: "小狗有16隻，小貓有23隻，小貓和小狗合起來不到40隻。", options: ["對", "錯"], ans: 0, exp: "16 + 23 = 39。39小於40，所以是對的。" },
+            { id: 37, unit: "8.二位數的加減", type: "mc", q: "哥哥今年18歲，爸爸今年45歲，爸爸比哥哥大幾歲？", options: ["25歲", "27歲", "37歲"], ans: 1, exp: "45 - 18 = 27。" },
+            { id: 38, unit: "8.二位數的加減", type: "mc", q: "書架上原有56本書，又放上去17本，現在有幾本？(進位加法)", options: ["63", "73", "83"], ans: 1, exp: "56 + 17 = 73。" },
+            { id: 39, unit: "8.二位數的加減", type: "mc", q: "小明買了一本38元的筆記本和一枝15元的原子筆，共要付幾元？", options: ["43", "53", "63"], ans: 1, exp: "38 + 15 = 53。" },
+            { id: 40, unit: "8.二位數的加減", type: "tf", q: "算式 82 - 39 的答案大於 50。", options: ["對", "錯"], ans: 1, exp: "82 - 39 = 43。43小於50，所以錯。" },
+
+            // 單元9: 做紀錄
+            { id: 41, unit: "9.做紀錄", type: "mc", q: "畫記號時，通常畫一個「正」字代表幾個數量？", options: ["1個", "3個", "4個", "5個"], ans: 3, exp: "「正」字有五筆畫，代表5個。" },
+            { id: 42, unit: "9.做紀錄", type: "tf", q: "要記錄全班喜歡吃蘋果的人數，可以用畫圈圈或畫「正」字來記錄。", options: ["對", "錯"], ans: 0, exp: "這兩種都是常見的做紀錄方法。" },
+            { id: 43, unit: "9.做紀錄", type: "mc", q: "老師在黑板上畫了兩個「正」字和兩畫，請問代表幾個人？", options: ["7個人", "10個人", "12個人"], ans: 2, exp: "兩個正是10，加兩畫是12。" },
+            { id: 44, unit: "9.做紀錄", type: "mc", q: "下雨天數統計中，三月畫了一個「正」，四月畫了「正」和三畫。哪個月下雨多？", options: ["三月", "四月", "一樣多"], ans: 1, exp: "三月5天，四月8天，四月比較多。" },
+            { id: 45, unit: "9.做紀錄", type: "mc", q: "要記錄車子經過的數量，下列哪一種方法最不容易算錯？", options: ["畫一整排的直線", "畫『正』字", "隨便塗鴉"], ans: 1, exp: "畫正字每5個一數，最清楚好算。" },
+            { id: 46, unit: "9.做紀錄", type: "tf", q: "紀錄表上如果西瓜的票數是三個「正」字，代表有15個人投票給西瓜。", options: ["對", "錯"], ans: 0, exp: "3個5是15，正確。" },
+            { id: 47, unit: "9.做紀錄", type: "match", q: "請根據描述選出正確的票數：三個「正」字和四畫。", options: ["14票", "17票", "19票", "21票"], ans: 2, exp: "3個5是15，加上4畫等於19。" },
+            { id: 48, unit: "9.做紀錄", type: "match", q: "請根據描述選出正確的票數：只有四畫。", options: ["4票", "5票", "9票"], ans: 0, exp: "不到一個正字，就是4票。" },
+            { id: 49, unit: "9.做紀錄", type: "mc", q: "班上選班長，小華得票數是「正正正一」，小明得票是「正正正正」，誰當選？", options: ["小華", "小明", "平手"], ans: 1, exp: "小華16票，小明20票，小明當選。" },
+            { id: 50, unit: "9.做紀錄", type: "tf", q: "做紀錄時，我們把資料分類排好，可以更容易看出哪一種數量最多或最少。", options: ["對", "錯"], ans: 0, exp: "做紀錄的目的就是為了方便統計和比較。" }
+        ];
+
+        // --- 狀態變數 ---
+        let questions = [];
+        let userAnswers = {};
+        let markedQuestions = {};
+        let timerInterval;
+        let timeRemaining = 40 * 60; // 40 minutes in seconds
+        let examSubmitted = false;
+
+        // --- 初始化 ---
+        function shuffleQuestions() {
+            questions = [...questionBank].sort(() => Math.random() - 0.5);
+            userAnswers = {};
+            markedQuestions = {};
+            timeRemaining = 40 * 60;
+            examSubmitted = false;
+        }
+
+        // --- 控制流程 ---
+        function startExam() {
+            shuffleQuestions();
+            document.getElementById('intro-screen').classList.add('hidden');
+            document.getElementById('exam-container').classList.remove('hidden');
+            document.getElementById('stats-footer').classList.remove('hidden');
+            document.getElementById('timer-display').classList.remove('hidden');
+            
+            renderQuestions();
+            updateStats();
+            
+            // Timer
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            if(examSubmitted) {
+                clearInterval(timerInterval);
+                return;
+            }
+
+            timeRemaining--;
+            let mins = Math.floor(timeRemaining / 60);
+            let secs = timeRemaining % 60;
+            document.getElementById('time-left').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            // 提醒判斷
+            if (timeRemaining === 25 * 60) {
+                showAlert('考試時間剩餘 25 分鐘！', 'info');
+            } else if (timeRemaining === 10 * 60) {
+                showAlert('考試時間剩餘 10 分鐘，請把握時間！', 'warning');
+            } else if (timeRemaining === 5 * 60) {
+                showAlert('考試時間最後 5 分鐘！時間到將自動繳卷。', 'warning');
+                document.getElementById('timer-display').classList.add('text-red-500', 'bg-red-100');
+            } else if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                showAlert('時間到！系統將自動為您繳交答案。', 'warning', forceSubmit);
+            }
+        }
+
+        // --- 渲染題目 ---
+        function renderQuestions() {
+            const container = document.getElementById('questions-area');
+            container.innerHTML = '';
+
+            questions.forEach((q, index) => {
+                const qNum = index + 1;
+                let html = `
+                <div id="q-block-${qNum}" class="bg-white p-6 rounded-xl border-l-8 border-brand3 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-brand1 text-white px-3 py-1 rounded font-bold">第 ${qNum} 題</span>
+                            <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">${q.unit}</span>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer text-orange-500 font-bold bg-orange-50 px-3 py-1 rounded border border-orange-200">
+                            <input type="checkbox" class="mark-checkbox" onchange="toggleMark(${qNum})" id="mark-${qNum}">
+                            稍後作答
+                        </label>
+                    </div>
+                    <p class="text-xl font-bold mb-4 ml-1">${q.q}</p>
+                    <div class="ml-4 space-y-3">
+                `;
+                
+                // 選項 (選擇題、是非題、配合題都轉換為選擇形式)
+                q.options.forEach((opt, optIndex) => {
+                    html += `
+                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-brand4 transition">
+                            <input type="radio" name="q-${qNum}" value="${optIndex}" class="radio-custom mr-3" onchange="answerSelected(${qNum}, ${optIndex})">
+                            <span class="text-lg">${opt}</span>
+                        </label>
+                    `;
+                });
+
+                html += `
+                    </div>
+                    <div id="exp-${qNum}" class="hidden mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+                        <p class="font-bold text-blue-700">【解答】</p>
+                        <p class="text-blue-900">${q.exp}</p>
+                    </div>
+                </div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        // --- 狀態更新 ---
+        function answerSelected(qNum, selectedIndex) {
+            if(examSubmitted) return; // 鎖定作答
+            userAnswers[qNum] = selectedIndex;
+            updateStats();
+        }
+
+        function toggleMark(qNum) {
+            const isChecked = document.getElementById(`mark-${qNum}`).checked;
+            markedQuestions[qNum] = isChecked;
+            updateStats();
+        }
+
+        function updateStats() {
+            let answeredCount = Object.keys(userAnswers).length;
+            let markedCount = Object.values(markedQuestions).filter(v => v).length;
+            
+            document.getElementById('stat-answered').innerText = answeredCount;
+            document.getElementById('stat-unanswered').innerText = questions.length - answeredCount;
+            document.getElementById('stat-marked').innerText = markedCount;
+        }
+
+        function scrollToFirstUnanswered() {
+            for (let i = 1; i <= questions.length; i++) {
+                if (userAnswers[i] === undefined) {
+                    const el = document.getElementById(`q-block-${i}`);
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.classList.add('highlight-focus');
+                    setTimeout(() => el.classList.remove('highlight-focus'), 2000);
+                    break;
+                }
+            }
+        }
+
+        // --- 繳卷邏輯 ---
+        function submitExam() {
+            let unanswered = questions.length - Object.keys(userAnswers).length;
+            let marked = Object.values(markedQuestions).filter(v => v).length;
+
+            if (unanswered > 0) {
+                showAlert(`你還有 ${unanswered} 題未作答，必須全部作答才能繳卷！<br>請點擊下方「未答」文字快速尋找未答題。`, 'error');
+                return;
+            }
+
+            if (marked > 0) {
+                showConfirm(`你還有 ${marked} 題標記為「稍後作答」，確定要現在繳卷嗎？`, forceSubmit);
+                return;
+            }
+
+            forceSubmit();
+        }
+
+        function forceSubmit() {
+            clearInterval(timerInterval);
+            examSubmitted = true;
+            document.getElementById('submit-section').classList.add('hidden');
+            
+            // 鎖定所有 radio
+            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
+            document.querySelectorAll('.mark-checkbox').forEach(cb => cb.disabled = true);
+
+            let score = 0;
+            const pointsPerQuestion = 100 / questions.length;
+
+            questions.forEach((q, index) => {
+                const qNum = index + 1;
+                const userAns = userAnswers[qNum];
+                const block = document.getElementById(`q-block-${qNum}`);
+                const expBlock = document.getElementById(`exp-${qNum}`);
+
+                if (userAns !== undefined) {
+                    if (userAns === q.ans) {
+                        score += pointsPerQuestion;
+                        block.classList.replace('border-brand3', 'border-green-500');
+                    } else {
+                        block.classList.replace('border-brand3', 'border-red-500');
+                        block.classList.add('bg-red-50');
+                        // 顯示詳解
+                        expBlock.classList.remove('hidden');
+                        
+                        // 標示出正確答案
+                        const correctRadio = document.querySelector(`input[name="q-${qNum}"][value="${q.ans}"]`);
+                        if(correctRadio) correctRadio.parentElement.classList.add('bg-green-200', 'font-bold');
+                    }
+                }
+            });
+
+            // 顯示成績區塊
+            const resultArea = document.getElementById('result-area');
+            resultArea.classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            
+            // 滾動到最上面看成績
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- 匯出 Excel (使用 xlsx-js-style 支援樣式) ---
+        function exportExcel() {
+            let errorData = [];
+            
+            questions.forEach((q, index) => {
+                const qNum = index + 1;
+                const userAnsIndex = userAnswers[qNum];
+                if (userAnsIndex !== q.ans) {
+                    const userText = userAnsIndex !== undefined ? q.options[userAnsIndex] : "未作答";
+                    const correctText = q.options[q.ans];
+                    errorData.push({
+                        '題號': qNum,
+                        '單元': q.unit,
+                        '題目': q.q,
+                        '正確答案': correctText,
+                        '你的答案': userText,
+                        '詳解': q.exp
+                    });
+                }
+            });
+
+            if(errorData.length === 0) {
+                showAlert('太棒了！你沒有錯題，不需下載。', 'info');
+                return;
+            }
+
+            // 建立 WorkBook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(errorData);
+
+            // 調整欄寬
+            ws['!cols'] = [
+                {wch: 5}, {wch: 15}, {wch: 40}, {wch: 15}, {wch: 15}, {wch: 40}
+            ];
+
+            // 找出「你的答案」這欄的位置並加上紅色加粗樣式
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for(let R = range.s.r; R <= range.e.r; ++R) {
+                // E 欄是「你的答案」 (index 4)
+                const cellRef = XLSX.utils.encode_cell({c: 4, r: R});
+                if(!ws[cellRef]) continue;
+                
+                // 如果不是標題列，上色
+                if(R !== 0) {
+                    ws[cellRef].s = {
+                        font: {
+                            bold: true,
+                            color: { rgb: "FF0000" } // 紅色
+                        }
+                    };
+                } else {
+                    // 標題列加粗
+                    for(let C = range.s.c; C <= range.e.c; ++C) {
+                        const titleCell = XLSX.utils.encode_cell({c: C, r: 0});
+                        if(ws[titleCell]) {
+                            ws[titleCell].s = { font: { bold: true } };
+                        }
+                    }
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, "錯題整理");
+            XLSX.writeFile(wb, "exam_result.xlsx");
+        }
+
+        // --- 老師/家長後台功能 ---
+        function toggleTeacherArea() {
+            const area = document.getElementById('teacher-area');
+            area.classList.toggle('hidden');
+        }
+
+        function downloadQuestions() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questionBank, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "nanyi_math_q_bank.json");
+            dlAnchorElem.click();
+            showAlert('題庫下載成功！', 'info');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const newBank = JSON.parse(e.target.result);
+                    if(Array.isArray(newBank) && newBank.length > 0) {
+                        questionBank = newBank;
+                        document.querySelector('.text-lg.mb-8').innerText = `總共 ${questionBank.length} 題，滿分 100 分。測驗時間 40 分鐘。`;
+                        showAlert(`題庫上傳成功！共 ${questionBank.length} 題。`, 'info');
+                    } else {
+                        showAlert('JSON 格式錯誤：必須是題目陣列。', 'error');
+                    }
+                } catch (err) {
+                    showAlert('讀取檔案失敗或 JSON 格式錯誤。', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showAllAnswers() {
+            if(!examSubmitted) {
+                // 如果還在外面
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = '<h3 class="font-bold text-xl mb-4 text-brand1">題庫解答速查</h3>';
+                tempContainer.className = 'bg-white p-6 rounded shadow mt-6 max-h-96 overflow-y-auto border-4 border-brand2 text-left';
+                
+                questionBank.forEach((q, i) => {
+                    tempContainer.innerHTML += `
+                        <div class="mb-3 pb-2 border-b">
+                            <p class="font-bold">${i+1}. ${q.q}</p>
+                            <p class="text-green-600">答：${q.options[q.ans]}</p>
+                            <p class="text-gray-500 text-sm">解析：${q.exp}</p>
+                        </div>
+                    `;
+                });
+                document.getElementById('teacher-area').appendChild(tempContainer);
+            } else {
+                // 考試完畢顯示所有解析
+                questions.forEach((q, index) => {
+                    const qNum = index + 1;
+                    document.getElementById(`exp-${qNum}`).classList.remove('hidden');
+                });
+                showAlert('已為您展開所有題目的詳細解答。', 'info');
+            }
+        }
+
+        // --- 自訂 Modal (取代 alert, prompt, confirm) ---
+        let currentAuthCallback = null;
+
+        function closeDialog() {
+            document.getElementById('custom-modal').classList.add('hidden');
+            document.getElementById('modal-input-container').classList.add('hidden');
+            document.getElementById('modal-password').value = '';
+        }
+
+        function showAlert(msg, type = 'info', onConfirm = null) {
+            document.getElementById('modal-title').innerText = type === 'error' ? '❌ 錯誤' : (type === 'warning' ? '⚠️ 注意' : '💡 提示');
+            document.getElementById('modal-msg').innerHTML = msg;
+            
+            const btnContainer = document.getElementById('modal-buttons');
+            btnContainer.innerHTML = '';
+            
+            const btn = document.createElement('button');
+            btn.className = "bg-brand1 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-purple-600";
+            btn.innerText = "我知道了";
+            btn.onclick = () => {
+                closeDialog();
+                if(onConfirm) onConfirm();
+            };
+            btnContainer.appendChild(btn);
+
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function showConfirm(msg, onConfirm) {
+            document.getElementById('modal-title').innerText = '❓ 確認';
+            document.getElementById('modal-msg').innerText = msg;
+            
+            const btnContainer = document.getElementById('modal-buttons');
+            btnContainer.innerHTML = '';
+            
+            const btnCancel = document.createElement('button');
+            btnCancel.className = "bg-gray-300 text-gray-800 px-6 py-2 rounded-full font-bold shadow hover:bg-gray-400";
+            btnCancel.innerText = "取消";
+            btnCancel.onclick = closeDialog;
+            
+            const btnOk = document.createElement('button');
+            btnOk.className = "bg-brand1 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-purple-600";
+            btnOk.innerText = "確定";
+            btnOk.onclick = () => {
+                closeDialog();
+                onConfirm();
+            };
+
+            btnContainer.appendChild(btnCancel);
+            btnContainer.appendChild(btnOk);
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        // 認證操作 (密碼 1234)
+        function authAction(callback) {
+            currentAuthCallback = callback;
+            document.getElementById('modal-title').innerText = '🔒 權限驗證';
+            document.getElementById('modal-msg').innerText = '請輸入家長/老師密碼以繼續操作：';
+            document.getElementById('modal-input-container').classList.remove('hidden');
+            
+            const btnContainer = document.getElementById('modal-buttons');
+            btnContainer.innerHTML = '';
+            
+            const btnCancel = document.createElement('button');
+            btnCancel.className = "bg-gray-300 text-gray-800 px-6 py-2 rounded-full font-bold shadow hover:bg-gray-400";
+            btnCancel.innerText = "取消";
+            btnCancel.onclick = closeDialog;
+            
+            const btnOk = document.createElement('button');
+            btnOk.className = "bg-brand1 text-white px-6 py-2 rounded-full font-bold shadow hover:bg-purple-600";
+            btnOk.innerText = "確認";
+            btnOk.onclick = verifyPassword;
+
+            btnContainer.appendChild(btnCancel);
+            btnContainer.appendChild(btnOk);
+            document.getElementById('custom-modal').classList.remove('hidden');
+            
+            // Focus on input
+            setTimeout(() => document.getElementById('modal-password').focus(), 100);
+        }
+
+        function verifyPassword() {
+            const pwd = document.getElementById('modal-password').value;
+            if(pwd === '1234') {
+                closeDialog();
+                if(currentAuthCallback) currentAuthCallback();
+            } else {
+                // 直接修改 modal 內容為錯誤提示，不疊加新的 modal
+                document.getElementById('modal-msg').innerText = '密碼錯誤！請重新輸入。';
+                document.getElementById('modal-msg').classList.add('text-red-500');
+                document.getElementById('modal-password').value = '';
+                setTimeout(() => document.getElementById('modal-msg').classList.remove('text-red-500'), 2000);
+            }
+        }
+    </script>
+</body>
+</html>
