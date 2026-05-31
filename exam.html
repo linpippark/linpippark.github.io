@@ -11,8 +11,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入精美生動的 SweetAlert2 彈窗庫 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- 引入超強字串壓縮庫，將 JSON 題庫壓縮成超短 URL 分享連結 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
         body { 
             font-family: 'Fredoka', 'Nunito', 'Noto Sans TC', '微軟正黑體', sans-serif; 
@@ -201,14 +199,9 @@
                 <textarea id="jsonInput" class="w-full h-48 pl-10 pr-4 py-4 border-4 border-slate-700 bg-amber-50/20 text-slate-700 font-mono text-sm rounded-2xl focus:ring-4 focus:ring-amber-300 focus:outline-none placeholder-slate-400 shadow-inner" placeholder='[\n  {\n    "id": 1,\n    "question": "題目...",\n    "options": ["A", "B", "C", "D"],\n    "answer": 0,\n    "explanation": "詳解...",\n    "subject": "五年級下學期國語科",\n    "textbook_version": "康軒版五年級下學期國語 - 第七課 題西林壁"\n  }\n]'></textarea>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="startExam()" class="flex-grow btn-3d-gold text-slate-800 font-black text-xl py-4 px-6 rounded-2xl cursor-pointer">
-                    🚀 啟動魔法！載入考卷開始挑戰
-                </button>
-                <button onclick="generateShareLink()" class="btn-3d-green text-white font-black text-lg py-4 px-6 rounded-2xl cursor-pointer flex items-center justify-center gap-2">
-                    🔗 產生學生專屬分享連結
-                </button>
-            </div>
+            <button onclick="startExam()" class="w-full btn-3d-gold text-slate-800 font-black text-xl py-4 px-6 rounded-2xl cursor-pointer">
+                🚀 啟動魔法！載入考卷開始挑戰
+            </button>
             
             <div id="setupError" class="mt-4 p-4 bg-rose-50 border-2 border-rose-400 text-rose-700 text-sm font-bold rounded-xl hidden flex items-center gap-2">
                 ⚠️ <span id="errorText">格式錯誤，請檢查！</span>
@@ -894,135 +887,8 @@
             historyList.innerHTML = html;
         }
 
-        // 產生學生專屬壓縮分享連結
-        function generateShareLink() {
-            const jsonText = document.getElementById('jsonInput').value;
-            const errorMsg = document.getElementById('setupError');
-            const errorText = document.getElementById('errorText');
-            
-            if (errorMsg) errorMsg.classList.add('hidden');
-            
-            try {
-                const parsed = JSON.parse(jsonText);
-                if (!Array.isArray(parsed) || parsed.length === 0) {
-                    throw new Error("題庫格式不對，必須是一個包含題目的陣列。");
-                }
-                
-                // 壓縮 JSON 內容
-                const compressed = LZString.compressToEncodedURIComponent(jsonText);
-                
-                // 拼接完整 URL
-                let shareUrl = window.location.href.split('?')[0] + '?quiz=' + compressed;
-                
-                Swal.fire({
-                    title: '🔗 學生專屬分享連結已生成！',
-                    html: `
-                        <p class="text-sm text-slate-500 font-bold mb-4">將此連結傳送給台中的學生，他們點開即可直接進行線上測驗，不需複製貼上！</p>
-                        <input id="shareLinkInput" type="text" class="w-full p-3 border-2 border-slate-300 rounded-xl bg-slate-50 font-mono text-xs text-slate-600 text-center select-all focus:outline-none mb-2" value="${shareUrl}" readonly>
-                    `,
-                    icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonText: '📋 複製連結',
-                    cancelButtonText: '關閉',
-                    confirmButtonColor: '#10b981',
-                    cancelButtonColor: '#475569',
-                    customClass: {
-                        popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const copyInput = document.getElementById('shareLinkInput');
-                        if (copyInput) {
-                            copyInput.select();
-                            copyInput.setSelectionRange(0, 99999);
-                            navigator.clipboard.writeText(copyInput.value)
-                                .then(() => {
-                                    Swal.fire({
-                                        title: '🎉 複製成功！',
-                                        text: '分享連結已複製到您的剪貼簿，趕快傳給學生吧！',
-                                        icon: 'success',
-                                        timer: 1500,
-                                        showConfirmButton: false,
-                                        customClass: {
-                                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                                        }
-                                    });
-                                })
-                                .catch(() => {
-                                    Swal.fire({
-                                        title: '⚠️ 複製失敗',
-                                        text: '請手動選取輸入框內的連結並進行複製！',
-                                        icon: 'warning',
-                                        customClass: {
-                                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                                        }
-                                    });
-                                });
-                        }
-                    }
-                });
-            } catch (e) {
-                if (errorText && errorMsg) {
-                    errorText.textContent = "JSON 格式錯誤，請檢查括號與逗號。詳細錯誤：" + e.message;
-                    errorMsg.classList.remove('hidden');
-                }
-                Swal.fire({
-                    title: '⚠️ 題庫解析失敗',
-                    text: '請確認魔法羊皮紙內的 JSON 格式完全正確後再生成連結！',
-                    icon: 'error',
-                    confirmButtonText: '我知道了',
-                    confirmButtonColor: '#ef4444',
-                    customClass: {
-                        popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                    }
-                });
-            }
-        }
-
-        // 頁面載入時先渲染一次戰績榜，並偵測 URL 魔法參數
-        window.addEventListener('DOMContentLoaded', () => {
-            renderHistory();
-            
-            // 讀取網址的 quiz 參數
-            const urlParams = new URLSearchParams(window.location.search);
-            const compressedQuiz = urlParams.get('quiz');
-            if (compressedQuiz) {
-                try {
-                    // 解壓縮題庫
-                    const decompressed = LZString.decompressFromEncodedURIComponent(compressedQuiz);
-                    if (decompressed) {
-                        const jsonInput = document.getElementById('jsonInput');
-                        if (jsonInput) {
-                            jsonInput.value = decompressed;
-                        }
-                        
-                        Swal.fire({
-                            title: '✨ 偵測到遠端考卷魔法！',
-                            text: '正在為您自動解鎖並加載這份神祕考卷...',
-                            icon: 'info',
-                            showConfirmButton: false,
-                            timer: 1500,
-                            customClass: {
-                                popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                            }
-                        }).then(() => {
-                            startExam();
-                        });
-                    }
-                } catch (e) {
-                    Swal.fire({
-                        title: '⚠️ 魔法解鎖失敗',
-                        text: '這份考卷的分享連結可能已損毀或格式不正確！',
-                        icon: 'error',
-                        confirmButtonText: '回到首頁',
-                        confirmButtonColor: '#ef4444',
-                        customClass: {
-                            popup: 'rounded-3xl border-4 border-slate-700 shadow-[8px_8px_0px_0px_#475569]'
-                        }
-                    });
-                }
-            }
-        });
+        // 頁面載入時先渲染一次戰績榜
+        window.addEventListener('DOMContentLoaded', renderHistory);
     </script>
 </body>
 </html>
