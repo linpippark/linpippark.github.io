@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>114學年-康軒(一下)國語線上期末測驗系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Fredoka+One&display=swap');
+  :root {
+    --gold: #FFD41D;
+    --orange: #FFA240;
+    --red: #D73535;
+    --coral: #FF4646;
+    --dark: #2c1a0e;
+    --light: #fffdf5;
+    --shadow: rgba(215,53,53,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #fffbe6; color: var(--dark); min-height: 100vh; }
+
+  /* HEADER */
+  #header {
+    background: linear-gradient(135deg, var(--red) 0%, #b82020 50%, #8a1515 100%);
+    color: #fff;
+    padding: 0 20px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border-bottom: 4px solid var(--gold);
+  }
+  #header-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0; gap: 12px; flex-wrap: wrap;
+  }
+  #header-title {
+    font-family: 'Fredoka One', 'Noto Sans TC', sans-serif;
+    font-size: clamp(14px, 2.5vw, 22px);
+    color: var(--gold);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    letter-spacing: 1px;
+    flex: 1;
+  }
+  #timer-box {
+    background: rgba(255,255,255,0.12);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 6px 18px;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+    min-width: 120px;
+    text-align: center;
+    display: none;
+  }
+  #timer-box.warning { color: var(--coral); border-color: var(--coral); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* WELCOME SCREEN */
+  #welcome-screen {
+    max-width: 700px; margin: 40px auto; padding: 20px;
+  }
+  .welcome-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 36px 32px;
+    box-shadow: 0 8px 40px var(--shadow);
+    border: 3px solid var(--gold);
+    text-align: center;
+  }
+  .welcome-card h2 {
+    font-size: 26px; color: var(--red); margin-bottom: 12px;
+    font-weight: 900;
+  }
+  .welcome-card p { color: #666; margin-bottom: 8px; font-size: 15px; line-height: 1.7; }
+  .scope-box {
+    background: linear-gradient(135deg, #fff9e6, #fff3cc);
+    border: 2px solid var(--orange);
+    border-radius: 16px; padding: 18px 22px;
+    margin: 20px 0; text-align: left;
+  }
+  .scope-box h3 { color: var(--red); font-size: 16px; margin-bottom: 10px; }
+  .scope-box ul { list-style: none; }
+  .scope-box li { padding: 4px 0; color: #555; font-size: 14px; }
+  .scope-box li::before { content: "📘 "; }
+  .source-box {
+    background: #f0f9ff; border: 1.5px solid #aed6f1;
+    border-radius: 12px; padding: 12px 16px; margin: 16px 0; text-align: left;
+    font-size: 13px; color: #555;
+  }
+  .source-box strong { color: #1a6699; }
+  .btn-start {
+    background: linear-gradient(135deg, var(--gold), var(--orange));
+    color: var(--dark); border: none; border-radius: 50px;
+    padding: 16px 48px; font-size: 20px; font-weight: 700;
+    cursor: pointer; margin-top: 20px;
+    box-shadow: 0 6px 20px rgba(255,162,64,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .btn-start:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,162,64,0.5); }
+
+  /* TEACHER ZONE */
+  #teacher-zone-toggle {
+    max-width: 700px; margin: 0 auto 10px; padding: 0 20px;
+  }
+  .teacher-toggle-btn {
+    background: #fff; border: 2px dashed #ccc; border-radius: 12px;
+    padding: 10px 20px; cursor: pointer; font-size: 13px; color: #888;
+    width: 100%; transition: all 0.2s;
+  }
+  .teacher-toggle-btn:hover { border-color: var(--orange); color: var(--orange); }
+  #teacher-panel {
+    max-width: 700px; margin: 0 auto 20px; padding: 0 20px;
+    display: none;
+  }
+  .teacher-card {
+    background: #fff; border-radius: 16px;
+    border: 2px solid var(--orange); padding: 20px;
+    box-shadow: 0 4px 20px rgba(255,162,64,0.2);
+  }
+  .teacher-card h3 { color: var(--red); margin-bottom: 14px; font-size: 16px; }
+  .teacher-btn {
+    background: var(--orange); color: #fff; border: none;
+    border-radius: 10px; padding: 10px 20px; cursor: pointer;
+    font-size: 14px; margin-right: 10px; margin-bottom: 8px;
+    font-family: 'Noto Sans TC', sans-serif; font-weight: 700;
+    transition: background 0.2s;
+  }
+  .teacher-btn:hover { background: var(--red); }
+  #upload-input { display: none; }
+
+  /* EXAM SCREEN */
+  #exam-screen { display: none; padding: 20px; max-width: 900px; margin: 0 auto; }
+  .section-title {
+    background: linear-gradient(90deg, var(--red), var(--coral));
+    color: #fff; border-radius: 12px; padding: 10px 20px;
+    font-size: 18px; font-weight: 700; margin: 28px 0 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .q-card {
+    background: #fff; border-radius: 16px;
+    border: 2px solid #f0e0c0;
+    padding: 20px 24px; margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .q-card.answered { border-color: #4caf50; }
+  .q-card.later { border-color: var(--gold); background: #fffef0; }
+  .q-card.unanswered-highlight { border-color: var(--red); box-shadow: 0 0 0 3px rgba(215,53,53,0.2); }
+  .q-header {
+    display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
+  }
+  .q-num {
+    background: var(--red); color: #fff;
+    border-radius: 50%; width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .q-unit {
+    background: var(--gold); color: var(--dark);
+    border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 700;
+    flex-shrink: 0; margin-top: 4px;
+  }
+  .q-text { font-size: 16px; line-height: 1.8; color: #222; font-weight: 500; }
+  .q-score { font-size: 12px; color: #999; margin-left: auto; white-space: nowrap; }
+  .later-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #888; margin-bottom: 12px; cursor: pointer;
+    user-select: none;
+  }
+  .later-label input { cursor: pointer; width: 16px; height: 16px; }
+  /* TRUE/FALSE */
+  .tf-options { display: flex; gap: 12px; flex-wrap: wrap; }
+  .tf-btn {
+    border: 2px solid #e0e0e0; border-radius: 12px;
+    padding: 10px 28px; font-size: 15px; cursor: pointer;
+    background: #fff; color: #555; font-weight: 700;
+    transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif;
+  }
+  .tf-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .tf-btn.selected-true { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+  .tf-btn.selected-false { background: #fce4ec; border-color: #e91e63; color: #880e4f; }
+  /* CHOICES */
+  .choice-options { display: flex; flex-direction: column; gap: 8px; }
+  .choice-btn {
+    border: 2px solid #e0e0e0; border-radius: 12px;
+    padding: 10px 16px; font-size: 15px; cursor: pointer;
+    background: #fff; color: #444; text-align: left;
+    transition: all 0.2s; font-family: 'Noto Sans TC', sans-serif;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .choice-btn:hover { border-color: var(--orange); background: #fff9f0; }
+  .choice-btn.selected { background: #fff3e0; border-color: var(--orange); color: #b35900; font-weight: 700; }
+  .choice-label {
+    background: var(--orange); color: #fff;
+    border-radius: 50%; width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  /* MATCH */
+  .match-area { display: flex; gap: 20px; flex-wrap: wrap; }
+  .match-col { flex: 1; min-width: 140px; }
+  .match-col h4 { font-size: 13px; color: #888; margin-bottom: 8px; }
+  .match-item {
+    border: 2px solid #e0e0e0; border-radius: 10px;
+    padding: 8px 12px; margin-bottom: 6px; font-size: 15px;
+    cursor: pointer; background: #fff; transition: all 0.2s;
+    user-select: none;
+  }
+  .match-item.selected-left { border-color: var(--orange); background: #fff3e0; font-weight: 700; }
+  .match-item.matched { border-color: #4caf50; background: #e8f5e9; }
+  .match-select { width: 100%; border: 2px solid #e0e0e0; border-radius: 10px; padding: 8px 10px; font-size: 15px; font-family: 'Noto Sans TC', sans-serif; background: #fff; cursor: pointer; }
+  .match-select.answered { border-color: var(--orange); }
+
+  /* BOTTOM BAR */
+  #bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.97);
+    border-top: 3px solid var(--gold);
+    padding: 10px 20px;
+    display: none; z-index: 90;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  }
+  #bottom-bar-inner {
+    max-width: 900px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .stat-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .chip-green { background: #e8f5e9; color: #2e7d32; border: 1.5px solid #a5d6a7; }
+  .chip-red { background: #fce4ec; color: #c62828; border: 1.5px solid #f48fb1; }
+  .chip-yellow { background: #fff9c4; color: #f57f17; border: 1.5px solid #fff176; }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--red), var(--coral));
+    color: #fff; border: none; border-radius: 50px;
+    padding: 12px 36px; font-size: 16px; font-weight: 700;
+    cursor: pointer; font-family: 'Noto Sans TC', sans-serif;
+    box-shadow: 0 4px 16px rgba(215,53,53,0.3);
+    transition: transform 0.2s;
+  }
+  .btn-submit:hover { transform: scale(1.05); }
+  #submit-area { text-align: center; margin: 40px 0 100px; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: #fff; border-radius: 24px;
+    padding: 32px 28px; max-width: 480px; width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 3px solid var(--gold);
+    transform: scale(0.8); transition: transform 0.25s;
+    text-align: center;
+  }
+  .modal-overlay.open .modal-box { transform: scale(1); }
+  .modal-icon { font-size: 48px; margin-bottom: 12px; }
+  .modal-title { font-size: 22px; font-weight: 700; color: var(--red); margin-bottom: 12px; }
+  .modal-msg { font-size: 15px; color: #555; line-height: 1.8; margin-bottom: 20px; }
+  .modal-input {
+    border: 2px solid #ddd; border-radius: 10px; padding: 10px 14px;
+    font-size: 16px; width: 100%; margin-bottom: 16px;
+    font-family: 'Noto Sans TC', sans-serif; text-align: center;
+  }
+  .modal-input:focus { outline: none; border-color: var(--orange); }
+  .modal-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .modal-btn {
+    border: none; border-radius: 50px; padding: 10px 28px;
+    font-size: 15px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif; transition: all 0.2s;
+  }
+  .modal-btn-primary { background: var(--red); color: #fff; }
+  .modal-btn-primary:hover { background: var(--coral); }
+  .modal-btn-secondary { background: #f0f0f0; color: #555; }
+  .modal-btn-secondary:hover { background: #e0e0e0; }
+
+  /* RESULT SCREEN */
+  #result-screen { display: none; }
+  .result-banner {
+    background: linear-gradient(135deg, var(--red), var(--coral));
+    color: #fff; text-align: center; padding: 32px 20px;
+  }
+  .result-score { font-size: 72px; font-weight: 900; color: var(--gold); }
+  .result-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .result-sub { font-size: 15px; opacity: 0.85; }
+  .result-detail {
+    max-width: 900px; margin: 0 auto;
+    display: flex; gap: 16px; padding: 20px; flex-wrap: wrap; justify-content: center;
+  }
+  .r-chip {
+    border-radius: 16px; padding: 16px 24px; text-align: center; min-width: 130px;
+  }
+  .r-chip-num { font-size: 28px; font-weight: 700; }
+  .r-chip-label { font-size: 13px; color: #666; margin-top: 4px; }
+  #review-area { max-width: 900px; margin: 0 auto; padding: 0 20px 120px; }
+  .review-section-title { font-size: 17px; color: var(--red); font-weight: 700; margin: 24px 0 12px; padding-left: 12px; border-left: 4px solid var(--red); }
+  .q-card .explanation { display: none; background: #f0f9f0; border-radius: 10px; padding: 12px 16px; margin-top: 14px; font-size: 14px; color: #2e7d32; border-left: 4px solid #4caf50; }
+  .q-card.show-exp .explanation { display: block; }
+  .show-exp-btn { background: #e8f5e9; border: 1.5px solid #4caf50; border-radius: 20px; padding: 4px 14px; font-size: 12px; color: #2e7d32; cursor: pointer; margin-top: 10px; font-family: 'Noto Sans TC', sans-serif; }
+  .correct-mark { color: #4caf50; font-weight: 700; }
+  .wrong-mark { color: var(--red); font-weight: 700; }
+  .your-ans { font-size: 14px; margin-top: 8px; }
+  .btn-dl-xlsx {
+    background: linear-gradient(135deg,#1d6f42,#2e7d32); color: #fff;
+    border: none; border-radius: 50px; padding: 14px 32px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif; margin: 20px auto; display: block;
+    box-shadow: 0 4px 16px rgba(46,125,50,0.3);
+  }
+  @media(max-width:600px){
+    .q-text{font-size:15px}
+    .section-title{font-size:15px}
+    .q-card{padding:14px 14px}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="header-inner">
+    <div id="header-title">🌈 114學年-康軒(一下)國語線上期末測驗系統</div>
+    <div id="timer-box">⏱ 40:00</div>
+  </div>
+</div>
+
+<!-- WELCOME -->
+<div id="welcome-screen">
+  <div class="welcome-card">
+    <h2>📝 期末測驗說明</h2>
+    <p>本系統依據康軒版一年級下學期國語課程設計，共 <strong>50題</strong>，總分 <strong>100分</strong>。</p>
+    <p>作答時間 <strong>40分鐘</strong>，請認真作答，加油！🌟</p>
+    <div class="scope-box">
+      <h3>📚 考試範圍</h3>
+      <ul>
+        <li>第七課：作夢的雲</li>
+        <li>第八課：妹妹的紅雨鞋</li>
+        <li>第九課：七彩的虹</li>
+        <li>第十課：和你在一起</li>
+        <li>第十一課：生日快樂</li>
+        <li>第十二課：我們都是第一名</li>
+        <li>閱讀階梯：小小鼠的快樂</li>
+      </ul>
+    </div>
+    <div class="source-box">
+      <strong>📌 考題資料來源：</strong><br>
+      本試卷題目參考康軒文教出版《國語》一年級下學期課本（114學年度版），依據各課課文、語詞、注音、句型練習等考古題命題，題型包含是非題、選擇題、配合題，符合臺灣國小一年級課程綱要。
+    </div>
+    <button class="btn-start" onclick="startExam()">🚀 開始作答</button>
+  </div>
+</div>
+
+<!-- TEACHER ZONE TOGGLE -->
+<div id="teacher-zone-toggle">
+  <button class="teacher-toggle-btn" onclick="toggleTeacherPanel()">🔒 老師/家長區域（點擊展開）</button>
+</div>
+<div id="teacher-panel">
+  <div class="teacher-card">
+    <h3>👩‍🏫 老師/家長專區</h3>
+    <button class="teacher-btn" onclick="teacherAction('download')">⬇️ 下載考題 (JSON)</button>
+    <button class="teacher-btn" onclick="teacherAction('upload')">⬆️ 上傳考題 (JSON)</button>
+    <input type="file" id="upload-input" accept=".json" onchange="handleUpload(event)">
+    <p style="font-size:12px;color:#999;margin-top:10px;">※ 考題格式為 JSON 檔案，請妥善保管。</p>
+  </div>
+</div>
+
+<!-- EXAM SCREEN -->
+<div id="exam-screen">
+  <div id="questions-container"></div>
+  <div id="submit-area">
+    <button class="btn-submit" onclick="trySubmit()">📩 繳卷送出</button>
+  </div>
+</div>
+
+<!-- BOTTOM BAR -->
+<div id="bottom-bar">
+  <div id="bottom-bar-inner">
+    <div class="stat-chips">
+      <div class="chip chip-green">✅ 已答：<span id="stat-answered">0</span> 題</div>
+      <div class="chip chip-red">❌ 未答：<span id="stat-unanswered">50</span> 題</div>
+      <div class="chip chip-yellow">⭐ 稍後作答：<span id="stat-later">0</span> 題</div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result-screen">
+  <div class="result-banner">
+    <div class="result-title">🎉 測驗完成！</div>
+    <div class="result-score" id="result-score-num">--</div>
+    <div class="result-sub">分（滿分100分）</div>
+  </div>
+  <div class="result-detail">
+    <div class="r-chip" style="background:#e8f5e9">
+      <div class="r-chip-num" style="color:#2e7d32" id="r-correct">0</div>
+      <div class="r-chip-label">答對題數</div>
+    </div>
+    <div class="r-chip" style="background:#fce4ec">
+      <div class="r-chip-num" style="color:#c62828" id="r-wrong">0</div>
+      <div class="r-chip-label">答錯題數</div>
+    </div>
+    <div class="r-chip" style="background:#fff9c4">
+      <div class="r-chip-num" style="color:#f57f17" id="r-total">50</div>
+      <div class="r-chip-label">總題數</div>
+    </div>
+  </div>
+  <div style="text-align:center;padding:0 20px">
+    <button class="btn-dl-xlsx" onclick="downloadXLSX()">📥 下載錯題分析 (Excel)</button>
+  </div>
+  <div id="review-area"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">❓</div>
+    <div class="modal-title" id="modal-title">提示</div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <input class="modal-input" id="modal-input" type="password" placeholder="請輸入密碼" style="display:none">
+    <div class="modal-btns" id="modal-btns"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// QUESTION BANK - 50 Questions
+// ============================================================
+const QUESTION_BANK = [
+  // ── 是非題 (20題) ──
+  {id:1,type:'tf',unit:'第七課',lesson:'作夢的雲',text:'課文「作夢的雲」中，雲的夢想是變成一棵大樹。',answer:false,explanation:'課文中雲的夢想是變成小雨，滋潤花草大地，不是變成大樹。',score:2},
+  {id:2,type:'tf',unit:'第七課',lesson:'作夢的雲',text:'天空中白白、軟軟的雲，會隨著風飄來飄去。',answer:true,explanation:'課文描述雲是白白的、軟軟的，在天空中飄動，這是正確的描述。',score:2},
+  {id:3,type:'tf',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'「妹妹的紅雨鞋」中，妹妹穿著紅色的雨鞋在下雨天快樂玩耍。',answer:true,explanation:'課文描述妹妹穿紅雨鞋，在下雨天開心地踩水坑玩耍。',score:2},
+  {id:4,type:'tf',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'妹妹的雨鞋是黃色的。',answer:false,explanation:'妹妹的雨鞋是紅色的，課文標題就是「妹妹的紅雨鞋」。',score:2},
+  {id:5,type:'tf',unit:'第九課',lesson:'七彩的虹',text:'彩虹有七種顏色，分別是紅、橙、黃、綠、藍、靛、紫。',answer:true,explanation:'彩虹確實有七種顏色：紅橙黃綠藍靛紫，這是課文的重要知識。',score:2},
+  {id:6,type:'tf',unit:'第九課',lesson:'七彩的虹',text:'下雨過後才可能看到彩虹。',answer:true,explanation:'彩虹在雨後天晴時，陽光折射水珠所形成，所以要下雨過後才能看到。',score:2},
+  {id:7,type:'tf',unit:'第十課',lesson:'和你在一起',text:'「和你在一起」這一課主要表達與朋友、家人一起的快樂心情。',answer:true,explanation:'課文主旨是表達和重要的人在一起所感受到的快樂與溫暖。',score:2},
+  {id:8,type:'tf',unit:'第十課',lesson:'和你在一起',text:'「和你在一起」中，小朋友不喜歡和別人一起玩。',answer:false,explanation:'課文的主題恰好相反，表達和他人在一起的快樂，小朋友很喜歡和別人一起玩。',score:2},
+  {id:9,type:'tf',unit:'第十一課',lesson:'生日快樂',text:'「生日快樂」課文中，大家為小壽星唱生日快樂歌。',answer:true,explanation:'課文描述慶生的情景，包含唱生日快樂歌、吹蠟燭等活動。',score:2},
+  {id:10,type:'tf',unit:'第十一課',lesson:'生日快樂',text:'過生日時，蠟燭是插在麵條上的。',answer:false,explanation:'生日蠟燭是插在生日蛋糕上，不是麵條上。',score:2},
+  {id:11,type:'tf',unit:'第十二課',lesson:'我們都是第一名',text:'「我們都是第一名」這課告訴我們，每個人都有自己的優點與長處。',answer:true,explanation:'課文傳達「每個人都有專長」的正向價值觀，每個人在某方面都可以是第一名。',score:2},
+  {id:12,type:'tf',unit:'第十二課',lesson:'我們都是第一名',text:'課文中只有跑步快的人才是第一名。',answer:false,explanation:'課文強調每個人各有所長，不是只有跑步快才算第一名。',score:2},
+  {id:13,type:'tf',unit:'閱讀階梯',lesson:'小小鼠的快樂',text:'「小小鼠的快樂」故事中，小小鼠很喜歡出去找朋友玩。',answer:true,explanation:'故事描述小小鼠喜歡與朋友互動、玩耍，從中獲得快樂。',score:2},
+  {id:14,type:'tf',unit:'閱讀階梯',lesson:'小小鼠的快樂',text:'小小鼠的快樂來自於有好多零食吃。',answer:false,explanation:'小小鼠的快樂來自與朋友的互動和友誼，不是來自零食。',score:2},
+  {id:15,type:'tf',unit:'第七課',lesson:'作夢的雲',text:'「作夢」的「夢」注音是ㄇㄥˋ。',answer:true,explanation:'「夢」字的正確注音是ㄇㄥˋ（第四聲）。',score:2},
+  {id:16,type:'tf',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'「雨鞋」的「鞋」注音是ㄒㄧㄝˊ。',answer:true,explanation:'「鞋」字的正確注音是ㄒㄧㄝˊ（第二聲）。',score:2},
+  {id:17,type:'tf',unit:'第九課',lesson:'七彩的虹',text:'「彩虹」的「虹」注音是ㄏㄨㄥˊ。',answer:true,explanation:'「虹」字的正確注音是ㄏㄨㄥˊ（第二聲）。',score:2},
+  {id:18,type:'tf',unit:'第十一課',lesson:'生日快樂',text:'「快樂」的「樂」在「快樂」這個詞裡念ㄌㄜˋ。',answer:true,explanation:'「快樂」的「樂」念ㄌㄜˋ，在不同詞語中「樂」有不同讀音，如「音樂」念ㄩㄝˋ。',score:2},
+  {id:19,type:'tf',unit:'第十課',lesson:'和你在一起',text:'「在一起」表示分開的意思。',answer:false,explanation:'「在一起」是指相聚、共處，是「在同一個地方」的意思，不是分開。',score:2},
+  {id:20,type:'tf',unit:'第十二課',lesson:'我們都是第一名',text:'「第一」是指排名最後的意思。',answer:false,explanation:'「第一」是指排名最前面、最棒的意思，不是最後。',score:2},
+
+  // ── 選擇題 (20題) ──
+  {id:21,type:'choice',unit:'第七課',lesson:'作夢的雲',text:'「作夢的雲」課文中，雲最後變成了什麼？',choices:['A.大樹','B.小雨','C.太陽','D.彩虹'],answer:'B',explanation:'課文結局是雲的夢想實現了，變成小雨滋潤了大地上的花草，所以答案是「小雨」。',score:2},
+  {id:22,type:'choice',unit:'第七課',lesson:'作夢的雲',text:'下列哪一個詞語可以形容雲的樣子？',choices:['A.硬邦邦','B.紅通通','C.白軟軟','D.黑漆漆'],answer:'C',explanation:'課文描述雲是白色且柔軟的，所以「白軟軟」最能形容雲的樣子。',score:2},
+  {id:23,type:'choice',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'下雨天，妹妹穿上紅雨鞋去做什麼？',choices:['A.去上學','B.踩水坑玩','C.買東西','D.看彩虹'],answer:'B',explanation:'課文描述妹妹穿紅雨鞋，在下雨天快樂地踩水坑玩耍。',score:2},
+  {id:24,type:'choice',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'「鞋」這個字是屬於哪一個部首？',choices:['A.革','B.木','C.足','D.衣'],answer:'A',explanation:'「鞋」字的部首是「革」（皮革），因為鞋子古時以皮革製成。',score:2},
+  {id:25,type:'choice',unit:'第九課',lesson:'七彩的虹',text:'彩虹的顏色共有幾種？',choices:['A.五種','B.六種','C.七種','D.八種'],answer:'C',explanation:'彩虹有七種顏色，分別是紅橙黃綠藍靛紫，這也是「七彩的虹」課名的來源。',score:2},
+  {id:26,type:'choice',unit:'第九課',lesson:'七彩的虹',text:'彩虹通常在什麼時候出現？',choices:['A.颱風來前','B.晴天中午','C.下雪之後','D.雨後天晴'],answer:'D',explanation:'彩虹在雨後天晴、有陽光時，光線折射水滴後形成，所以在「雨後天晴」最容易看到。',score:2},
+  {id:27,type:'choice',unit:'第十課',lesson:'和你在一起',text:'「和你在一起」中的「和」字，在這裡是什麼意思？',choices:['A.溫和','B.跟、與','C.和平','D.和解'],answer:'B',explanation:'「和你在一起」的「和」作連詞用，意思是「跟、與」，表示一起的概念。',score:2},
+  {id:28,type:'choice',unit:'第十課',lesson:'和你在一起',text:'和朋友在一起，我們的心情是怎樣的？',choices:['A.害怕','B.傷心','C.快樂','D.生氣'],answer:'C',explanation:'課文描述和好朋友、家人在一起是快樂的事，所以心情是快樂的。',score:2},
+  {id:29,type:'choice',unit:'第十一課',lesson:'生日快樂',text:'過生日時，通常會在蛋糕上插什麼？',choices:['A.蠟筆','B.蠟燭','C.鉛筆','D.旗子'],answer:'B',explanation:'過生日時，會在蛋糕上插蠟燭，許願後吹熄蠟燭，這是過生日的習俗。',score:2},
+  {id:30,type:'choice',unit:'第十一課',lesson:'生日快樂',text:'「生日快樂」課文中，壽星最想要的是什麼？',choices:['A.很多零食','B.新玩具','C.家人朋友的祝福','D.出去旅行'],answer:'C',explanation:'課文強調生日時，大家的祝福和一起慶祝的溫馨時光，才是最珍貴的禮物。',score:2},
+  {id:31,type:'choice',unit:'第十二課',lesson:'我們都是第一名',text:'「我們都是第一名」這課最主要告訴我們什麼道理？',choices:['A.讀書最重要','B.每個人都有自己的優點','C.要努力打敗別人','D.只有得第一名才光榮'],answer:'B',explanation:'課文的核心價值是「欣賞自己的長處，每個人都有專長，都可以是第一名」。',score:2},
+  {id:32,type:'choice',unit:'第十二課',lesson:'我們都是第一名',text:'下列哪種行為符合「我們都是第一名」的精神？',choices:['A.嘲笑不會跑步的同學','B.欣賞朋友畫畫很厲害','C.只跟成績好的人做朋友','D.不讓別人得第一名'],answer:'B',explanation:'欣賞別人的長處、肯定他人的優點，才是課文所傳達的正向精神。',score:2},
+  {id:33,type:'choice',unit:'閱讀階梯',lesson:'小小鼠的快樂',text:'「小小鼠的快樂」故事中，小小鼠的快樂是什麼？',choices:['A.找到很多食物','B.和朋友一起玩','C.睡覺做美夢','D.獨自在家'],answer:'B',explanation:'故事中小小鼠的快樂來自和朋友互動、一起玩耍，表達友情的珍貴。',score:2},
+  {id:34,type:'choice',unit:'第七課',lesson:'作夢的雲',text:'「作夢」的「作」注音是？',choices:['A.ㄗㄨˊ','B.ㄗㄨㄛˋ','C.ㄗㄜˋ','D.ㄗㄚˋ'],answer:'B',explanation:'「作」字注音是ㄗㄨㄛˋ（第四聲），如「作業」、「作夢」。',score:2},
+  {id:35,type:'choice',unit:'第九課',lesson:'七彩的虹',text:'「七彩」中「彩」字的注音是？',choices:['A.ㄘㄞˇ','B.ㄘㄞˊ','C.ㄘㄞˋ','D.ㄘㄞ'],answer:'A',explanation:'「彩」字的正確注音是ㄘㄞˇ（第三聲），如「彩色」、「彩虹」。',score:2},
+  {id:36,type:'choice',unit:'第十一課',lesson:'生日快樂',text:'「吹蠟燭」的「吹」注音是？',choices:['A.ㄔㄨㄟˊ','B.ㄔㄨㄟ','C.ㄔㄨˋ','D.ㄔㄨ'],answer:'B',explanation:'「吹」字注音是ㄔㄨㄟ（第一聲），如「吹風」、「吹蠟燭」。',score:2},
+  {id:37,type:'choice',unit:'第十課',lesson:'和你在一起',text:'「一起」的「起」注音是？',choices:['A.ㄑㄧ','B.ㄑㄧˊ','C.ㄑㄧˇ','D.ㄑㄧˋ'],answer:'C',explanation:'「起」字注音是ㄑㄧˇ（第三聲），如「起床」、「一起」。',score:2},
+  {id:38,type:'choice',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'「紅雨鞋」中，哪個字的注音是ㄩˇ？',choices:['A.紅','B.雨','C.鞋','D.妹'],answer:'B',explanation:'「雨」字的注音是ㄩˇ（第三聲），「紅」是ㄏㄨㄥˊ，「鞋」是ㄒㄧㄝˊ，「妹」是ㄇㄟˋ。',score:2},
+  {id:39,type:'choice',unit:'第十二課',lesson:'我們都是第一名',text:'「第一名」的「第」注音是？',choices:['A.ㄉㄧˊ','B.ㄉㄧ','C.ㄉㄧˇ','D.ㄉㄧˋ'],answer:'D',explanation:'「第」字注音是ㄉㄧˋ（第四聲），如「第一」、「第二」。',score:2},
+  {id:40,type:'choice',unit:'閱讀階梯',lesson:'小小鼠的快樂',text:'「快樂」這個詞語的反義詞是什麼？',choices:['A.高興','B.開心','C.難過','D.平靜'],answer:'C',explanation:'「快樂」是心情愉快的意思，其反義詞是「難過」（悲傷、不快樂）。',score:2},
+
+  // ── 配合題 (10題) ──
+  {id:41,type:'match',unit:'第七課',lesson:'作夢的雲',text:'請將下列詞語與正確的注音配合：「雲」',matchLeft:['ㄩㄣˊ','ㄩˇ','ㄏㄨㄥˊ'],matchRight:['雨','虹','雲'],answer:{'ㄩㄣˊ':'雲','ㄩˇ':'雨','ㄏㄨㄥˊ':'虹'},explanation:'「雲」→ㄩㄣˊ，「雨」→ㄩˇ，「虹」→ㄏㄨㄥˊ。這三個字的注音要仔細分辨。',score:2},
+  {id:42,type:'match',unit:'第八課',lesson:'妹妹的紅雨鞋',text:'請將詞語與意思配合：「下雨天」',matchLeft:['晴天','下雨天','雨鞋'],matchRight:['天氣好，太陽出來','天空下著雨的日子','下雨時穿的鞋子'],answer:{'晴天':'天氣好，太陽出來','下雨天':'天空下著雨的日子','雨鞋':'下雨時穿的鞋子'},explanation:'晴天=天氣好；下雨天=天空下雨的日子；雨鞋=下雨時穿的鞋子。',score:2},
+  {id:43,type:'match',unit:'第九課',lesson:'七彩的虹',text:'請將彩虹顏色與順序配合（由外到內）：',matchLeft:['第一色','第二色','第三色'],matchRight:['橙','紅','黃'],answer:{'第一色':'紅','第二色':'橙','第三色':'黃'},explanation:'彩虹由外到內依序是：紅→橙→黃→綠→藍→靛→紫。',score:2},
+  {id:44,type:'match',unit:'第十課',lesson:'和你在一起',text:'請將詞語與相近詞配合：',matchLeft:['快樂','朋友','一起'],matchRight:['同學好友','共同、一同','高興開心'],answer:{'快樂':'高興開心','朋友':'同學好友','一起':'共同、一同'},explanation:'快樂≈高興開心；朋友≈同學好友；一起≈共同、一同。',score:2},
+  {id:45,type:'match',unit:'第十一課',lesson:'生日快樂',text:'請將生日活動與說明配合：',matchLeft:['唱歌','吹蠟燭','切蛋糕'],matchRight:['許願後輕輕吹熄','大家一起分享吃','唱生日快樂歌'],answer:{'唱歌':'唱生日快樂歌','吹蠟燭':'許願後輕輕吹熄','切蛋糕':'大家一起分享吃'},explanation:'生日活動：唱歌→唱生日快樂歌；吹蠟燭→許願後吹熄；切蛋糕→大家分享。',score:2},
+  {id:46,type:'match',unit:'第十二課',lesson:'我們都是第一名',text:'請將小朋友的優點與說明配合：',matchLeft:['跑步快','畫畫好','唱歌棒'],matchRight:['藝術天分高','嗓音優美','運動神經佳'],answer:{'跑步快':'運動神經佳','畫畫好':'藝術天分高','唱歌棒':'嗓音優美'},explanation:'跑步快→運動神經佳；畫畫好→藝術天分高；唱歌棒→嗓音優美，各有各的長處。',score:2},
+  {id:47,type:'match',unit:'閱讀階梯',lesson:'小小鼠的快樂',text:'請將詞語與意思配合：',matchLeft:['快樂','朋友','分享'],matchRight:['把東西給別人一起用','一起玩的好伙伴','心情愉快、高興'],answer:{'快樂':'心情愉快、高興','朋友':'一起玩的好伙伴','分享':'把東西給別人一起用'},explanation:'快樂→心情愉快高興；朋友→一起玩的好伙伴；分享→把東西給別人一起用。',score:2},
+  {id:48,type:'match',unit:'第七課',lesson:'作夢的雲',text:'請將語詞填入正確的類別：',matchLeft:['白白的','軟軟的','飄飄的'],matchRight:['描寫感覺的','描寫樣子的','描寫動作的'],answer:{'白白的':'描寫樣子的','軟軟的':'描寫感覺的','飄飄的':'描寫動作的'},explanation:'白白的→描寫外觀樣子；軟軟的→描寫觸覺感覺；飄飄的→描寫飄動的動態。',score:2},
+  {id:49,type:'match',unit:'第九課',lesson:'七彩的虹',text:'請將天氣現象與配合的詞語連起來：',matchLeft:['下雨','太陽','彩虹'],matchRight:['雨後天晴時出現','帶來光和熱','從天空落下水滴'],answer:{'下雨':'從天空落下水滴','太陽':'帶來光和熱','彩虹':'雨後天晴時出現'},explanation:'下雨→水滴從天空落下；太陽→帶來光和熱；彩虹→雨後天晴陽光折射形成。',score:2},
+  {id:50,type:'match',unit:'第十一課',lesson:'生日快樂',text:'請將詞語與注音配合：',matchLeft:['ㄕㄥ','ㄖˋ','ㄎㄨㄞˋ'],matchRight:['快','生','日'],answer:{'ㄕㄥ':'生','ㄖˋ':'日','ㄎㄨㄞˋ':'快'},explanation:'生→ㄕㄥ（第一聲）；日→ㄖˋ（第四聲）；快→ㄎㄨㄞˋ（第四聲）。',score:2},
+];
+
+// ============================================================
+// APP STATE
+// ============================================================
+let currentQuestions = [];
+let answers = {};
+let laterMarks = {};
+let timerInterval = null;
+let timeLeft = 40 * 60;
+let examStarted = false;
+let examSubmitted = false;
+let pendingAction = null;
+
+// ============================================================
+// SHUFFLE
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ============================================================
+// TEACHER PANEL
+// ============================================================
+function toggleTeacherPanel() {
+  const p = document.getElementById('teacher-panel');
+  p.style.display = p.style.display === 'block' ? 'none' : 'block';
+}
+function teacherAction(action) {
+  pendingAction = action;
+  showModal('🔒', '密碼驗證', '請輸入老師/家長密碼：', true, [
+    {label:'確認', cls:'modal-btn-primary', fn:() => {
+      const pw = document.getElementById('modal-input').value;
+      if (pw === '1234') {
+        closeModal();
+        if (action === 'download') downloadJSON();
+        else document.getElementById('upload-input').click();
+      } else {
+        document.getElementById('modal-msg').textContent = '❌ 密碼錯誤，請重試！';
+        document.getElementById('modal-input').value = '';
+      }
+    }},
+    {label:'取消', cls:'modal-btn-secondary', fn:closeModal}
+  ]);
+}
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(QUESTION_BANK, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'exam_questions.json';
+  a.click();
+}
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      showModal('✅','上傳成功','考題已成功上傳！共 '+data.length+' 題。',false,[{label:'確認',cls:'modal-btn-primary',fn:closeModal}]);
+    } catch {
+      showModal('❌','格式錯誤','JSON 格式不正確，請確認後再試。',false,[{label:'確認',cls:'modal-btn-primary',fn:closeModal}]);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ============================================================
+// START EXAM
+// ============================================================
+function startExam() {
+  currentQuestions = shuffle(QUESTION_BANK);
+  answers = {};
+  laterMarks = {};
+  examStarted = true;
+  examSubmitted = false;
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('teacher-zone-toggle').style.display = 'none';
+  document.getElementById('teacher-panel').style.display = 'none';
+  document.getElementById('exam-screen').style.display = 'block';
+  document.getElementById('bottom-bar').style.display = 'block';
+  document.getElementById('timer-box').style.display = 'block';
+  renderQuestions();
+  startTimer();
+  updateStats();
+}
+
+// ============================================================
+// RENDER QUESTIONS
+// ============================================================
+function renderQuestions() {
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+  let lastUnit = '';
+  let qNum = 0;
+
+  // Group by type for display sections
+  const tfQs = currentQuestions.filter(q=>q.type==='tf');
+  const choiceQs = currentQuestions.filter(q=>q.type==='choice');
+  const matchQs = currentQuestions.filter(q=>q.type==='match');
+
+  const sections = [
+    {label:'🔵 是非題', desc:'（每題2分，共40分，共20題）', qs: tfQs},
+    {label:'🟠 選擇題', desc:'（每題2分，共40分，共20題）', qs: choiceQs},
+    {label:'🟢 配合題', desc:'（每題2分，共20分，共10題）', qs: matchQs},
+  ];
+
+  for (const sec of sections) {
+    const secDiv = document.createElement('div');
+    secDiv.className = 'section-title';
+    secDiv.innerHTML = sec.label + '<span style="font-size:13px;font-weight:400;opacity:0.85">'+sec.desc+'</span>';
+    container.appendChild(secDiv);
+    for (const q of sec.qs) {
+      qNum++;
+      container.appendChild(buildQCard(q, qNum));
+    }
+  }
+}
+
+function buildQCard(q, num) {
+  const card = document.createElement('div');
+  card.className = 'q-card';
+  card.id = 'qcard-'+q.id;
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'q-header';
+  hdr.innerHTML = `
+    <div class="q-num">${num}</div>
+    <div class="q-unit">${q.unit}</div>
+    <div class="q-text">${q.text}</div>
+    <div class="q-score">${q.score}分</div>
+  `;
+  card.appendChild(hdr);
+
+  // Later mark
+  const laterDiv = document.createElement('label');
+  laterDiv.className = 'later-label';
+  laterDiv.innerHTML = `<input type="checkbox" id="later-${q.id}" onchange="toggleLater(${q.id})"> ⭐ 稍後作答`;
+  card.appendChild(laterDiv);
+
+  // Answer area
+  const ans = document.createElement('div');
+  ans.id = 'ans-'+q.id;
+  if (q.type === 'tf') {
+    ans.className = 'tf-options';
+    ans.innerHTML = `
+      <button class="tf-btn" id="tf-t-${q.id}" onclick="answerTF(${q.id},true)">⭕ 是（○）</button>
+      <button class="tf-btn" id="tf-f-${q.id}" onclick="answerTF(${q.id},false)">❌ 非（✕）</button>
+    `;
+  } else if (q.type === 'choice') {
+    ans.className = 'choice-options';
+    const labels = ['A','B','C','D'];
+    q.choices.forEach((c,i) => {
+      const txt = c.replace(/^[A-D]\./,'');
+      ans.innerHTML += `<button class="choice-btn" id="choice-${q.id}-${labels[i]}" onclick="answerChoice(${q.id},'${labels[i]}')">
+        <span class="choice-label">${labels[i]}</span>${txt}
+      </button>`;
+    });
+  } else if (q.type === 'match') {
+    ans.className = 'match-area';
+    const leftCol = document.createElement('div');
+    leftCol.className = 'match-col';
+    leftCol.innerHTML = '<h4>左欄</h4>';
+    const rightCol = document.createElement('div');
+    rightCol.className = 'match-col';
+    rightCol.innerHTML = '<h4>右欄（請選擇）</h4>';
+    q.matchLeft.forEach((left, i) => {
+      const rightOptions = ['-- 請選擇 --', ...q.matchRight];
+      leftCol.innerHTML += `<div class="match-item">${left}</div>`;
+      rightCol.innerHTML += `<select class="match-select" id="match-${q.id}-${i}" onchange="answerMatch(${q.id})">
+        ${rightOptions.map(o=>`<option value="${o}">${o}</option>`).join('')}
+      </select>`;
+    });
+    ans.appendChild(leftCol);
+    ans.appendChild(rightCol);
+  }
+  card.appendChild(ans);
+
+  // Explanation (hidden during exam)
+  const expDiv = document.createElement('div');
+  expDiv.className = 'explanation';
+  expDiv.id = 'exp-'+q.id;
+  expDiv.innerHTML = '📖 <strong>解析：</strong>' + q.explanation;
+  card.appendChild(expDiv);
+
+  return card;
+}
+
+// ============================================================
+// ANSWER FUNCTIONS
+// ============================================================
+function answerTF(id, val) {
+  answers[id] = val;
+  document.getElementById('tf-t-'+id).className = 'tf-btn' + (val===true ? ' selected-true' : '');
+  document.getElementById('tf-f-'+id).className = 'tf-btn' + (val===false ? ' selected-false' : '');
+  markAnswered(id);
+}
+function answerChoice(id, val) {
+  answers[id] = val;
+  const q = QUESTION_BANK.find(q=>q.id===id);
+  ['A','B','C','D'].forEach(l => {
+    const btn = document.getElementById('choice-'+id+'-'+l);
+    if(btn) btn.className = 'choice-btn' + (l===val ? ' selected' : '');
+  });
+  markAnswered(id);
+}
+function answerMatch(id) {
+  const q = currentQuestions.find(q=>q.id===id);
+  const result = {};
+  let allSelected = true;
+  q.matchLeft.forEach((left,i) => {
+    const sel = document.getElementById('match-'+id+'-'+i);
+    if (sel) {
+      const v = sel.value;
+      if (v === '-- 請選擇 --') allSelected = false;
+      result[left] = v;
+      sel.className = 'match-select' + (v !== '-- 請選擇 --' ? ' answered' : '');
+    }
+  });
+  if (allSelected) {
+    answers[id] = result;
+    markAnswered(id);
+  } else {
+    delete answers[id];
+    const card = document.getElementById('qcard-'+id);
+    if(card) card.className = 'q-card' + (laterMarks[id] ? ' later' : '');
+  }
+  updateStats();
+}
+function markAnswered(id) {
+  const card = document.getElementById('qcard-'+id);
+  if (card) card.className = 'q-card answered' + (laterMarks[id] ? ' later' : '');
+  updateStats();
+}
+function toggleLater(id) {
+  const cb = document.getElementById('later-'+id);
+  laterMarks[id] = cb.checked;
+  const card = document.getElementById('qcard-'+id);
+  if (card) {
+    let cls = 'q-card';
+    if (answers[id] !== undefined) cls += ' answered';
+    if (laterMarks[id]) cls += ' later';
+    card.className = cls;
+  }
+  updateStats();
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats() {
+  const answered = Object.keys(answers).length;
+  const unanswered = 50 - answered;
+  const later = Object.values(laterMarks).filter(Boolean).length;
+  document.getElementById('stat-answered').textContent = answered;
+  document.getElementById('stat-unanswered').textContent = unanswered;
+  document.getElementById('stat-later').textContent = later;
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function startTimer() {
+  timeLeft = 40 * 60;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerDisplay();
+    if (timeLeft === 25*60) alertTimer('⏰ 還有 25 分鐘！請加緊作答！','warning');
+    if (timeLeft === 10*60) alertTimer('⚠️ 只剩 10 分鐘！請注意時間！','danger');
+    if (timeLeft === 5*60) alertTimer('🚨 只剩 5 分鐘！請加快作答！','urgent');
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      autoSubmit();
+    }
+  }, 1000);
+}
+function updateTimerDisplay() {
+  const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+  const s = (timeLeft%60).toString().padStart(2,'0');
+  const box = document.getElementById('timer-box');
+  box.textContent = `⏱ ${m}:${s}`;
+  if (timeLeft <= 5*60) box.className = 'warning';
+  else box.className = '';
+  box.style.display = 'block';
+}
+function alertTimer(msg, type) {
+  showModal('⏰','時間提醒',msg,false,[{label:'知道了！',cls:'modal-btn-primary',fn:closeModal}]);
+}
+function autoSubmit() {
+  showModal('⏰','時間到！','作答時間已結束，系統自動繳交！',false,[{label:'查看結果',cls:'modal-btn-primary',fn:()=>{closeModal();doSubmit();}}]);
+}
+
+// ============================================================
+// SUBMIT
+// ============================================================
+function trySubmit() {
+  const unanswered = currentQuestions.filter(q => answers[q.id] === undefined);
+  const later = currentQuestions.filter(q => laterMarks[q.id]);
+
+  if (unanswered.length > 0 || later.length > 0) {
+    let msg = '';
+    if (unanswered.length > 0) msg += `尚有 <strong>${unanswered.length} 題</strong> 未作答！<br>`;
+    if (later.length > 0) msg += `有 <strong>${later.length} 題</strong> 標記為「稍後作答」未完成！<br>`;
+    msg += '<br>確定要繳卷嗎？';
+    showModal('⚠️','注意！',msg,false,[
+      {label:'繼續作答',cls:'modal-btn-secondary',fn:()=>{closeModal(); if(unanswered.length>0) scrollToUnanswered(unanswered[0].id);}},
+      {label:'確定繳卷',cls:'modal-btn-primary',fn:()=>{closeModal(); doSubmit();}}
+    ]);
+    return;
+  }
+  doSubmit();
+}
+function scrollToUnanswered(id) {
+  const el = document.getElementById('qcard-'+id);
+  if (el) {
+    el.className = 'q-card unanswered-highlight';
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    setTimeout(()=>{ el.className = 'q-card'; },3000);
+  }
+}
+function doSubmit() {
+  clearInterval(timerInterval);
+  examSubmitted = true;
+  document.getElementById('bottom-bar').style.display = 'none';
+  document.getElementById('exam-screen').style.display = 'none';
+  showResults();
+}
+
+// ============================================================
+// RESULTS
+// ============================================================
+function showResults() {
+  document.getElementById('result-screen').style.display = 'block';
+  let correct = 0, wrong = 0, total = 0;
+  const wrongQs = [];
+
+  for (const q of currentQuestions) {
+    total++;
+    const ua = answers[q.id];
+    let isCorrect = false;
+    if (q.type === 'tf') {
+      isCorrect = ua === q.answer;
+    } else if (q.type === 'choice') {
+      isCorrect = ua === q.answer;
+    } else if (q.type === 'match') {
+      if (ua && typeof ua === 'object') {
+        isCorrect = q.matchLeft.every(left => ua[left] === q.answer[left]);
+      }
+    }
+    if (isCorrect) correct++;
+    else { wrong++; wrongQs.push(q); }
+  }
+
+  const score = Math.round((correct / total) * 100);
+  document.getElementById('result-score-num').textContent = score;
+  document.getElementById('r-correct').textContent = correct;
+  document.getElementById('r-wrong').textContent = wrong;
+  document.getElementById('r-total').textContent = total;
+
+  // Store for download
+  window._wrongQs = wrongQs;
+
+  renderReview();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderReview() {
+  const area = document.getElementById('review-area');
+  area.innerHTML = '<div class="review-section-title">📋 詳細答題回顧（點擊「查看解析」可看詳解）</div>';
+
+  let qNum = 0;
+  const sections = [
+    {label:'是非題', qs: currentQuestions.filter(q=>q.type==='tf')},
+    {label:'選擇題', qs: currentQuestions.filter(q=>q.type==='choice')},
+    {label:'配合題', qs: currentQuestions.filter(q=>q.type==='match')},
+  ];
+
+  for (const sec of sections) {
+    const st = document.createElement('div');
+    st.className = 'review-section-title';
+    st.textContent = '── ' + sec.label;
+    area.appendChild(st);
+
+    for (const q of sec.qs) {
+      qNum++;
+      const ua = answers[q.id];
+      let isCorrect = false;
+      let yourAnsText = '未作答';
+      let correctAnsText = '';
+
+      if (q.type === 'tf') {
+        isCorrect = ua === q.answer;
+        yourAnsText = ua === undefined ? '未作答' : (ua ? '是（○）' : '非（✕）');
+        correctAnsText = q.answer ? '是（○）' : '非（✕）';
+      } else if (q.type === 'choice') {
+        isCorrect = ua === q.answer;
+        yourAnsText = ua || '未作答';
+        correctAnsText = q.answer;
+      } else if (q.type === 'match') {
+        if (ua && typeof ua === 'object') {
+          isCorrect = q.matchLeft.every(left => ua[left] === q.answer[left]);
+          yourAnsText = q.matchLeft.map(l => `${l}→${ua[l]||'?'}`).join('、');
+        }
+        correctAnsText = q.matchLeft.map(l=>`${l}→${q.answer[l]}`).join('、');
+      }
+
+      const card = document.createElement('div');
+      card.className = 'q-card';
+      card.innerHTML = `
+        <div class="q-header">
+          <div class="q-num" style="background:${isCorrect?'#4caf50':'#D73535'}">${qNum}</div>
+          <div class="q-unit">${q.unit}</div>
+          <div class="q-text">${q.text}</div>
+          <div class="q-score">${isCorrect?'✅':'❌'}</div>
+        </div>
+        <div class="your-ans">
+          <span style="color:#666">你的答案：</span><span class="${isCorrect?'correct-mark':'wrong-mark'}">${yourAnsText}</span>
+          ${!isCorrect ? `<span style="color:#666"> ｜ 正確答案：</span><span class="correct-mark">${correctAnsText}</span>` : ''}
+        </div>
+        <button class="show-exp-btn" onclick="toggleExp(this,'exp-r-${q.id}')">📖 查看解析</button>
+        <div class="explanation" id="exp-r-${q.id}">📖 <strong>解析：</strong>${q.explanation}</div>
+      `;
+      area.appendChild(card);
+    }
+  }
+}
+function toggleExp(btn, id) {
+  const el = document.getElementById(id);
+  if (el) {
+    const show = el.style.display === 'block';
+    el.style.display = show ? 'none' : 'block';
+    btn.textContent = show ? '📖 查看解析' : '📕 收起解析';
+  }
+}
+
+// ============================================================
+// DOWNLOAD XLSX
+// ============================================================
+function downloadXLSX() {
+  if (!window._wrongQs || window._wrongQs.length === 0) {
+    showModal('🎉','全部答對！','恭喜！沒有答錯的題目，無需下載錯題分析！',false,[{label:'太棒了！',cls:'modal-btn-primary',fn:closeModal}]);
+    return;
+  }
+  const wb = XLSX.utils.book_new();
+  const wsData = [['題號','課次','題型','題目','你的答案','正確答案','解析']];
+  let qNum = 0;
+
+  const sections = [
+    currentQuestions.filter(q=>q.type==='tf'),
+    currentQuestions.filter(q=>q.type==='choice'),
+    currentQuestions.filter(q=>q.type==='match'),
+  ];
+  for(const sec of sections) for(const q of sec) qNum++;
+
+  // re-map numbers
+  const numMap = {};
+  let n = 0;
+  for(const sec of sections) for(const q of sec){ n++; numMap[q.id]=n; }
+
+  for (const q of window._wrongQs) {
+    const ua = answers[q.id];
+    let yourAns = '未作答', correctAns = '';
+    if (q.type === 'tf') {
+      yourAns = ua === undefined ? '未作答' : (ua ? '是' : '非');
+      correctAns = q.answer ? '是' : '非';
+    } else if (q.type === 'choice') {
+      yourAns = ua || '未作答';
+      correctAns = q.answer;
+    } else if (q.type === 'match') {
+      yourAns = ua ? q.matchLeft.map(l=>`${l}→${ua[l]||'?'}`).join('；') : '未作答';
+      correctAns = q.matchLeft.map(l=>`${l}→${q.answer[l]}`).join('；');
+    }
+    wsData.push([numMap[q.id]||'?', q.unit+'（'+q.lesson+'）', q.type==='tf'?'是非題':q.type==='choice'?'選擇題':'配合題', q.text, yourAns, correctAns, q.explanation]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Style wrong answers red+bold
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let R = 1; R <= range.e.r; R++) {
+    const cell = ws[XLSX.utils.encode_cell({r:R, c:4})];
+    if (cell) {
+      cell.s = {
+        font: { bold: true, color: { rgb: 'D73535' } }
+      };
+    }
+  }
+
+  // Column widths
+  ws['!cols'] = [{wch:6},{wch:18},{wch:8},{wch:40},{wch:20},{wch:20},{wch:40}];
+
+  XLSX.utils.book_append_sheet(wb, ws, '錯題分析');
+  XLSX.writeFile(wb, 'exam_result.xlsx');
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function showModal(icon, title, msg, hasInput, btns) {
+  document.getElementById('modal-icon').textContent = icon;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-msg').innerHTML = msg;
+  const inp = document.getElementById('modal-input');
+  if (hasInput) { inp.style.display='block'; inp.value=''; inp.focus(); }
+  else inp.style.display='none';
+  const btnDiv = document.getElementById('modal-btns');
+  btnDiv.innerHTML = '';
+  btns.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = 'modal-btn ' + b.cls;
+    btn.textContent = b.label;
+    btn.onclick = b.fn;
+    btnDiv.appendChild(btn);
+  });
+  document.getElementById('modal').classList.add('open');
+  // Enter key for password
+  if (hasInput) {
+    inp.onkeydown = (e) => { if(e.key==='Enter') btns[0].fn(); };
+  }
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+</script>
+</body>
+</html>
