@@ -232,9 +232,9 @@
 
                     <!-- 爽人 Persona -->
                     <div class="glass-card p-6 flex flex-col relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-24 h-24 bg-primary-yellow opacity-20 rounded-bl-full"></div>
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-[#FF61F8] opacity-10 rounded-bl-full"></div>
                         <div class="flex items-center gap-4 mb-4">
-                            <div class="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-600 text-2xl shadow-sm">
+                            <div class="w-14 h-14 rounded-full bg-[#FF61F8]/10 flex items-center justify-center text-[#FF61F8] text-2xl shadow-sm">
                                 <i class="fa-solid fa-umbrella-beach"></i>
                             </div>
                             <div class="flex-grow">
@@ -245,11 +245,11 @@
                                         <span class="text-lg font-bold text-primary-red">7 天</span>
                                     </div>
                                 </div>
-                                <p class="text-yellow-600 font-semibold mt-1">「享樂型體驗派」</p>
+                                <p class="text-[#FF61F8] font-semibold mt-1">「享樂型體驗派」</p>
                             </div>
                         </div>
                         <p class="text-gray-600 leading-relaxed">
-                            雖然全年僅有 7 天特休，但爽人前六個月的請假總量 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">已經超標</strong>！這顯示他非常樂於使用事假或其他假別來安排 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">連續多日的長假</strong>（如四月份）。這類人格 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">活在當下</strong>，傾向於追求 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">深度體驗</strong> 與 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">高品質的生活享受</strong>，寧可 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">犧牲部分薪水</strong>，也要獲得 <strong class="text-yellow-600 bg-yellow-50 px-1 rounded">身心靈的滿足與自由</strong>。
+                            雖然全年僅有 7 天特休，但爽人前六個月的請假總量 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">已經超標</strong>！這顯示他非常樂於使用事假或其他假別來安排 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">連續多日的長假</strong>（如四月份）。這類人格 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">活在當下</strong>，傾向於追求 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">深度體驗</strong> 與 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">高品質的生活享受</strong>，寧可 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">犧牲部分薪水</strong>，也要獲得 <strong class="text-[#FF61F8] bg-[#FF61F8]/10 px-1 rounded">身心靈的滿足與自由</strong>。
                         </p>
                     </div>
                 </div>
@@ -284,7 +284,7 @@
                             </div>
                             <div class="text-center">
                                 <p class="text-xs text-gray-500 uppercase tracking-wide">爽人總計</p>
-                                <p class="text-xl font-bold text-yellow-600" id="total-leave-chill">0H</p>
+                                <p class="text-xl font-bold text-[#FF61F8]" id="total-leave-chill">0H</p>
                                 <p class="text-xs text-gray-400 mt-1">特休 7 天</p>
                             </div>
                         </div>
@@ -300,7 +300,7 @@
                     <div class="flex gap-4 text-sm font-medium">
                         <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-primary-orange mr-2"></span>狼人 (請假)</span>
                         <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#EA5252] mr-2"></span>狼人 (公出)</span>
-                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></span>爽人 (請假)</span>
+                        <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#FF61F8] mr-2"></span>爽人 (請假)</span>
                         <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-[#5B7E3C] mr-2"></span>爽人 (公出)</span>
                     </div>
                 </div>
@@ -351,7 +351,7 @@
                 ]
             },
             '爽人': {
-                color: '#eab308', // Tailwind Yellow-500 (#eab308) for better contrast than light yellow #FFD65A
+                color: '#FF61F8', // Pink for Chill
                 errandColor: '#5B7E3C', // Green for Errand
                 records: [
                     { date: '2026-01-05', hours: 8, isErrand: false },
@@ -431,7 +431,7 @@
                 summaryEl.innerHTML = `
                     <span class="text-primary-orange font-semibold flex items-center gap-1"><i class="fa-solid fa-user-ninja"></i> 狼人: 共30天 / 已休 ${formatDaysHours(usedLeaveWolf)}</span>
                     <span class="text-gray-300">|</span>
-                    <span class="text-yellow-600 font-semibold flex items-center gap-1"><i class="fa-solid fa-umbrella-beach"></i> 爽人: 共7天 / 已休 ${formatDaysHours(usedLeaveChill)}</span>
+                    <span class="text-[#FF61F8] font-semibold flex items-center gap-1"><i class="fa-solid fa-umbrella-beach"></i> 爽人: 共7天 / 已休 ${formatDaysHours(usedLeaveChill)}</span>
                 `;
             }
 
@@ -472,9 +472,9 @@
                     <td class="p-4 text-center font-bold text-gray-700">${monthNames[idx]}</td>
                     <td class="p-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-sm font-semibold">${totalWork}H</span></td>
                     <td class="p-4 text-center border-l border-gray-100 bg-orange-50/30">${formatCell(wolfLeave, wolfErrand)}</td>
-                    <td class="p-4 text-center border-l border-gray-100 bg-yellow-50/50">${formatCell(chillLeave, chillErrand)}</td>
+                    <td class="p-4 text-center border-l border-gray-100 bg-[#FF61F8]/10">${formatCell(chillLeave, chillErrand)}</td>
                     <td class="p-4 text-center border-l border-gray-100 font-semibold text-orange-600 bg-orange-50/10">${wolfAttend}H <span class="block text-xs text-orange-400 mt-1">出席率: ${((wolfAttend/totalWork)*100).toFixed(1)}%</span></td>
-                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-yellow-600 bg-yellow-50/20">${chillAttend}H <span class="block text-xs text-yellow-500 mt-1">出席率: ${((chillAttend/totalWork)*100).toFixed(1)}%</span></td>
+                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-[#FF61F8] bg-[#FF61F8]/10">${chillAttend}H <span class="block text-xs text-[#FF61F8]/80 mt-1">出席率: ${((chillAttend/totalWork)*100).toFixed(1)}%</span></td>
                 `;
                 tbody.appendChild(tr);
             }
@@ -502,7 +502,7 @@
                         {
                             label: '爽人請假時數',
                             data: chillTotalLeavePerMonth,
-                            backgroundColor: '#eab308',
+                            backgroundColor: '#FF61F8',
                             borderRadius: 6,
                             barPercentage: 0.6
                         }
@@ -536,7 +536,7 @@
                     labels: ['狼人', '爽人'],
                     datasets: [{
                         data: [totalLeaveWolf, totalLeaveChill],
-                        backgroundColor: ['#FF9D23', '#eab308'],
+                        backgroundColor: ['#FF9D23', '#FF61F8'],
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
