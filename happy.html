@@ -137,7 +137,7 @@
         .stats-table th { background-color: rgba(91, 126, 60, 0.05); color: var(--color-green); font-weight: 600; }
         .stats-table tr { border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s; }
         .stats-table tr:hover { background-color: #f8fafc; }
-        .stats-table td { padding: 1rem; color: #475569; }
+        .stats-table td { color: #475569; }
     </style>
 </head>
 <body>
@@ -180,12 +180,10 @@
                     <table class="w-full text-left border-collapse stats-table">
                         <thead>
                             <tr>
-                                <th class="p-4 text-center">月份</th>
-                                <th class="p-4 text-center">總工作時數</th>
-                                <th class="p-4 text-center border-l border-gray-200">狼人請假 (含公出)</th>
-                                <th class="p-4 text-center border-l border-gray-200">爽人請假 (含公出)</th>
-                                <th class="p-4 text-center border-l border-gray-200">狼人實際出勤</th>
-                                <th class="p-4 text-center border-l border-gray-200">爽人實際出勤</th>
+                                <th class="px-1 py-2 text-center text-sm">月份</th>
+                                <th class="px-1 py-2 text-center text-sm">總工作時數</th>
+                                <th class="px-1 py-2 text-center text-sm border-l border-gray-200">狼人實際出勤</th>
+                                <th class="px-1 py-2 text-center text-sm border-l border-gray-200">爽人實際出勤</th>
                             </tr>
                         </thead>
                         <tbody id="stats-table-body">
@@ -399,6 +397,16 @@
         let usedLeaveWolf = 0;
         let usedLeaveChill = 0;
 
+        const formatDaysHours = (hours) => {
+            if (hours === 0) return '0天';
+            const d = Math.floor(hours / 8);
+            const h = hours % 8;
+            if (d > 0 && h > 0) return `${d}天${h}小時`;
+            if (d > 0) return `${d}天`;
+            if (h > 0) return `${h}小時`;
+            return '0天';
+        };
+
         function processData() {
             Object.keys(employees).forEach(emp => {
                 employees[emp].records.forEach(rec => {
@@ -419,15 +427,6 @@
             });
 
             // Calculate Days and Hours for Leave Summary
-            const formatDaysHours = (hours) => {
-                const d = Math.floor(hours / 8);
-                const h = hours % 8;
-                if (d > 0 && h > 0) return `${d}天${h}小時`;
-                if (d > 0) return `${d}天`;
-                if (h > 0) return `${h}小時`;
-                return '0天';
-            };
-
             const summaryEl = document.getElementById('leave-summary-header');
             if (summaryEl) {
                 summaryEl.innerHTML = `
@@ -471,12 +470,10 @@
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-4 text-center font-bold text-gray-700">${monthNames[idx]}</td>
-                    <td class="p-4 text-center"><span class="bg-gray-100 px-3 py-1 rounded-full text-sm font-semibold">${totalWork}H</span></td>
-                    <td class="p-4 text-center border-l border-gray-100 bg-orange-50/30">${formatCell(wolfLeave, wolfErrand)}</td>
-                    <td class="p-4 text-center border-l border-gray-100 bg-[#FF61F8]/10">${formatCell(chillLeave, chillErrand)}</td>
-                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-orange-600 bg-orange-50/10">${wolfAttend}H <span class="block text-xs text-orange-400 mt-1">出席率: ${((wolfAttend/totalWork)*100).toFixed(1)}%</span></td>
-                    <td class="p-4 text-center border-l border-gray-100 font-semibold text-[#FF61F8] bg-[#FF61F8]/10">${chillAttend}H <span class="block text-xs text-[#FF61F8]/80 mt-1">出席率: ${((chillAttend/totalWork)*100).toFixed(1)}%</span></td>
+                    <td class="px-1 py-2 text-center font-bold text-sm text-gray-700">${monthNames[idx]}</td>
+                    <td class="px-1 py-2 text-center"><span class="bg-gray-100 px-2 py-0.5 rounded-full text-xs font-semibold">${totalWork}H</span></td>
+                    <td class="px-1 py-2 text-center border-l border-gray-100 font-semibold text-sm text-orange-600 bg-orange-50/10">${wolfAttend}H <span class="block text-xs text-orange-400 mt-0.5">出席率: ${((wolfAttend/totalWork)*100).toFixed(1)}%</span><span class="block text-xs text-orange-500 mt-0.5">當月已休: ${formatDaysHours(wolfLeave)}</span></td>
+                    <td class="px-1 py-2 text-center border-l border-gray-100 font-semibold text-sm text-[#FF61F8] bg-[#FF61F8]/10">${chillAttend}H <span class="block text-xs text-[#FF61F8]/80 mt-0.5">出席率: ${((chillAttend/totalWork)*100).toFixed(1)}%</span><span class="block text-xs text-[#FF61F8] mt-0.5">當月已休: ${formatDaysHours(chillLeave)}</span></td>
                 `;
                 tbody.appendChild(tr);
             }
