@@ -1,657 +1,822 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HeroList 英雄榜管理系統</title>
-    
+
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- 引入 Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    
+
+    <!-- 引入 SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <!-- 引入 FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- 引入 Google Fonts (毛筆字體) -->
+    <link href="https://fonts.googleapis.com/css2?family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+
     <style>
         /* 隱藏捲軸但保留功能 */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #FFD586; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #FFAAAA; }
-        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #FFD586;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FFAAAA;
+        }
+
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             box-shadow: 0 4px 15px rgba(255, 152, 152, 0.15);
             border: 1px solid #FFE99A;
         }
-        
-        body { background-color: #FFFDF9; font-family: 'Helvetica Neue', Helvetica, Arial, 'Microsoft JhengHei', sans-serif; }
 
-        /* 垂直滾動跑馬燈動畫優化 */
-        .marquee-container {
-            height: 40px; 
-            overflow: hidden;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .marquee-content {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            animation: scroll-vertical 15s linear infinite;
-        }
-        .marquee-container:hover .marquee-content {
-            animation-play-state: paused;
-        }
-        @keyframes scroll-vertical {
-            0% { transform: translateY(100%); }
-            100% { transform: translateY(-100%); }
+        body {
+            background-color: #FFFDF9;
+            font-family: 'Helvetica Neue', Helvetica, Arial, 'Microsoft JhengHei', sans-serif;
         }
     </style>
 </head>
+
 <body class="text-gray-700 min-h-screen pb-10">
 
-<div id="app" v-cloak>
-    <!-- Header -->
-    <header class="text-white p-4 flex justify-center items-center shadow-lg sticky top-0 z-50 transition-all" style="background-color: #FF9898;">
-        <h1 class="text-3xl font-extrabold tracking-widest drop-shadow-md">
-            <i class="fas fa-medal text-[#FFE99A] mr-2"></i>HeroList 英雄榜
-        </h1>
-    </header>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header
+            class="text-white p-4 flex flex-col md:flex-row justify-between items-center shadow-lg sticky top-0 z-50 transition-all"
+            style="background-color: #FF9898;">
+            <h1 class="text-3xl font-extrabold tracking-widest drop-shadow-md mb-3 md:mb-0 flex items-center flex-wrap">
+                <span><i class="fas fa-medal text-[#FFE99A] mr-2"></i>HeroList</span>
+                <span class="text-3xl ml-4 font-normal"
+                    style="font-family: 'Zhi Mang Xing', cursive; color: #FFE99A; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">「天地英雄氣，千秋尚凜然」</span>
+            </h1>
+        </header>
 
-    <!-- Marquee -->
-    <div class="p-2 font-bold shadow flex items-center text-gray-800" style="background-color: #FFE99A;">
-        <span class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm mr-3 shadow-sm z-10 relative">
-            <i class="fas fa-bullhorn mr-1"></i> 最新動態
-        </span>
-        <div class="marquee-container flex-grow w-full text-center">
-            <div class="marquee-content text-lg tracking-wide">
-                <div v-for="(line, index) in marqueeLines" :key="index">{{ line }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content Area -->
-    <div class="container mx-auto mt-6 px-4">
-        
-        <!-- Controls: Filters & Sort -->
-        <div class="glass-card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between bg-white max-w-5xl mx-auto">
-            <div class="flex flex-wrap gap-4 items-center">
-                <div class="flex items-center">
-                    <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-filter"></i> 篩選年份：</label>
-                    <select v-model="filters.year" class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
-                        <option value="all">全部年份</option>
-                        <option value="2025">2025年</option>
-                        <option value="2026">2026年</option>
-                    </select>
-                </div>
-                <div class="flex items-center">
-                    <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-sitemap"></i> 篩選單位：</label>
-                    <select v-model="filters.dept" class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
-                        <option value="all">全部單位</option>
-                        <option v-for="dept in uniqueDepts" :key="dept" :value="dept">{{ dept }}</option>
-                    </select>
-                </div>
-                <div class="flex items-center">
-                    <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-sort"></i> 排序方式：</label>
-                    <select v-model="sort.order" class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
-                        <option value="asc">日期舊到新</option>
-                        <option value="desc">日期新到舊</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex gap-2">
-                <button @click="toggleCharts" class="bg-gradient-to-r from-purple-300 to-indigo-300 text-white font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
-                    <i class="fas" :class="showCharts ? 'fa-eye-slash' : 'fa-chart-pie'"></i> {{ showCharts ? '隱藏統計表' : '顯示統計表' }}
-                </button>
-            </div>
+        <!-- Marquee -->
+        <div class="p-2 font-bold overflow-hidden whitespace-nowrap shadow flex items-center text-gray-800"
+            style="background-color: #FFE99A;">
+            <span class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm mr-3 shadow-sm">
+                <i class="fas fa-bullhorn mr-1"></i> 最新動態
+            </span>
+            <marquee behavior="scroll" direction="left" class="flex-grow text-lg tracking-wide">
+                {{ marqueeText }}
+            </marquee>
         </div>
 
-        <!-- Charts Section -->
-        <div v-if="showCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 transition-all duration-500 max-w-5xl mx-auto">
-            <div class="glass-card p-4">
-                <h2 class="text-xl font-bold text-center text-[#FF9898] mb-2"><i class="fas fa-chart-bar mr-2"></i>到職英雄統計</h2>
-                <div class="relative h-64">
-                    <canvas id="onboardChart"></canvas>
-                </div>
-            </div>
-            <div class="glass-card p-4">
-                <h2 class="text-xl font-bold text-center text-[#FFAAAA] mb-2"><i class="fas fa-chart-bar mr-2"></i>離職英雄統計</h2>
-                <div class="relative h-64">
-                    <canvas id="offboardChart"></canvas>
-                </div>
-            </div>
-        </div>
+        <!-- Main Content Area -->
+        <div class="container mx-auto mt-6 px-4">
 
-        <!-- Shortest Tenure Highlight -->
-        <div v-if="shortestTenureStats && shortestTenureStats.length > 0" class="max-w-5xl mx-auto glass-card p-3 mb-6 bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm">
-            <div class="flex items-center mb-2">
-                <div class="bg-[#FF9898] text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow text-sm">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h3 class="text-base font-bold text-gray-700">離職英雄在職天數最短統計 (前三名)</h3>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:pl-11">
-                <div v-for="(stat, index) in shortestTenureStats" :key="index" class="bg-white p-2.5 rounded-lg shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-[10px] font-bold px-2 py-0.5 bg-pink-100 text-[#FF9898] rounded-full">Top {{ index + 1 }}</span>
-                        <span class="text-[10px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded"><i class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
+            <!-- Controls: Filters & Sort -->
+            <div class="glass-card p-4 mb-6 flex flex-wrap gap-4 items-center justify-between bg-white">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="flex items-center">
+                        <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-filter"></i> 篩選年份：</label>
+                        <select v-model="filters.year"
+                            class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
+                            <option value="all">全部年份</option>
+                            <option value="2025">2025年</option>
+                            <option value="2026">2026年</option>
+                        </select>
                     </div>
-                    <div class="flex items-center justify-between mt-1">
-                        <div class="text-sm font-bold text-gray-800">{{ maskName(stat.name) }}</div>
-                        <div class="text-xs font-bold text-blue-600 flex items-center"><i class="fas fa-history mr-1 text-gray-400"></i>{{ stat.tenureText }}</div>
+                    <div class="flex items-center">
+                        <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-sitemap"></i> 篩選單位：</label>
+                        <select v-model="filters.dept"
+                            class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
+                            <option value="all">全部單位</option>
+                            <option v-for="dept in uniqueDepts" :key="dept" :value="dept">{{ dept }}</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="font-bold mr-2 text-[#FFAAAA]"><i class="fas fa-sort"></i> 排序方式：</label>
+                        <select v-model="sort.order"
+                            class="border border-[#FFD586] rounded px-3 py-1 outline-none focus:ring-2 focus:ring-[#FF9898]">
+                            <option value="asc">日期舊到新</option>
+                            <option value="desc">日期新到舊</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="toggleCharts"
+                        class="bg-gradient-to-r from-purple-300 to-indigo-300 text-white font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
+                        <i class="fas" :class="showCharts ? 'fa-eye-slash' : 'fa-chart-pie'"></i> {{ showCharts ?
+                        '隱藏統計表' : '顯示統計表' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div v-if="showCharts" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 transition-all duration-500">
+                <div class="glass-card p-4">
+                    <h2 class="text-xl font-bold text-center text-[#FF9898] mb-2"><i
+                            class="fas fa-chart-bar mr-2"></i>到職統計</h2>
+                    <div class="relative h-64">
+                        <canvas id="onboardChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card p-4">
+                    <h2 class="text-xl font-bold text-center text-[#FFAAAA] mb-2"><i
+                            class="fas fa-chart-bar mr-2"></i>離職統計</h2>
+                    <div class="relative h-64">
+                        <canvas id="offboardChart"></canvas>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Tables Section (Stacked vertically and constrained width) -->
-        <div class="flex flex-col items-center gap-6">
-            
-            <!-- Onboard Table -->
-            <div class="glass-card overflow-hidden w-full max-w-5xl">
-                <div class="bg-[#FFD586] text-gray-800 p-3 flex justify-between items-center">
-                    <h2 class="text-xl font-bold"><i class="fas fa-door-open mr-2"></i>到職英雄榜</h2>
-                    <span class="bg-white px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOnboard.length }} 人</span>
+            <!-- Shortest Tenure Highlight -->
+            <div v-if="shortestTenureStats && shortestTenureStats.length > 0"
+                class="glass-card py-2 px-4 mb-4 bg-gradient-to-r from-[#FFFDF9] to-[#FFF0F0] border-l-4 border-[#FF9898] shadow-sm">
+                <div class="flex items-center mb-2">
+                    <div
+                        class="bg-[#FF9898] text-white rounded-full h-8 w-8 flex items-center justify-center mr-3 shadow text-sm">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="text-base font-bold text-gray-700">在職天數最短</h3>
                 </div>
-                <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-[#FFE99A] text-gray-700 sticky top-0 shadow-sm">
-                            <tr>
-                                <th class="p-3 border-b-2 border-white w-24">到職日</th>
-                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
-                                <th class="p-3 border-b-2 border-white w-20">單位</th>
-                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
-                                <th class="p-3 border-b-2 border-white text-center w-20">備註</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-if="filteredOnboard.length === 0">
-                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
-                            </tr>
-                            <tr v-for="(item, index) in filteredOnboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
-                                <td class="p-3 font-mono text-sm">{{ item.date }}</td>
-                                <td class="p-3 font-bold text-[#FF9898]">{{ maskName(item.originalName) }}</td>
-                                <td class="p-3">
-                                    <span class="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">{{ item.dept }}</span>
-                                </td>
-                                <td class="p-3 text-sm" :class="getTenureStatus(item.date, item.originalName) === '無需統計(已離職)' ? 'text-gray-400 italic' : 'text-blue-600 font-bold'">
-                                    {{ getTenureStatus(item.date, item.originalName) }}
-                                </td>
-                                <td class="p-3 text-center text-sm text-gray-500">
-                                    {{ item.remark || '' }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:pl-11">
+                    <div v-for="(stat, index) in shortestTenureStats" :key="index"
+                        class="bg-white p-2 rounded-lg shadow-sm border border-pink-100 flex flex-col justify-between hover:shadow-md transition">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold px-2 py-0.5 bg-pink-100 text-[#FF9898] rounded-full">Top {{
+                                index + 1 }}</span>
+                            <span class="text-[10px] text-gray-500 bg-gray-50 px-2 py-0.5 rounded"><i
+                                    class="fas fa-sitemap mr-1"></i>{{ stat.dept }}</span>
+                        </div>
+                        <div class="text-base font-bold text-gray-800 mt-1">{{ maskName(stat.name) }}</div>
+                        <div class="text-xs font-bold text-blue-600 mt-0.5"><i class="fas fa-history mr-1 text-gray-400"></i>{{
+                            stat.tenureText }}</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Offboard Table -->
-            <div class="glass-card overflow-hidden w-full max-w-5xl">
-                <div class="bg-[#FFAAAA] text-white p-3 flex justify-between items-center">
-                    <h2 class="text-xl font-bold"><i class="fas fa-door-closed mr-2"></i>離職英雄榜</h2>
-                    <span class="bg-white text-[#FFAAAA] px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOffboard.length }} 人</span>
+            <!-- Tables Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Onboard Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="bg-[#FFD586] text-gray-800 p-3 flex justify-between items-center">
+                        <h2 class="text-xl font-bold"><i class="fas fa-door-open mr-2"></i>到職英雄榜</h2>
+                        <span class="bg-white px-2 rounded-full text-sm font-bold shadow-sm">共 {{ filteredOnboard.length
+                            }} 人</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-[#FFE99A] text-gray-700 sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="p-3 border-b-2 border-white">到職日</th>
+                                    <th class="p-3 border-b-2 border-white">姓名</th>
+                                    <th class="p-3 border-b-2 border-white">單位</th>
+                                    <th class="p-3 border-b-2 border-white">在職天數</th>
+                                    <th class="p-3 border-b-2 border-white text-center">備註</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="filteredOnboard.length === 0">
+                                    <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
+                                </tr>
+                                <tr v-for="(item, index) in filteredOnboard" :key="item.id"
+                                    class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
+                                    <td class="p-3 font-mono text-sm">{{ item.date }}</td>
+                                    <td class="p-3 font-bold text-[#FF9898]">{{ maskName(item.originalName) }}</td>
+                                    <td class="p-3">
+                                        <span class="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">{{ item.dept
+                                            }}</span>
+                                    </td>
+                                    <td class="p-3 text-sm"
+                                        :class="getTenureStatus(item.date, item.originalName) === '無需統計(已離職)' ? 'text-gray-400 italic' : 'text-blue-600 font-bold'">
+                                        {{ getTenureStatus(item.date, item.originalName) }}
+                                    </td>
+                                    <td class="p-3 text-center text-sm text-gray-500">
+                                        {{ item.remark || '' }}
+                                    </td>
+
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-[#FF9898] text-white sticky top-0 shadow-sm">
-                            <tr>
-                                <th class="p-3 border-b-2 border-white w-24">離職日</th>
-                                <th class="p-3 border-b-2 border-white w-24">姓名</th>
-                                <th class="p-3 border-b-2 border-white w-20">單位</th>
-                                <th class="p-3 border-b-2 border-white w-32">在職天數</th>
-                                <th class="p-3 border-b-2 border-white text-center w-20">備註</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-if="filteredOffboard.length === 0">
-                                <td colspan="5" class="text-center p-4 text-gray-400">無符合資料</td>
-                            </tr>
-                            <tr v-for="(item, index) in filteredOffboard" :key="item.id" class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
-                                <td class="p-3 font-mono text-sm">{{ item.date }}</td>
-                                <td class="p-3 font-bold text-gray-700">{{ maskName(item.originalName) }}</td>
-                                <td class="p-3">
-                                    <span class="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">{{ item.dept }}</span>
-                                </td>
-                                <td class="p-3 text-sm text-[#FF9898] font-bold">
-                                    {{ getOffboardTenure(item) }}
-                                </td>
-                                <td class="p-3 text-center text-sm text-gray-500">
-                                    {{ getOffboardRemark(item.originalName) }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+
+                <!-- Offboard Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="bg-[#FFAAAA] text-white p-3 flex justify-between items-center">
+                        <h2 class="text-xl font-bold"><i class="fas fa-door-closed mr-2"></i>離職英雄榜</h2>
+                        <span class="bg-white text-[#FFAAAA] px-2 rounded-full text-sm font-bold shadow-sm">共 {{
+                            filteredOffboard.length }} 人</span>
+                    </div>
+                    <div class="overflow-x-auto max-h-[600px]">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-[#FF9898] text-white sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="p-3 border-b-2 border-white">離職日</th>
+                                    <th class="p-3 border-b-2 border-white">姓名</th>
+                                    <th class="p-3 border-b-2 border-white">單位</th>
+                                    <th class="p-3 border-b-2 border-white">在職天數</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="filteredOffboard.length === 0">
+                                    <td colspan="4" class="text-center p-4 text-gray-400">無符合資料</td>
+                                </tr>
+                                <tr v-for="(item, index) in filteredOffboard" :key="item.id"
+                                    class="border-b border-gray-100 hover:bg-[#FFF9F9] transition">
+                                    <td class="p-3 font-mono text-sm">{{ item.date }}</td>
+                                    <td class="p-3 font-bold text-gray-700">{{ maskName(item.originalName) }}</td>
+                                    <td class="p-3">
+                                        <span class="bg-gray-100 px-2 py-1 rounded text-xs text-gray-600">{{ item.dept
+                                            }}</span>
+                                    </td>
+                                    <td class="p-3 text-sm text-[#FF9898] font-bold">
+                                        {{ getOffboardTenure(item) }}
+                                    </td>
+
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
             </div>
-            
         </div>
+
+        <!-- 頁尾版權宣告 -->
+        <footer class="text-center py-6 mt-8 text-sm text-gray-500 font-medium">
+            <p>Copyright &copy; 2026 Pip_Lin 版權所有</p>
+            <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v1.5.11</p>
+            <p class="text-xs text-gray-400 mt-2"><i class="fas fa-sync-alt mr-1"></i>最後更新日期：{{ lastUpdated }}</p>
+        </footer>
     </div>
 
-    <!-- 頁尾版權宣告 -->
-    <footer class="text-center py-6 mt-8 text-sm text-gray-500 font-medium">
-        <p>Copyright &copy; 2026 Pip_Lin 版權所有</p>
-        <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v1.5.18</p>
-        <p class="text-xs text-gray-400 mt-2"><i class="fas fa-sync-alt mr-1"></i>最後更新日期：{{ lastUpdated }}</p>
-    </footer>
-</div>
+    <script>
+        const { createApp } = Vue;
 
-<script>
-    const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    lastUpdated: '',
+                    showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
+                    filters: {
+                        year: 'all',
+                        dept: 'all'
+                    },
+                    sort: {
+                        order: 'desc' // 預設新到舊
+                    },
+                    // 圖表實例
+                    onboardChartInstance: null,
+                    offboardChartInstance: null,
 
-    createApp({
-        data() {
-            return {
-                lastUpdated: '',
-                showCharts: false,
-                filters: {
-                    year: 'all',
-                    dept: 'all'
-                },
-                sort: {
-                    order: 'desc' // 預設新到舊
-                },
-                // 圖表實例
-                onboardChartInstance: null,
-                offboardChartInstance: null,
-                
-                // 到職資料
-                onboardList: [
-                    { id: 1, date: '2025-02-10', originalName: '林彥芬', dept: '二組' },
-                    { id: 2, date: '2025-02-10', originalName: '陳淳渝', dept: '二組' },
-                    { id: 3, date: '2025-05-12', originalName: '簡麗華', dept: '行二' },
-                    { id: 4, date: '2025-07-14', originalName: '王紋星', dept: '二組' },
-                    { id: 5, date: '2025-07-14', originalName: '呂文彰', dept: '一組' },
-                    { id: 6, date: '2025-08-18', originalName: '蔡昇峰', dept: '二組' },
-                    { id: 7, date: '2025-08-25', originalName: '陳玟蓉', dept: '三組' },
-                    { id: 8, date: '2025-09-08', originalName: '張家綺', dept: '行二' },
-                    { id: 9, date: '2025-09-15', originalName: '張宇豐', dept: '行一' },
-                    { id: 10, date: '2025-11-03', originalName: '簡悅伃', dept: '三組' },
-                    { id: 11, date: '2025-11-17', originalName: '王泓文', dept: '一組' },
-                    { id: 12, date: '2025-11-17', originalName: '茍穎書', dept: '一組' },
-                    { id: 13, date: '2025-11-17', originalName: '陳建和', dept: '二組' },
-                    { id: 14, date: '2025-11-17', originalName: '陳勁凱', dept: '二組' },
-                    { id: 15, date: '2025-11-24', originalName: '張雅涵', dept: '行一', remark: 'Happy' },
-                    { id: 16, date: '2025-12-01', originalName: '黃鈺媖', dept: '一組' },
-                    { id: 17, date: '2025-12-01', originalName: '林宛樺', dept: '三組' },
-                    { id: 18, date: '2026-02-09', originalName: '林厚實', dept: '行一', remark: 'MIS' },
-                    { id: 19, date: '2026-03-02', originalName: '葉子歆', dept: '三組' },
-                    { id: 20, date: '2026-03-23', originalName: '陳昱翔', dept: '三組' },
-                    { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一', remark: 'Planning' },
-                    { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一', remark: 'MIS' },
-                    { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二', remark: 'HR' },
-                    { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '行二', remark: 'HR' },
-                    { id: 51, date: '2026-05-18', originalName: '蔡雅玲', dept: '行二', remark: 'ACC' },
-                    { id: 51, date: '2026-06-01', originalName: '曾威誌', dept: '二組' },
-                    { id: 52, date: '2026-06-01', originalName: '孫榮田', dept: '三組' }
-                ],
-                
-                // 離職資料
-                offboardList: [
-                    { id: 24, date: '2025-01-16', originalName: '許志豪', dept: '二組' },
-                    { id: 25, date: '2025-02-14', originalName: '黃亮愷', dept: '三組' },
-                    { id: 26, date: '2025-03-31', originalName: '杜宜蓁', dept: '三組' },
-                    { id: 27, date: '2025-03-31', originalName: '金煜舜', dept: '二組' },
-                    { id: 28, date: '2025-04-13', originalName: '詹淑鋆', dept: '行二' },
-                    { id: 29, date: '2025-04-30', originalName: '孫東正', dept: '二組' },
-                    { id: 30, date: '2025-04-30', originalName: '劉英愉', dept: '一組' },
-                    { id: 31, date: '2025-06-18', originalName: '潘建宏', dept: '行一' },
-                    { id: 32, date: '2025-07-11', originalName: '黃政皓', dept: '二組' },
-                    { id: 33, date: '2025-07-31', originalName: '陳姿穎', dept: '二組' },
-                    { id: 34, date: '2025-07-31', originalName: '魏葆蓉', dept: '行二' },
-                    { id: 35, date: '2025-07-31', originalName: '張桂瑜', dept: '一組' },
-                    { id: 36, date: '2025-08-14', originalName: '簡麗華', dept: '行二' },
-                    { id: 37, date: '2025-08-15', originalName: '劉芷綺', dept: '三組' },
-                    { id: 38, date: '2025-08-29', originalName: '陳乙瑄', dept: '二組' },
-                    { id: 39, date: '2025-08-29', originalName: '吳政輝', dept: '行一' },
-                    { id: 40, date: '2025-09-05', originalName: '蔡昇峰', dept: '二組' },
-                    { id: 41, date: '2025-09-19', originalName: '簡司頻', dept: '三組' },
-                    { id: 42, date: '2025-10-15', originalName: '陳姿吟', dept: '三組' },
-                    { id: 43, date: '2025-10-19', originalName: '許哲偉', dept: '二組' },
-                    { id: 44, date: '2025-10-19', originalName: '黃新棠', dept: '一組' },
-                    { id: 45, date: '2025-11-28', originalName: '馮昱豪', dept: '三組' },
-                    { id: 46, date: '2025-12-12', originalName: '張宇豐', dept: '行一' },
-                    { id: 47, date: '2026-01-30', originalName: '黃鈺媖', dept: '一組' },
-                    { id: 48, date: '2026-02-28', originalName: '張家綺', dept: '行二' },
-                    { id: 49, date: '2026-04-24', originalName: '彭鉯喬', dept: '行二' },
-                    { id: 52, date: '2026-05-18', originalName: '茍穎書', dept: '一組' }
-                ]
-            }
-        },
-        computed: {
-            uniqueDepts() {
-                const depts = new Set([
-                    ...this.onboardList.map(item => item.dept),
-                    ...this.offboardList.map(item => item.dept)
-                ]);
-                return Array.from(depts).sort();
-            },
-            filteredOnboard() {
-                return this.filterAndSortList(this.onboardList);
-            },
-            filteredOffboard() {
-                return this.filterAndSortList(this.offboardList);
-            },
-            marqueeLines() {
-                const now = new Date();
-                const currentMonth = now.getMonth() + 1;
-                const currentYear = now.getFullYear();
-                
-                let lastMonth = currentMonth - 1;
-                let lastMonthYear = currentYear;
-                if (lastMonth === 0) {
-                    lastMonth = 12;
-                    lastMonthYear--;
+                    // 初始資料載入 (使用自增 ID 以供操作)
+                    autoId: 100,
+
+                    // 到職資料
+                    onboardList: [
+                        { id: 1, date: '2025-02-10', originalName: '林彥芬', dept: '二組' },
+                        { id: 2, date: '2025-02-10', originalName: '陳淳渝', dept: '二組' },
+                        { id: 3, date: '2025-05-12', originalName: '簡麗華', dept: '行二' },
+                        { id: 4, date: '2025-07-14', originalName: '王紋星', dept: '二組' },
+                        { id: 5, date: '2025-07-14', originalName: '呂文彰', dept: '一組' },
+                        { id: 6, date: '2025-08-18', originalName: '蔡昇峰', dept: '二組' },
+                        { id: 7, date: '2025-08-25', originalName: '陳玟蓉', dept: '三組' },
+                        { id: 8, date: '2025-09-08', originalName: '張家綺', dept: '行二' },
+                        { id: 9, date: '2025-09-15', originalName: '張宇豐', dept: '行一' },
+                        { id: 10, date: '2025-11-03', originalName: '簡悅伃', dept: '三組' },
+                        { id: 11, date: '2025-11-17', originalName: '王泓文', dept: '一組' },
+                        { id: 12, date: '2025-11-17', originalName: '茍穎書', dept: '一組' },
+                        { id: 13, date: '2025-11-17', originalName: '陳建和', dept: '二組' },
+                        { id: 14, date: '2025-11-17', originalName: '陳勁凱', dept: '二組' },
+                        { id: 15, date: '2025-11-24', originalName: '張雅涵', dept: '行一', remark: 'Happy' },
+                        { id: 16, date: '2025-12-01', originalName: '黃鈺媖', dept: '一組' },
+                        { id: 17, date: '2025-12-01', originalName: '林宛樺', dept: '三組' },
+                        { id: 18, date: '2026-02-09', originalName: '林厚實', dept: '行一', remark: 'MIS' },
+                        { id: 19, date: '2026-03-02', originalName: '葉子歆', dept: '三組' },
+                        { id: 20, date: '2026-03-23', originalName: '陳昱翔', dept: '三組' },
+                        { id: 21, date: '2026-04-07', originalName: '盛嘉苓', dept: '行一', remark: 'Planning' },
+                        { id: 22, date: '2026-04-07', originalName: '許嘉益', dept: '行一', remark: 'MIS' },
+                        { id: 23, date: '2026-04-07', originalName: '彭鉯喬', dept: '行二', remark: 'HR' },
+                        { id: 50, date: '2026-05-11', originalName: '林霈覠', dept: '行二', remark: 'HR' },
+                        { id: 51, date: '2026-06-01', originalName: '曾威誌', dept: '二組' },
+                        { id: 52, date: '2026-06-01', originalName: '孫榮田', dept: '三組' },
+                        { id: 53, date: '2026-06-08', originalName: '吳惠芳', dept: '行二' },
+                    ],
+
+                    // 離職資料
+                    offboardList: [
+                        { id: 24, date: '2025-01-16', originalName: '許志豪', dept: '二組' },
+                        { id: 25, date: '2025-02-14', originalName: '黃亮愷', dept: '三組' },
+                        { id: 26, date: '2025-03-31', originalName: '杜宜蓁', dept: '三組' },
+                        { id: 27, date: '2025-03-31', originalName: '金煜舜', dept: '二組' },
+                        { id: 28, date: '2025-04-13', originalName: '詹淑鋆', dept: '行二' },
+                        { id: 29, date: '2025-04-30', originalName: '孫東正', dept: '二組' },
+                        { id: 30, date: '2025-04-30', originalName: '劉英愉', dept: '一組' },
+                        { id: 31, date: '2025-06-18', originalName: '潘建宏', dept: '行一' },
+                        { id: 32, date: '2025-07-11', originalName: '黃政皓', dept: '二組' },
+                        { id: 33, date: '2025-07-31', originalName: '陳姿穎', dept: '二組' },
+                        { id: 34, date: '2025-07-31', originalName: '魏葆蓉', dept: '行二' },
+                        { id: 35, date: '2025-07-31', originalName: '張桂瑜', dept: '一組' },
+                        { id: 36, date: '2025-08-14', originalName: '簡麗華', dept: '行二' },
+                        { id: 37, date: '2025-08-15', originalName: '劉芷綺', dept: '三組' },
+                        { id: 38, date: '2025-08-29', originalName: '陳乙瑄', dept: '二組' },
+                        { id: 39, date: '2025-08-29', originalName: '吳政輝', dept: '行一' },
+                        { id: 40, date: '2025-09-05', originalName: '蔡昇峰', dept: '二組' },
+                        { id: 41, date: '2025-09-19', originalName: '簡司頻', dept: '三組' },
+                        { id: 42, date: '2025-10-15', originalName: '陳姿吟', dept: '三組' },
+                        { id: 43, date: '2025-10-19', originalName: '許哲偉', dept: '二組' },
+                        { id: 44, date: '2025-10-19', originalName: '黃新棠', dept: '一組' },
+                        { id: 45, date: '2025-11-28', originalName: '馮昱豪', dept: '三組' },
+                        { id: 46, date: '2025-12-12', originalName: '張宇豐', dept: '行一' },
+                        { id: 47, date: '2026-01-30', originalName: '黃鈺媖', dept: '一組' },
+                        { id: 48, date: '2026-02-28', originalName: '張家綺', dept: '行二' },
+                        { id: 49, date: '2026-04-24', originalName: '彭鉯喬', dept: '行二' },
+                        { id: 54, date: '2026-06-08', originalName: '黃敏毓', dept: '二組' }
+                    ]
                 }
-
-                const currentMonthOffNames = this.offboardList
-                    .filter(item => {
-                        const d = new Date(item.date);
-                        return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
-                    })
-                    .map(item => this.maskName(item.originalName));
-
-                const lastMonthOffNames = this.offboardList
-                    .filter(item => {
-                        const d = new Date(item.date);
-                        return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
-                    })
-                    .map(item => this.maskName(item.originalName));
-
-                const currentMonthOnNames = this.onboardList
-                    .filter(item => {
-                        const d = new Date(item.date);
-                        return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
-                    })
-                    .map(item => this.maskName(item.originalName));
-
-                const lastMonthOnNames = this.onboardList
-                    .filter(item => {
-                        const d = new Date(item.date);
-                        return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
-                    })
-                    .map(item => this.maskName(item.originalName));
-
-                const cOffText = currentMonthOffNames.length > 0 ? currentMonthOffNames.join('、') : '無';
-                const lOffText = lastMonthOffNames.length > 0 ? lastMonthOffNames.join('、') : '無';
-                const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
-                const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
-
-                // 改為回傳陣列，讓垂直滾動動畫依序顯示
-                return [
-                    `⭐ 本月(${currentMonth}月)到職：${cOnText}`,
-                    `🌙 上月(${lastMonth}月)到職：${lOnText}`,
-                    `🚩 本月(${currentMonth}月)離職：${cOffText}`,
-                    `🍂 上月(${lastMonth}月)離職：${lOffText}`
-                ];
             },
-            shortestTenureStats() {
-                let validRecords = [];
+            computed: {
+                uniqueDepts() {
+                    const depts = new Set([
+                        ...this.onboardList.map(item => item.dept),
+                        ...this.offboardList.map(item => item.dept)
+                    ]);
+                    return Array.from(depts).sort();
+                },
+                filteredOnboard() {
+                    return this.filterAndSortList(this.onboardList);
+                },
+                filteredOffboard() {
+                    return this.filterAndSortList(this.offboardList);
+                },
+                marqueeText() {
+                    const now = new Date();
+                    // 為了展示邏輯，這裡以系統實際時間為基準抓取當月/上月
+                    const currentMonth = now.getMonth() + 1;
+                    const currentYear = now.getFullYear();
 
-                this.offboardList.forEach(item => {
+                    let lastMonth = currentMonth - 1;
+                    let lastMonthYear = currentYear;
+                    if (lastMonth === 0) {
+                        lastMonth = 12;
+                        lastMonthYear--;
+                    }
+
+                    // 抓取離職名單
+                    const currentMonthOffNames = this.offboardList
+                        .filter(item => {
+                            const d = new Date(item.date);
+                            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+                        })
+                        .map(item => this.maskName(item.originalName));
+
+                    const lastMonthOffNames = this.offboardList
+                        .filter(item => {
+                            const d = new Date(item.date);
+                            return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
+                        })
+                        .map(item => this.maskName(item.originalName));
+
+                    // 抓取到職名單
+                    const currentMonthOnNames = this.onboardList
+                        .filter(item => {
+                            const d = new Date(item.date);
+                            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+                        })
+                        .map(item => this.maskName(item.originalName));
+
+                    const lastMonthOnNames = this.onboardList
+                        .filter(item => {
+                            const d = new Date(item.date);
+                            return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
+                        })
+                        .map(item => this.maskName(item.originalName));
+
+                    const cOffText = currentMonthOffNames.length > 0 ? currentMonthOffNames.join('、') : '無';
+                    const lOffText = lastMonthOffNames.length > 0 ? lastMonthOffNames.join('、') : '無';
+                    const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
+                    const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
+
+                    return `⭐ 本月(${currentMonth}月)到職：${cOnText} ｜ 🌙 上月(${lastMonth}月)到職：${lOnText} ｜ 🚩 本月(${currentMonth}月)離職：${cOffText} ｜ 🍂 上月(${lastMonth}月)離職：${lOffText} ⭐`;
+                },
+                shortestTenureStats() {
+                    let validRecords = [];
+
+                    // 僅檢查已離職的英雄，尋找在職天數最短的紀錄
+                    this.offboardList.forEach(item => {
+                        // 尋找對應的到職紀錄 (必須有到職紀錄才能計算天數)
+                        const onboardRecord = this.onboardList.find(
+                            onItem => onItem.originalName === item.originalName && new Date(onItem.date) <= new Date(item.date)
+                        );
+                        if (!onboardRecord) return; // 無到職紀錄則跳過
+
+                        const start = new Date(onboardRecord.date);
+                        start.setHours(0, 0, 0, 0);
+                        const end = new Date(item.date);
+                        end.setHours(0, 0, 0, 0);
+
+                        const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+
+                        if (diffDays >= 0) {
+                            validRecords.push({
+                                name: item.originalName,
+                                dept: item.dept,
+                                diffDays: diffDays,
+                                tenureText: this.getOffboardTenure(item)
+                            });
+                        }
+                    });
+
+                    if (validRecords.length === 0) return null;
+
+                    // 依在職天數升冪排序 (天數少的在前面)
+                    validRecords.sort((a, b) => a.diffDays - b.diffDays);
+
+                    // 取前三名，如果平手，原陣列排序在前的優先，符合需求
+                    return validRecords.slice(0, 3);
+                }
+            },
+            watch: {
+                filters: {
+                    handler() {
+                        // 只有在圖表顯示的狀態下才重新繪製，節省效能
+                        if (this.showCharts) {
+                            this.renderCharts();
+                        }
+                    },
+                    deep: true
+                }
+            },
+            methods: {
+                // 切換統計表顯示狀態
+                toggleCharts() {
+                    this.showCharts = !this.showCharts;
+                    // 如果是打開的狀態，等待 DOM 渲染完成後再畫圖表
+                    if (this.showCharts) {
+                        this.$nextTick(() => {
+                            this.renderCharts();
+                        });
+                    }
+                },
+                // 姓名去識別化
+                maskName(name) {
+                    if (!name) return '';
+                    if (name.length === 2) return name[0] + 'Ｏ';
+                    if (name.length >= 3) {
+                        let arr = name.split('');
+                        arr[1] = 'Ｏ';
+                        return arr.join('');
+                    }
+                    return name;
+                },
+                // 計算年資
+                getTenureStatus(dateStr, name) {
+                    // 如果該英雄出現在離職名單中，則無需統計
+                    const hasOffboarded = this.offboardList.some(item => item.originalName === name);
+                    if (hasOffboarded) {
+                        return '無需統計(已離職)';
+                    }
+
+                    const start = new Date(dateStr);
+                    const now = new Date();
+
+                    if (start > now) return '尚未到職';
+
+                    let years = now.getFullYear() - start.getFullYear();
+                    let months = now.getMonth() - start.getMonth();
+                    let days = now.getDate() - start.getDate();
+
+                    if (days < 0) {
+                        months--;
+                        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                        days += prevMonth.getDate();
+                    }
+                    if (months < 0) {
+                        years--;
+                        months += 12;
+                    }
+
+                    let result = [];
+                    if (years > 0) result.push(`${years}年`);
+                    if (months > 0) result.push(`${months}個月`);
+                    if (days > 0 || result.length === 0) result.push(`${days}天`);
+
+                    return result.join('');
+                },
+                // 計算離職英雄的在職天數
+                getOffboardTenure(offboardItem) {
+                    // 從到職名單中尋找同名且到職日早於離職日的紀錄
                     const onboardRecord = this.onboardList.find(
-                        onItem => onItem.originalName === item.originalName && new Date(onItem.date) <= new Date(item.date)
+                        onItem => onItem.originalName === offboardItem.originalName && new Date(onItem.date) <= new Date(offboardItem.date)
                     );
-                    if (!onboardRecord) return;
+
+                    if (!onboardRecord) return '無到職紀錄';
 
                     const start = new Date(onboardRecord.date);
-                    start.setHours(0, 0, 0, 0);
-                    const end = new Date(item.date);
-                    end.setHours(0, 0, 0, 0);
-                    
-                    const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
+                    const end = new Date(offboardItem.date);
 
-                    if (diffDays >= 0) {
-                        validRecords.push({
-                            name: item.originalName,
-                            dept: item.dept,
-                            diffDays: diffDays,
-                            tenureText: this.getOffboardTenure(item)
-                        });
+                    let years = end.getFullYear() - start.getFullYear();
+                    let months = end.getMonth() - start.getMonth();
+                    let days = end.getDate() - start.getDate();
+
+                    if (days < 0) {
+                        months--;
+                        const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+                        days += prevMonth.getDate();
                     }
-                });
+                    if (months < 0) {
+                        years--;
+                        months += 12;
+                    }
 
-                if (validRecords.length === 0) return null;
+                    let result = [];
+                    if (years > 0) result.push(`${years}年`);
+                    if (months > 0) result.push(`${months}個月`);
+                    if (days > 0 || result.length === 0) result.push(`${days}天`);
 
-                validRecords.sort((a, b) => a.diffDays - b.diffDays);
-                return validRecords.slice(0, 3);
-            }
-        },
-        watch: {
-            filters: {
-                handler() {
-                    if (this.showCharts) {
-                        this.renderCharts();
+                    return result.join('');
+                },
+                // 通用的過濾與排序函數
+                filterAndSortList(list) {
+                    let result = list.filter(item => {
+                        const yearMatch = this.filters.year === 'all' || item.date.startsWith(this.filters.year);
+                        const deptMatch = this.filters.dept === 'all' || item.dept === this.filters.dept;
+                        return yearMatch && deptMatch;
+                    });
+
+                    result.sort((a, b) => {
+                        if (this.sort.order === 'asc') {
+                            return new Date(a.date) - new Date(b.date);
+                        } else {
+                            return new Date(b.date) - new Date(a.date);
+                        }
+                    });
+
+                    return result;
+                },
+                // 密碼驗證包裝函數
+                async requirePassword(actionCallback) {
+                    const { value: password } = await Swal.fire({
+                        title: '系統安全驗證',
+                        text: '請輸入管理員密碼以繼續操作',
+                        input: 'password',
+                        inputPlaceholder: '輸入密碼',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#FF9898',
+                        cancelButtonColor: '#ccc',
+                        confirmButtonText: '確認',
+                        cancelButtonText: '取消'
+                    });
+
+                    if (password === '123') {
+                        actionCallback();
+                    } else if (password !== undefined) {
+                        Swal.fire({
+                            title: '驗證失敗',
+                            text: '密碼不正確',
+                            icon: 'error',
+                            confirmButtonColor: '#FF9898'
+                        });
                     }
                 },
-                deep: true
-            }
-        },
-        methods: {
-            toggleCharts() {
-                this.showCharts = !this.showCharts;
-                if (this.showCharts) {
-                    this.$nextTick(() => {
-                        this.renderCharts();
+                // 更新時間戳記
+                setLastUpdated() {
+                    const now = new Date();
+                    const yyyy = now.getFullYear();
+                    const mm = String(now.getMonth() + 1).padStart(2, '0');
+                    const dd = String(now.getDate()).padStart(2, '0');
+                    const hh = String(now.getHours()).padStart(2, '0');
+                    const min = String(now.getMinutes()).padStart(2, '0');
+                    const ss = String(now.getSeconds()).padStart(2, '0');
+                    this.lastUpdated = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
+                },
+                // 打開新增/修改視窗
+                async openForm(type, item = null) {
+                    const title = item ? `修改${type === 'onboard' ? '到職' : '離職'}英雄` : `新增${type === 'onboard' ? '到職' : '離職'}英雄`;
+                    const isOnboard = type === 'onboard';
+
+                    await this.requirePassword(async () => {
+                        const { value: formValues } = await Swal.fire({
+                            title: title,
+                            html:
+                                `<div class="flex flex-col gap-3 text-left px-2">
+                                <label class="text-sm font-bold text-gray-600">日期</label>
+                                <input id="swal-date" type="date" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" value="${item ? item.date : ''}">
+                                <label class="text-sm font-bold text-gray-600 mt-2">姓名</label>
+                                <input id="swal-name" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入姓名" value="${item ? item.originalName : ''}">
+                                <label class="text-sm font-bold text-gray-600 mt-2">單位</label>
+                                <input id="swal-dept" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入單位名稱 (例如: 一組)" value="${item ? item.dept : ''}">
+                                ${isOnboard ? `
+                                <label class="text-sm font-bold text-gray-600 mt-2">備註</label>
+                                <input id="swal-remark" class="border p-2 rounded w-full outline-none focus:border-[#FF9898]" placeholder="請輸入備註 (選填)" value="${item && item.remark ? item.remark : ''}">
+                                ` : ''}
+                            </div>`,
+                            focusConfirm: false,
+                            showCancelButton: true,
+                            confirmButtonColor: '#FFD586',
+                            cancelButtonColor: '#ccc',
+                            confirmButtonText: '儲存',
+                            cancelButtonText: '取消',
+                            preConfirm: () => {
+                                const date = document.getElementById('swal-date').value;
+                                const name = document.getElementById('swal-name').value;
+                                const dept = document.getElementById('swal-dept').value;
+                                let remark = '';
+                                if (isOnboard) {
+                                    remark = document.getElementById('swal-remark').value;
+                                }
+
+                                if (!date || !name || !dept) {
+                                    Swal.showValidationMessage('日期、姓名與單位都必須填寫！');
+                                }
+                                return isOnboard ? { date, originalName: name, dept, remark } : { date, originalName: name, dept };
+                            }
+                        });
+
+                        if (formValues) {
+                            const targetList = type === 'onboard' ? this.onboardList : this.offboardList;
+                            if (item) {
+                                // 修改
+                                const index = targetList.findIndex(i => i.id === item.id);
+                                if (index !== -1) {
+                                    targetList[index] = { ...targetList[index], ...formValues };
+                                }
+                            } else {
+                                // 新增
+                                this.autoId++;
+                                targetList.push({ id: this.autoId, ...formValues });
+                            }
+
+                            this.setLastUpdated();
+                            this.renderCharts();
+
+                            Swal.fire({
+                                title: '成功',
+                                text: '資料已儲存！',
+                                icon: 'success',
+                                confirmButtonColor: '#FFD586'
+                            });
+                        }
+                    });
+                },
+                // 刪除項目
+                async deleteItem(type, id) {
+                    await this.requirePassword(() => {
+                        Swal.fire({
+                            title: '確定要刪除嗎？',
+                            text: "刪除後將無法恢復！",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#FFAAAA',
+                            cancelButtonColor: '#ccc',
+                            confirmButtonText: '確定刪除',
+                            cancelButtonText: '取消'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                if (type === 'onboard') {
+                                    this.onboardList = this.onboardList.filter(i => i.id !== id);
+                                } else {
+                                    this.offboardList = this.offboardList.filter(i => i.id !== id);
+                                }
+                                this.setLastUpdated();
+                                this.renderCharts();
+
+                                Swal.fire({
+                                    title: '已刪除',
+                                    text: '資料已成功刪除。',
+                                    icon: 'success',
+                                    confirmButtonColor: '#FFD586'
+                                });
+                            }
+                        });
+                    });
+                },
+                // 繪製統計圖表
+                renderCharts() {
+                    if (!this.showCharts) return; // 如果圖表區塊是隱藏的，就不執行繪製以避免報錯
+
+                    const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+                    // 處理資料函數
+                    const processData = (list) => {
+                        let data2025 = new Array(12).fill(0);
+                        let data2026 = new Array(12).fill(0);
+
+                        list.forEach(item => {
+                            // 如果有單位篩選條件，且不符合，則跳過不計入圖表
+                            if (this.filters.dept !== 'all' && item.dept !== this.filters.dept) return;
+
+                            const d = new Date(item.date);
+                            const year = d.getFullYear();
+                            const monthIndex = d.getMonth(); // 0-11
+
+                            if (year === 2025) data2025[monthIndex]++;
+                            if (year === 2026) data2026[monthIndex]++;
+                        });
+                        return { data2025, data2026 };
+                    };
+
+                    const onData = processData(this.onboardList);
+                    const offData = processData(this.offboardList);
+
+                    // 準備 Datasets，根據年份篩選條件動態顯示
+                    const getDatasets = (dataMap, color1, color2) => {
+                        let datasets = [];
+                        if (this.filters.year === 'all' || this.filters.year === '2025') {
+                            datasets.push({
+                                label: '2025年',
+                                data: dataMap.data2025,
+                                backgroundColor: color1,
+                                borderRadius: 4
+                            });
+                        }
+                        if (this.filters.year === 'all' || this.filters.year === '2026') {
+                            datasets.push({
+                                label: '2026年',
+                                data: dataMap.data2026,
+                                backgroundColor: color2,
+                                borderRadius: 4
+                            });
+                        }
+                        return datasets;
+                    };
+
+                    // 設定共用選項
+                    const chartOptions = {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                        },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    };
+
+                    // 到職圖表更新
+                    if (this.onboardChartInstance) this.onboardChartInstance.destroy();
+                    const ctxOn = document.getElementById('onboardChart').getContext('2d');
+                    this.onboardChartInstance = new Chart(ctxOn, {
+                        type: 'bar',
+                        data: {
+                            labels: months,
+                            datasets: getDatasets(onData, '#FFD586', '#FFE99A')
+                        },
+                        options: chartOptions
+                    });
+
+                    // 離職圖表更新
+                    if (this.offboardChartInstance) this.offboardChartInstance.destroy();
+                    const ctxOff = document.getElementById('offboardChart').getContext('2d');
+                    this.offboardChartInstance = new Chart(ctxOff, {
+                        type: 'bar',
+                        data: {
+                            labels: months,
+                            datasets: getDatasets(offData, '#FFAAAA', '#FF9898')
+                        },
+                        options: chartOptions
                     });
                 }
             },
-            maskName(name) {
-                if (!name) return '';
-                if (name.length === 2) return name[0] + 'Ｏ';
-                if (name.length >= 3) {
-                    let arr = name.split('');
-                    arr[1] = 'Ｏ';
-                    return arr.join('');
-                }
-                return name;
-            },
-            getTenureStatus(dateStr, name) {
-                const hasOffboarded = this.offboardList.some(item => item.originalName === name);
-                if (hasOffboarded) {
-                    return '無需統計(已離職)';
-                }
+            mounted() {
+                this.setLastUpdated();
 
-                const start = new Date(dateStr);
-                const now = new Date();
-                
-                if (start > now) return '尚未到職';
-
-                let years = now.getFullYear() - start.getFullYear();
-                let months = now.getMonth() - start.getMonth();
-                let days = now.getDate() - start.getDate();
-
-                if (days < 0) {
-                    months--;
-                    const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-                    days += prevMonth.getDate();
-                }
-                if (months < 0) {
-                    years--;
-                    months += 12;
-                }
-
-                let result = [];
-                if (years > 0) result.push(`${years}年`);
-                if (months > 0) result.push(`${months}個月`);
-                if (days > 0 || result.length === 0) result.push(`${days}天`);
-
-                return result.join('');
-            },
-            // 這是遺失的計算離職英雄在職天數函式，已補上
-            getOffboardTenure(offboardItem) {
-                const onboardRecord = this.onboardList.find(
-                    onItem => onItem.originalName === offboardItem.originalName && new Date(onItem.date) <= new Date(offboardItem.date)
-                );
-
-                if (!onboardRecord) return '無到職紀錄';
-
-                const start = new Date(onboardRecord.date);
-                const end = new Date(offboardItem.date);
-
-                let years = end.getFullYear() - start.getFullYear();
-                let months = end.getMonth() - start.getMonth();
-                let days = end.getDate() - start.getDate();
-
-                if (days < 0) {
-                    months--;
-                    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
-                    days += prevMonth.getDate();
-                }
-                if (months < 0) {
-                    years--;
-                    months += 12;
-                }
-
-                let result = [];
-                if (years > 0) result.push(`${years}年`);
-                if (months > 0) result.push(`${months}個月`);
-                if (days > 0 || result.length === 0) result.push(`${days}天`);
-
-                return result.join('');
-            },
-            // 抓取離職人員對應的到職備註
-            getOffboardRemark(name) {
-                const onboardRecord = this.onboardList.find(
-                    onItem => onItem.originalName === name
-                );
-                return onboardRecord && onboardRecord.remark ? onboardRecord.remark : '';
-            },
-            filterAndSortList(list) {
-                let result = list.filter(item => {
-                    const yearMatch = this.filters.year === 'all' || item.date.startsWith(this.filters.year);
-                    const deptMatch = this.filters.dept === 'all' || item.dept === this.filters.dept;
-                    return yearMatch && deptMatch;
-                });
-
-                result.sort((a, b) => {
-                    if (this.sort.order === 'asc') {
-                        return new Date(a.date) - new Date(b.date);
-                    } else {
-                        return new Date(b.date) - new Date(a.date);
-                    }
-                });
-
-                return result;
-            },
-            setLastUpdated() {
-                const now = new Date();
-                const yyyy = now.getFullYear();
-                const mm = String(now.getMonth() + 1).padStart(2, '0');
-                const dd = String(now.getDate()).padStart(2, '0');
-                const hh = String(now.getHours()).padStart(2, '0');
-                const min = String(now.getMinutes()).padStart(2, '0');
-                const ss = String(now.getSeconds()).padStart(2, '0');
-                this.lastUpdated = `${yyyy}/${mm}/${dd} ${hh}:${min}:${ss}`;
-            },
-            renderCharts() {
-                if (!this.showCharts) return;
-                
-                const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-                
-                const processData = (list) => {
-                    let data2025 = new Array(12).fill(0);
-                    let data2026 = new Array(12).fill(0);
-                    
-                    list.forEach(item => {
-                        if (this.filters.dept !== 'all' && item.dept !== this.filters.dept) return;
-                        
-                        const d = new Date(item.date);
-                        const year = d.getFullYear();
-                        const monthIndex = d.getMonth(); 
-                        
-                        if (year === 2025) data2025[monthIndex]++;
-                        if (year === 2026) data2026[monthIndex]++;
-                    });
-                    return { data2025, data2026 };
-                };
-
-                const onData = processData(this.onboardList);
-                const offData = processData(this.offboardList);
-
-                const getDatasets = (dataMap, color1, color2) => {
-                    let datasets = [];
-                    if (this.filters.year === 'all' || this.filters.year === '2025') {
-                        datasets.push({
-                            label: '2025年',
-                            data: dataMap.data2025,
-                            backgroundColor: color1,
-                            borderRadius: 4
-                        });
-                    }
-                    if (this.filters.year === 'all' || this.filters.year === '2026') {
-                        datasets.push({
-                            label: '2026年',
-                            data: dataMap.data2026,
-                            backgroundColor: color2,
-                            borderRadius: 4
-                        });
-                    }
-                    return datasets;
-                };
-
-                const chartOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    },
-                    plugins: {
-                        legend: { position: 'top' }
-                    }
-                };
-
-                if (this.onboardChartInstance) this.onboardChartInstance.destroy();
-                const ctxOn = document.getElementById('onboardChart').getContext('2d');
-                this.onboardChartInstance = new Chart(ctxOn, {
-                    type: 'bar',
-                    data: {
-                        labels: months,
-                        datasets: getDatasets(onData, '#FFD586', '#FFE99A')
-                    },
-                    options: chartOptions
-                });
-
-                if (this.offboardChartInstance) this.offboardChartInstance.destroy();
-                const ctxOff = document.getElementById('offboardChart').getContext('2d');
-                this.offboardChartInstance = new Chart(ctxOff, {
-                    type: 'bar',
-                    data: {
-                        labels: months,
-                        datasets: getDatasets(offData, '#FFAAAA', '#FF9898')
-                    },
-                    options: chartOptions
-                });
-            }
-        },
-        mounted() {
-            this.setLastUpdated();
-
-            document.addEventListener('contextmenu', event => {
-                event.preventDefault();
-            });
-
-            document.addEventListener('keydown', event => {
-                if (event.altKey || event.shiftKey || event.metaKey) {
+                // 鎖定滑鼠右鍵選單
+                document.addEventListener('contextmenu', event => {
                     event.preventDefault();
-                }
-            });
-        },
-        beforeUnmount() {
-            if (this.onboardChartInstance) this.onboardChartInstance.destroy();
-            if (this.offboardChartInstance) this.offboardChartInstance.destroy();
-        }
-    }).mount('#app');
-</script>
+                });
+
+                // 鎖定特定鍵盤按鍵 (Alt/Option, Shift, Windows/Command)
+                document.addEventListener('keydown', event => {
+                    // metaKey 包含 Windows 鍵與 Mac 的 Command 鍵
+                    if (event.altKey || event.shiftKey || event.metaKey) {
+                        event.preventDefault();
+                    }
+                });
+            },
+            beforeUnmount() {
+                if (this.onboardChartInstance) this.onboardChartInstance.destroy();
+                if (this.offboardChartInstance) this.offboardChartInstance.destroy();
+            }
+        }).mount('#app');
+    </script>
 
 </body>
+
 </html>
