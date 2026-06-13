@@ -17,6 +17,9 @@ let map;
 let markerLayer;
 let isAdmin = true; // 開放所有人直接新增刪除景點
 
+let allMarkers = {};
+let currentActiveKey = null;
+
 // 天氣代碼對應表
 const weatherCodes = {
     0: { desc: '晴天', icon: 'fa-sun' },
@@ -188,56 +191,20 @@ function initMap() {
             const place = data[key];
             const lowerName = place.name.toLowerCase();
             
-            // 食物關鍵字與對應的圖示
-            const foodMappings = [
-                { keywords: ['咖啡', '茶', '冰室', 'cafe', '飲', '奶', '豆花'], icon: 'fa-mug-hot' },
-                { keywords: ['餅', '撻', '甜', '糕', '雪糕', '安德魯', '瑪嘉烈'], icon: 'fa-ice-cream' },
-                { keywords: ['麵', '粉', '粥', '湯', '雲吞'], icon: 'fa-bowl-food' },
-                { keywords: ['牛雜', '肉', '豬', '雞', '鴨', '堡', '排'], icon: 'fa-drumstick-bite' },
-                { keywords: ['餐廳', '飯店', '餐室', '美食', '記', '食', '味', '小吃', '葡國', '廚', '大排檔', '酒樓', '館', '鍋'], icon: 'fa-utensils' }
-            ];
-
-            let foodIcon = null;
-            for (let mapping of foodMappings) {
-                if (mapping.keywords.some(kw => lowerName.includes(kw))) {
-                    foodIcon = mapping.icon;
-                    break;
-                }
-            }
-            
-            const isCustom = !key.startsWith('place_');
-            const isHotel = place.name.includes('藝舍酒店');
-            
-            let iconClass = 'custom-marker';
-            if (isHotel) {
-                iconClass += ' special-hotel';
-            } else if (isCustom) {
-                iconClass += ' new-place';
-            }
-            
-            let faIcon = '<i class="fa-solid fa-star"></i>';
-            if (isHotel) {
-                faIcon = `
-                    <div class="hotel-wrapper">
-                        <div class="hotel-pin"><i class="fa-solid fa-bed"></i></div>
-                        <div class="hotel-shadow"></div>
-                    </div>
-                `;
-            } else if (foodIcon) {
-                faIcon = `<i class="fa-solid ${foodIcon}"></i>`;
-            }
-            
-            const customIcon = L.divIcon({
-                className: iconClass,
-                html: faIcon,
-                iconSize: isHotel ? [40, 50] : [32, 32],
-                iconAnchor: isHotel ? [20, 50] : [16, 16]
-            });
+            const customIcon = getIconForPlace(place, key, false);
 
             const marker = L.marker([place.lat, place.lng], { icon: customIcon }).addTo(markerLayer);
+            allMarkers[key] = { marker, place };
             bounds.push([place.lat, place.lng]);
             
+            // 綁定 Popup 作為明顯提示
+            marker.bindPopup(`<div class="text-center font-bold text-slate-800">${place.name}</div>`, {
+                closeButton: false,
+                autoClose: true
+            });
+            
             marker.on('click', () => {
+                highlightPlace(key);
                 showBottomSheet(place, key);
                 map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
             });
@@ -247,6 +214,22 @@ function initMap() {
                 const li = document.createElement('li');
                 li.className = 'cursor-pointer text-slate-700 font-bold hover:text-dark transition-colors flex items-center group py-1';
                 
+                // 為了列表圖示的顏色判斷
+                const isHotel = place.name.includes('藝舍酒店');
+                const foodMappings = [
+                    { keywords: ['咖啡', '茶', '冰室', 'cafe', '飲', '奶', '豆花'], icon: 'fa-mug-hot' },
+                    { keywords: ['餅', '撻', '甜', '糕', '雪糕', '安德魯', '瑪嘉烈'], icon: 'fa-ice-cream' },
+                    { keywords: ['麵', '粉', '粥', '湯', '雲吞'], icon: 'fa-bowl-food' },
+                    { keywords: ['牛雜', '肉', '豬', '雞', '鴨', '堡', '排'], icon: 'fa-drumstick-bite' },
+                    { keywords: ['餐廳', '飯店', '餐室', '美食', '記', '食', '味', '小吃', '葡國', '廚', '大排檔', '酒樓', '館', '鍋'], icon: 'fa-utensils' }
+                ];
+                let foodIcon = null;
+                for (let mapping of foodMappings) {
+                    if (mapping.keywords.some(kw => lowerName.includes(kw))) {
+                        foodIcon = mapping.icon; break;
+                    }
+                }
+
                 let listIconHTML = '<i class="fa-solid fa-star text-[10px] mr-2 text-slate-400 w-4 text-center group-hover:text-dark transition-colors"></i>';
                 if (isHotel) {
                     listIconHTML = '<i class="fa-solid fa-bed text-[10px] mr-2 text-[#E63946] w-4 text-center group-hover:text-dark transition-colors"></i>';
@@ -256,6 +239,7 @@ function initMap() {
                 
                 li.innerHTML = `${listIconHTML} <span class="truncate text-xs leading-tight border-b border-transparent group-hover:border-dark pb-0.5">${place.name}</span>`;
                 li.onclick = () => {
+                    highlightPlace(key);
                     showBottomSheet(place, key);
                     map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
                 };
@@ -278,9 +262,15 @@ function initMap() {
     document.getElementById('btn-center').addEventListener('click', () => {
         map.setView(macauCenter, 14, { animate: true });
         hideBottomSheet();
+        map.closePopup();
+        highlightPlace(null);
     });
 
-    map.on('click', hideBottomSheet);
+    map.on('click', () => {
+        hideBottomSheet();
+        map.closePopup();
+        highlightPlace(null);
+    });
 
     map.on('contextmenu', (e) => {
         
@@ -319,6 +309,25 @@ function initMap() {
 
 function initUI() {
     document.getElementById('btn-close').addEventListener('click', hideBottomSheet);
+
+    // 側邊欄收合邏輯
+    const sidebar = document.getElementById('places-sidebar');
+    const btnOpenSidebar = document.getElementById('btn-open-sidebar');
+    const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
+    if (sidebar && btnOpenSidebar && btnCloseSidebar) {
+        btnCloseSidebar.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-[150%]');
+            setTimeout(() => {
+                btnOpenSidebar.classList.remove('hidden');
+            }, 300); // 等待動畫完成
+        });
+
+        btnOpenSidebar.addEventListener('click', () => {
+            btnOpenSidebar.classList.add('hidden');
+            sidebar.classList.remove('-translate-x-[150%]');
+        });
+    }
 
     // 列表過濾功能
     const filterInput = document.getElementById('filter-input');
@@ -485,4 +494,70 @@ function showBottomSheet(place, key) {
 function hideBottomSheet() {
     const sheet = document.getElementById('bottom-sheet');
     sheet.classList.remove('show');
+}
+
+function getIconForPlace(place, key, isActive) {
+    const lowerName = place.name.toLowerCase();
+    const foodMappings = [
+        { keywords: ['咖啡', '茶', '冰室', 'cafe', '飲', '奶', '豆花'], icon: 'fa-mug-hot' },
+        { keywords: ['餅', '撻', '甜', '糕', '雪糕', '安德魯', '瑪嘉烈'], icon: 'fa-ice-cream' },
+        { keywords: ['麵', '粉', '粥', '湯', '雲吞'], icon: 'fa-bowl-food' },
+        { keywords: ['牛雜', '肉', '豬', '雞', '鴨', '堡', '排'], icon: 'fa-drumstick-bite' },
+        { keywords: ['餐廳', '飯店', '餐室', '美食', '記', '食', '味', '小吃', '葡國', '廚', '大排檔', '酒樓', '館', '鍋'], icon: 'fa-utensils' }
+    ];
+
+    let foodIcon = null;
+    for (let mapping of foodMappings) {
+        if (mapping.keywords.some(kw => lowerName.includes(kw))) {
+            foodIcon = mapping.icon;
+            break;
+        }
+    }
+    
+    const isCustom = !key.startsWith('place_');
+    const isHotel = place.name.includes('藝舍酒店');
+    
+    let iconClass = 'custom-marker';
+    if (isHotel) iconClass += ' special-hotel';
+    else if (isCustom) iconClass += ' new-place';
+    
+    // 選中時加入紅色高亮類別 (排除飯店，因為飯店本身就是紅色)
+    if (isActive && !isHotel) {
+        iconClass += ' active-marker';
+    }
+    
+    let faIcon = '<i class="fa-solid fa-star"></i>';
+    if (isHotel) {
+        faIcon = `
+            <div class="hotel-wrapper">
+                <div class="hotel-pin"><i class="fa-solid fa-bed"></i></div>
+                <div class="hotel-shadow"></div>
+            </div>
+        `;
+    } else if (foodIcon) {
+        faIcon = `<i class="fa-solid ${foodIcon}"></i>`;
+    }
+    
+    return L.divIcon({
+        className: iconClass,
+        html: faIcon,
+        iconSize: isHotel ? [40, 50] : [32, 32],
+        iconAnchor: isHotel ? [20, 50] : [16, 16],
+        popupAnchor: isHotel ? [0, -45] : [0, -16]
+    });
+}
+
+function highlightPlace(targetKey) {
+    if (currentActiveKey && allMarkers[currentActiveKey]) {
+        const prev = allMarkers[currentActiveKey];
+        prev.marker.setIcon(getIconForPlace(prev.place, currentActiveKey, false));
+    }
+    
+    currentActiveKey = targetKey;
+    
+    if (targetKey && allMarkers[targetKey]) {
+        const curr = allMarkers[targetKey];
+        curr.marker.setIcon(getIconForPlace(curr.place, targetKey, true));
+        curr.marker.openPopup();
+    }
 }
