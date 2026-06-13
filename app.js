@@ -206,7 +206,7 @@ function initMap() {
             marker.on('click', () => {
                 highlightPlace(key);
                 showBottomSheet(place, key);
-                map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
+                map.setView([place.lat - 0.001, place.lng], 16, { animate: true });
             });
 
             // 加入左側列表
@@ -241,7 +241,7 @@ function initMap() {
                 li.onclick = () => {
                     highlightPlace(key);
                     showBottomSheet(place, key);
-                    map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
+                    map.setView([place.lat - 0.001, place.lng], 16, { animate: true });
                 };
                 placesListEl.appendChild(li);
             }
