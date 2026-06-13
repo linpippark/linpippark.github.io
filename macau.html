@@ -90,6 +90,14 @@
             display: block;
         }
 
+        .leaflet-marker-icon.active-marker {
+            background-color: #E63946 !important;
+            color: white !important;
+            border-color: white !important;
+            z-index: 1000 !important;
+            box-shadow: 0 0 0 6px rgba(230, 57, 70, 0.3), 0 4px 6px rgba(0,0,0,0.3) !important;
+        }
+
         .hotel-wrapper {
             position: relative;
             width: 100%;
@@ -185,10 +193,16 @@
     <main class="flex-grow relative">
         <div id="map"></div>
         
+        <!-- 左側面板開關 (當面板收合時顯示) -->
+        <button id="btn-open-sidebar" class="hidden absolute top-4 left-4 bg-white/80 backdrop-blur shadow-lg p-3 rounded-xl z-20 text-slate-700 active:scale-95 transition-transform border border-slate-200">
+            <i class="fa-solid fa-list-ul"></i>
+        </button>
+
         <!-- 左側半透明景點列表 -->
-        <div id="places-sidebar" class="absolute top-4 left-4 bottom-36 w-[160px] max-w-[40vw] bg-white/70 backdrop-blur-md rounded-2xl shadow-lg z-20 overflow-hidden flex flex-col border border-white/50">
-            <h3 class="text-xs text-slate-800 font-bold bg-white/50 px-4 py-3 border-b border-slate-300/50 flex-shrink-0">
-                <i class="fa-solid fa-list-ul mr-2"></i>所有景點
+        <div id="places-sidebar" class="absolute top-4 left-4 bottom-36 w-[180px] max-w-[45vw] bg-white/70 backdrop-blur-md rounded-2xl shadow-lg z-20 overflow-hidden flex flex-col border border-white/50 transition-transform duration-300 transform translate-x-0">
+            <h3 class="text-xs text-slate-800 font-bold bg-white/50 px-4 py-3 border-b border-slate-300/50 flex-shrink-0 flex justify-between items-center">
+                <span><i class="fa-solid fa-list-ul mr-2"></i>所有景點</span>
+                <button id="btn-close-sidebar" class="text-slate-500 hover:text-slate-800 active:scale-90 transition-transform p-1"><i class="fa-solid fa-chevron-left"></i></button>
             </h3>
             <div class="px-2 pt-2 flex-shrink-0">
                 <input type="text" id="filter-input" placeholder="尋找列表景點..." class="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-tertiary bg-white/80 placeholder-slate-400">
