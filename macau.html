@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>澳門自由行旅遊地圖</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ECEEDF',
+                        secondary: '#BBDCE5',
+                        tertiary: '#D9C4B0',
+                        dark: '#CFAB8D'
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <style>
+        body {
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            background-color: #f8fafc;
+        }
+
+        #map {
+            height: calc(100dvh - 145px); /* 扣掉頂部天氣區域與 padding */
+            width: 100%;
+            z-index: 10;
+        }
+
+        #bottom-sheet {
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translateY(120%);
+            z-index: 50;
+        }
+
+        #bottom-sheet.show {
+            transform: translateY(0);
+        }
+
+        .custom-marker {
+            background-color: theme('colors.dark');
+            color: #1e293b;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+            transition: transform 0.2s;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .custom-marker.new-place {
+            background-color: theme('colors.secondary');
+            color: #1e293b; 
+        }
+
+        .custom-marker.special-hotel {
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            animation: none !important;
+            display: block;
+        }
+
+        .hotel-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            animation: bounce-wrapper 0.8s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5);
+        }
+        
+        @keyframes bounce-wrapper {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-15px); }
+        }
+
+        .hotel-pin {
+            background-color: #E63946; /* 醒目的艷紅色 */
+            color: white;
+            width: 34px;
+            height: 34px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid white;
+            box-shadow: -2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 2px;
+        }
+
+        .hotel-pin i {
+            transform: rotate(45deg);
+            font-size: 16px;
+        }
+
+        .hotel-shadow {
+            width: 16px;
+            height: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 50%;
+            position: absolute;
+            bottom: -8px;
+            animation: shadow-scale 0.8s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5);
+        }
+
+        @keyframes shadow-scale {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.3); opacity: 0.1; }
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 1rem;
+            background-color: theme('colors.primary');
+            color: #1e293b;
+            font-weight: bold;
+        }
+
+        .weather-scroll::-webkit-scrollbar {
+            display: none; 
+        }
+    </style>
+</head>
+<body class="flex flex-col relative text-slate-800 h-[100dvh] w-full overflow-hidden">
+
+    <!-- 頂部：日期與當前天氣 -->
+    <header class="bg-dark text-slate-800 py-2 px-4 shadow-lg z-20 flex-shrink-0 select-none" id="header">
+        <div class="flex justify-between items-center mb-1">
+            <div>
+                <h1 class="text-lg font-bold flex items-center">
+                    <i class="fa-solid fa-map-location-dot mr-2"></i>澳門自由行 
+                    <span id="admin-badge" class="hidden text-[10px] bg-tertiary text-white px-2 py-0.5 rounded ml-2">Admin</span>
+                </h1>
+                <p class="text-xs mt-0.5 flex items-center">
+                    <span id="current-date">載入日期中...</span>
+                    <i id="admin-login-btn" class="fa-solid fa-lock text-slate-800/50 text-xs ml-2 cursor-pointer active:scale-90 transition-transform px-2 py-1 rounded hover:bg-black/10"></i>
+                </p>
+            </div>
+            <div class="text-right flex items-center gap-2">
+                <i id="current-weather-icon" class="fa-solid fa-cloud-sun text-2xl"></i>
+                <div>
+                    <div class="text-xl font-bold leading-tight" id="current-temp">--°C</div>
+                    <div class="text-[10px] leading-none" id="current-desc">載入天氣中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 一週天氣預報 (水平捲動) -->
+        <div class="weather-scroll flex gap-3 overflow-x-auto pb-1 pt-1 border-t border-black/10" id="forecast-container">
+            <div class="text-sm text-slate-600 text-center w-full">預報資料載入中...</div>
+        </div>
+    </header>
+
+    <!-- 地圖區塊 -->
+    <main class="flex-grow relative">
+        <div id="map"></div>
+        
+        <!-- 管理員搜尋按鈕 (預設隱藏) -->
+        <button id="btn-search" class="hidden absolute bottom-20 right-4 bg-primary p-3 rounded-full shadow-lg z-20 text-slate-800 border-2 border-dark active:scale-95 transition-transform">
+            <i class="fa-solid fa-magnifying-glass text-xl"></i>
+        </button>
+
+        <!-- 返回目前位置按鈕 (可選) -->
+        <button id="btn-center" class="absolute bottom-6 right-4 bg-white p-3 rounded-full shadow-lg z-20 text-dark border-2 border-primary active:scale-95 transition-transform">
+            <i class="fa-solid fa-crosshairs text-xl"></i>
+        </button>
+    </main>
+
+    <!-- 底部資訊卡片 -->
+    <div id="bottom-sheet" class="absolute bottom-0 left-0 w-full bg-white rounded-t-3xl shadow-[0_-5px_15px_rgba(0,0,0,0.1)] p-6">
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
+        
+        <div class="flex justify-between items-start mb-4">
+            <h2 id="place-title" class="text-2xl font-bold text-slate-800 w-5/6 leading-tight">選擇景點</h2>
+            <button id="btn-close" class="text-gray-400 hover:text-gray-600 w-1/6 text-right text-2xl">
+                <i class="fa-solid fa-times-circle"></i>
+            </button>
+        </div>
+        
+        <div class="flex items-center text-sm text-gray-500 mb-6">
+            <i class="fa-solid fa-location-dot mr-2 text-tertiary"></i>
+            <span id="place-coords">請點擊地圖上的座標</span>
+        </div>
+        
+        <div id="bottom-sheet-actions" class="flex gap-4">
+            <button id="btn-nav" class="flex-1 bg-tertiary text-slate-800 py-3 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center">
+                <i class="fa-solid fa-location-arrow mr-2"></i>前往導航
+            </button>
+            <button id="btn-delete" class="hidden flex-1 bg-red-600 text-white py-3 rounded-xl font-bold active:scale-95 transition-transform flex items-center justify-center">
+                <i class="fa-solid fa-trash-can mr-2"></i>刪除
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Firebase SDK (Compat version for file:// protocol) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    
+    <!-- 主程式 -->
+    <script src="app.js"></script>
+</body>
+</html>
