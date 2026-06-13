@@ -15,7 +15,7 @@ const db = firebase.database();
 
 let map;
 let markerLayer;
-let isAdmin = false;
+let isAdmin = true; // 開放所有人直接新增刪除景點
 
 // 天氣代碼對應表
 const weatherCodes = {
@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initWeather();
     initMap();
     initUI();
-    initAdmin();
     initSearch();
     
     adjustMapHeight();
@@ -133,7 +132,7 @@ function initMap() {
     ];
     
     const streetLine = L.polyline(cincoDeOutubroLines, {
-        color: '#CFAB8D', // 品牌沙褐色
+        color: '#FFE600', // 明亮的黃色
         weight: 8,
         opacity: 0.9,
         lineCap: 'round',
@@ -155,7 +154,7 @@ function initMap() {
     ];
     
     const cunhaLine = L.polyline(cunhaLines, {
-        color: '#BBDCE5', // 品牌淺水藍
+        color: '#FFE600', // 明亮的黃色
         weight: 8,
         opacity: 0.9,
         lineCap: 'round',
@@ -250,9 +249,7 @@ function initMap() {
 
     map.on('click', hideBottomSheet);
 
-    // 長按或點擊右鍵新增地圖點
     map.on('contextmenu', (e) => {
-        if (!isAdmin) return; // 只有管理員可以新增
         
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
@@ -289,53 +286,6 @@ function initMap() {
 
 function initUI() {
     document.getElementById('btn-close').addEventListener('click', hideBottomSheet);
-}
-
-function initAdmin() {
-    const adminBtn = document.getElementById('admin-login-btn');
-    if (adminBtn) {
-        adminBtn.addEventListener('click', () => {
-            if (!isAdmin) {
-                promptAdminLogin();
-            } else {
-                Swal.fire({
-                    title: '管理員模式已啟動',
-                    text: '您已經登入了。請在地圖上按滑鼠右鍵（或長按）來新增景點。',
-                    icon: 'info',
-                    confirmButtonColor: '#5478FF'
-                });
-            }
-        });
-    }
-}
-
-function promptAdminLogin() {
-    Swal.fire({
-        title: '管理員登入',
-        input: 'password',
-        inputPlaceholder: '請輸入管理員密碼',
-        showCancelButton: true,
-        confirmButtonText: '登入',
-        cancelButtonText: '取消',
-        confirmButtonColor: '#5478FF'
-    }).then((result) => {
-        // 為了展示方便，密碼設為 123456
-        if (result.isConfirmed && result.value === '123456') {
-            isAdmin = true;
-            document.getElementById('admin-badge').classList.remove('hidden');
-            const searchBtn = document.getElementById('btn-search');
-            if(searchBtn) searchBtn.classList.remove('hidden');
-            
-            Swal.fire({
-                title: '登入成功',
-                text: '您現在可以長按地圖，或是點擊右下角放大鏡來搜尋新增景點了！',
-                icon: 'success',
-                confirmButtonColor: '#5478FF'
-            });
-        } else if (result.isConfirmed) {
-            Swal.fire('錯誤', '密碼不正確', 'error');
-        }
-    });
 }
 
 function initSearch() {
