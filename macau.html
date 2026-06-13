@@ -260,6 +260,29 @@
     <!-- 主程式 -->
     <script src="app.js"></script>
 
+    <!-- PWA 安裝橫幅 (Android/PC) -->
+    <div id="pwa-install-banner" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-[400px] bg-white rounded-2xl shadow-2xl z-50 p-4 border border-slate-200 flex items-center justify-between transition-opacity">
+        <div class="flex items-center gap-3">
+            <img src="icon.png" alt="App Icon" class="w-10 h-10 rounded-lg shadow-sm">
+            <div>
+                <h4 class="text-slate-800 font-bold text-sm">澳門自由行地圖</h4>
+                <p class="text-slate-500 text-xs">加到主畫面，體驗更流暢</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-install-dismiss" class="text-slate-400 hover:text-slate-600 p-2"><i class="fa-solid fa-xmark"></i></button>
+            <button id="btn-install-pwa" class="bg-primary text-slate-800 font-bold text-xs px-4 py-2 rounded-xl shadow-md active:scale-95 transition-transform">下載</button>
+        </div>
+    </div>
+
+    <!-- iOS 安裝引導 -->
+    <div id="ios-install-guide" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 w-[90%] max-w-[320px] bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl z-50 p-4 border border-slate-200 text-center animate-bounce">
+        <button id="btn-ios-dismiss" class="absolute top-2 right-2 text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark"></i></button>
+        <p class="text-slate-700 text-sm font-bold mb-2">安裝「澳門地圖」App 📍</p>
+        <p class="text-slate-500 text-xs mb-3">點擊下方選單的 <i class="fa-solid fa-arrow-up-from-bracket text-blue-500 mx-1"></i> 分享按鈕<br>然後選擇 <strong>「加入主畫面」</strong></p>
+        <div class="text-slate-400 text-xl"><i class="fa-solid fa-arrow-down"></i></div>
+    </div>
+
     <!-- 註冊 Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
