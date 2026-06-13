@@ -173,7 +173,14 @@ function initMap() {
     placesRef.on('value', (snapshot) => {
         markerLayer.clearLayers();
         const data = snapshot.val();
-        if (!data) return;
+        
+        const placesListEl = document.getElementById('places-list');
+        if (placesListEl) placesListEl.innerHTML = '';
+
+        if (!data) {
+            if (placesListEl) placesListEl.innerHTML = '<li class="text-slate-500 text-xs empty-message">目前沒有景點</li>';
+            return;
+        }
 
         const bounds = [];
         
@@ -234,11 +241,37 @@ function initMap() {
                 showBottomSheet(place, key);
                 map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
             });
+
+            // 加入左側列表
+            if (placesListEl) {
+                const li = document.createElement('li');
+                li.className = 'cursor-pointer text-slate-700 font-bold hover:text-dark transition-colors flex items-center group py-1';
+                
+                let listIconHTML = '<i class="fa-solid fa-star text-[10px] mr-2 text-slate-400 w-4 text-center group-hover:text-dark transition-colors"></i>';
+                if (isHotel) {
+                    listIconHTML = '<i class="fa-solid fa-bed text-[10px] mr-2 text-[#E63946] w-4 text-center group-hover:text-dark transition-colors"></i>';
+                } else if (foodIcon) {
+                    listIconHTML = `<i class="fa-solid ${foodIcon} text-[10px] mr-2 text-slate-400 w-4 text-center group-hover:text-dark transition-colors"></i>`;
+                }
+                
+                li.innerHTML = `${listIconHTML} <span class="truncate text-xs leading-tight border-b border-transparent group-hover:border-dark pb-0.5">${place.name}</span>`;
+                li.onclick = () => {
+                    showBottomSheet(place, key);
+                    map.setView([place.lat - 0.005, place.lng], 16, { animate: true });
+                };
+                placesListEl.appendChild(li);
+            }
         });
 
         if (isInitialLoad && bounds.length > 0) {
             map.fitBounds(bounds, { padding: [20, 20] });
             isInitialLoad = false;
+        }
+
+        // 當 Firebase 資料更新後，重新套用現有的搜尋過濾
+        const filterInput = document.getElementById('filter-input');
+        if (filterInput && filterInput.value) {
+            filterInput.dispatchEvent(new Event('input'));
         }
     });
 
@@ -286,6 +319,24 @@ function initMap() {
 
 function initUI() {
     document.getElementById('btn-close').addEventListener('click', hideBottomSheet);
+
+    // 列表過濾功能
+    const filterInput = document.getElementById('filter-input');
+    if (filterInput) {
+        filterInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const listItems = document.querySelectorAll('#places-list li');
+            listItems.forEach(li => {
+                if (li.classList.contains('empty-message')) return;
+                const text = li.textContent.toLowerCase();
+                if (text.includes(term)) {
+                    li.style.display = 'flex';
+                } else {
+                    li.style.display = 'none';
+                }
+            });
+        });
+    }
 }
 
 function initSearch() {
