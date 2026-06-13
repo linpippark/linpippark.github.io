@@ -48,10 +48,80 @@ document.addEventListener('DOMContentLoaded', () => {
     initMap();
     initUI();
     initSearch();
+    initPWAInstallLogic();
     
     adjustMapHeight();
     window.addEventListener('resize', adjustMapHeight);
 });
+
+function initPWAInstallLogic() {
+    let deferredPrompt;
+    const installBanner = document.getElementById('pwa-install-banner');
+    const btnInstall = document.getElementById('btn-install-pwa');
+    const btnDismiss = document.getElementById('btn-install-dismiss');
+    
+    // Android/Desktop PWA Install
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // 防止瀏覽器預設的陽春安裝提示出現
+        e.preventDefault();
+        // 保存事件，稍後觸發
+        deferredPrompt = e;
+        // 顯示我們自訂的安裝橫幅
+        if (installBanner) {
+            installBanner.classList.remove('hidden');
+        }
+    });
+
+    if (btnInstall) {
+        btnInstall.addEventListener('click', async () => {
+            if (!installBanner) return;
+            // 隱藏橫幅
+            installBanner.classList.add('hidden');
+            // 觸發原生的安裝對話框
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                // 觸發過就清空
+                deferredPrompt = null;
+            }
+        });
+    }
+
+    if (btnDismiss) {
+        btnDismiss.addEventListener('click', () => {
+            if (installBanner) installBanner.classList.add('hidden');
+        });
+    }
+
+    // iOS PWA 安裝引導 (因為 iOS 不支援 beforeinstallprompt)
+    const isIos = () => {
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        return /iphone|ipad|ipod/.test(userAgent);
+    };
+    
+    // 偵測是否已經是 Standalone 模式 (已經加到桌面並開啟)
+    const isInStandaloneMode = () => {
+        return ('standalone' in window.navigator && window.navigator.standalone) || 
+               window.matchMedia('(display-mode: standalone)').matches;
+    };
+
+    if (isIos() && !isInStandaloneMode()) {
+        const iosGuide = document.getElementById('ios-install-guide');
+        const btnIosDismiss = document.getElementById('btn-ios-dismiss');
+        
+        // 延遲 2 秒再顯示引導，避免一進網頁就彈出太突兀
+        setTimeout(() => {
+            if (iosGuide) iosGuide.classList.remove('hidden');
+        }, 2000);
+
+        if (btnIosDismiss) {
+            btnIosDismiss.addEventListener('click', () => {
+                if (iosGuide) iosGuide.classList.add('hidden');
+            });
+        }
+    }
+}
 
 function adjustMapHeight() {
     const header = document.getElementById('header');
