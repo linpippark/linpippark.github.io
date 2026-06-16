@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>澳門輕鬆遊：7/3 自由行互動導覽</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+            overflow: hidden; /* Prevent body scroll, manage scroll internally */
+        }
+        
+        /* Custom Scrollbar for the timeline */
+        .timeline-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .timeline-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+            border-radius: 4px;
+        }
+        .timeline-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .timeline-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Animated Route Line CSS */
+        .animated-path {
+            stroke-dasharray: 10, 10;
+            animation: dash 20s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        /* Custom Map Marker styles */
+        .custom-marker {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 36px;
+            height: 36px;
+            background-color: #ec4899; /* Pink */
+            color: white;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .custom-marker.active {
+            background-color: #eab308; /* Yellow */
+            transform: scale(1.3);
+            z-index: 1000 !important;
+        }
+
+        /* Card transition */
+        .itinerary-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .itinerary-card:hover {
+            transform: translateX(5px);
+            border-left-color: #ec4899;
+        }
+        .itinerary-card.active {
+            border-left-color: #eab308;
+            background-color: #fffbeb;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: scale(1.02);
+        }
+
+        /* Responsive Layout Adjustments */
+        @media (max-width: 768px) {
+            body { overflow: auto; }
+            #app-container { flex-direction: column; height: auto; }
+            #map-container { height: 40vh; position: sticky; top: 0; z-index: 50; }
+            #timeline-container { height: auto; overflow: visible; padding-bottom: 2rem;}
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container" class="flex h-screen w-full">
+        
+        <!-- Left Panel: Timeline -->
+        <div id="timeline-container" class="w-full md:w-5/12 lg:w-1/3 bg-white h-full overflow-y-auto timeline-scroll shadow-xl z-10">
+            
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-pink-500 to-rose-400 p-6 text-white sticky top-0 z-20 shadow-md">
+                <h1 class="text-2xl font-black mb-2 tracking-wide"><i class="fa-solid fa-map-location-dot mr-2"></i>澳門輕鬆遊</h1>
+                <p class="text-sm font-medium opacity-90 mb-3">7/3(五) 輕鬆散步篇 👨‍👩‍👧‍👦</p>
+                <div class="flex gap-2 flex-wrap">
+                    <span class="bg-white/20 text-xs px-2 py-1 rounded backdrop-blur-sm"><i class="fa-solid fa-person-cane mr-1"></i>70歲友善</span>
+                    <span class="bg-white/20 text-xs px-2 py-1 rounded backdrop-blur-sm"><i class="fa-solid fa-child mr-1"></i>10歲友善</span>
+                    <span class="bg-white/20 text-xs px-2 py-1 rounded backdrop-blur-sm"><i class="fa-solid fa-snowflake mr-1"></i>避暑路線</span>
+                </div>
+            </div>
+
+            <!-- Itinerary Content (Injected by JS) -->
+            <div id="itinerary-list" class="p-4 space-y-6">
+                <!-- Cards go here -->
+            </div>
+            
+            <div class="p-6 text-center text-gray-400 text-sm">
+                <p>行程結束，祝您全家有個美好的夜晚！🌙</p>
+            </div>
+        </div>
+
+        <!-- Right Panel: Map -->
+        <div id="map-container" class="w-full md:w-7/12 lg:w-2/3 h-full relative">
+            <div id="map" class="w-full h-full"></div>
+            <!-- Overlay Info -->
+            <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-lg z-[1000] text-sm font-bold text-gray-700 border-l-4 border-pink-500">
+                <i class="fa-solid fa-hand-pointer text-pink-500 mr-1 animate-bounce"></i> 點擊左側行程觀看路線
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Itinerary Data extracted from user's PPT
+        const itineraryData = [
+            {
+                id: "hotel",
+                time: "出發",
+                title: "藝舍酒店 (Hotel S)",
+                desc: "我們的基地，位於司打口，交通便利。",
+                icon: "fa-hotel",
+                lat: 22.1932,
+                lng: 113.5358,
+                color: "bg-blue-500",
+                img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "準備好防曬、水壺，出發囉！",
+                tags: ["起點", "住宿"]
+            },
+            {
+                id: "breakfast",
+                time: "08:30",
+                title: "南屏雅敘 - 早餐",
+                desc: "出飯店右轉進「十月初五街」，平坦直走5分鐘即達。清晨最涼爽，地形對長輩膝蓋最友善。",
+                icon: "fa-mug-hot",
+                lat: 22.1955,
+                lng: 113.5375,
+                color: "bg-orange-400",
+                img: "https://images.unsplash.com/photo-1652541484803-b0e77ffcdca3?auto=format&fit=crop&q=80&w=600&h=400", // Generic sandwich/tea
+                tips: "必點：馳名厚蛋三文治 (分食)、冰鎮奶茶/熱鴛鴦。厚蛋軟嫩，長輩小孩牙口無礙！",
+                tags: ["步行5分", "老字號", "無上坡"]
+            },
+            {
+                id: "bus1",
+                time: "09:30",
+                title: "交通神操作：直達大三巴上方",
+                desc: "南屏雅敘旁的「沙欄仔」站搭乘 19號公車，坐2站在「白鴿巢前地」下車。",
+                icon: "fa-bus",
+                lat: 22.1990,
+                lng: 113.5390,
+                color: "bg-pink-500",
+                img: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "全行程精華秘訣！公車直接送到高處，徹底避開從新馬路往上爬的痛苦魔鬼坡！",
+                tags: ["19號公車", "免爬坡", "神操作"]
+            },
+            {
+                id: "stpaul",
+                time: "10:00",
+                title: "舊城散步：大三巴與下坡逛街",
+                desc: "下車後順著「花王堂街」一路下坡。沿途樹蔭多，抵達大三巴牌坊拍照，再順階梯輕鬆往下走。",
+                icon: "fa-camera",
+                lat: 22.1975,
+                lng: 113.5405,
+                color: "bg-teal-500",
+                img: "https://images.unsplash.com/photo-1583216834185-303102a704e0?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "趁早上10點太陽發威前拍全家福，光線好、長輩不累！",
+                tags: ["全下坡", "拍照點"]
+            },
+            {
+                id: "snacks1",
+                time: "10:30",
+                title: "下坡點心補給 (一)",
+                desc: "順路下坡前往網紅店。八目烘焙 (開心果蛋塔) 與 世紀咖啡 (外帶厚蛋包、瓦煲咖啡)。",
+                icon: "fa-cookie-bite",
+                lat: 22.1960,
+                lng: 113.5400,
+                color: "bg-amber-500",
+                img: "https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "買了邊走邊吃或找陰涼處分享，完美避開繞路辛勞。",
+                tags: ["順路", "網紅美食"]
+            },
+            {
+                id: "snacks2",
+                time: "11:00",
+                title: "下坡點心補給 (二)",
+                desc: "抵達議事亭前地周邊。買「大堂炸雞」給小孩，「潘榮記金錢餅」給長輩。",
+                icon: "fa-drumstick-bite",
+                lat: 22.1945,
+                lng: 113.5398,
+                color: "bg-red-500",
+                img: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "用炸雞搞定小孩，金錢餅安撫長輩，坐在噴水池旁休息，全家開心的戰術！",
+                tags: ["長幼皆宜", "休息點"]
+            },
+            {
+                id: "lunch",
+                time: "12:00",
+                title: "午餐：議事亭前地找冷氣",
+                desc: "推薦：恆友咖哩魚蛋、錦華牛雜。若太熱排隊，備案：義順牛奶公司 (找冷氣吹，外帶牛雜進去配)。",
+                icon: "fa-bowl-food",
+                lat: 22.1935,
+                lng: 113.5395,
+                color: "bg-green-500",
+                img: "https://images.unsplash.com/photo-1615486171430-802c6d48bc39?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "正午12點氣溫急升，「有冷氣坐得舒服」比網紅店重要！牛雜軟爛長輩好咀嚼，記得點不辣。",
+                tags: ["找冷氣", "避暑"]
+            },
+            {
+                id: "nap",
+                time: "13:00",
+                title: "高效午休：撤退回飯店！",
+                desc: "走到新馬路搭乘 2, 5, 10 等公車，直達「司打口」站，下車對面就是飯店。",
+                icon: "fa-bed",
+                lat: 22.1932, // Back to hotel
+                lng: 113.5358,
+                color: "bg-indigo-500",
+                img: "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "夏天帶老小玩澳門，13:00-15:00的飯店午休是「必須遵守的規定」，睡飽迎戰下半天！",
+                tags: ["強制休息", "公車5分"]
+            },
+            {
+                id: "teatime",
+                time: "15:00",
+                title: "下午茶：榮暉咖啡美食",
+                desc: "從飯店出發，走路3分鐘即達十月初五街總店。距離極近，剛睡醒不用走遠。",
+                icon: "fa-bowl-rice",
+                lat: 22.1945,
+                lng: 113.5370,
+                color: "bg-yellow-600",
+                img: "https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "必點：雞湯米線、川芎白芷魚頭米粉。藥膳湯頭補充流失元氣，冷氣房喝熱湯對長輩氣管好！",
+                tags: ["步行3分", "養生湯"]
+            },
+            {
+                id: "sunset",
+                time: "16:30",
+                title: "黃昏浪漫散步",
+                desc: "太陽下山、微風吹拂，沿著新馬路慢慢散步回「議事亭前地」，欣賞亮起黃光的歐洲風情廣場。",
+                icon: "fa-moon",
+                lat: 22.1938,
+                lng: 113.5395,
+                color: "bg-purple-500",
+                img: "https://images.unsplash.com/photo-1584042851253-157d60927df8?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "澳門黃昏最迷人，氣溫下降後長輩小孩心情愉悅，最適合拍照！",
+                tags: ["夜景", "氣溫舒爽"]
+            },
+            {
+                id: "dinner",
+                time: "18:30",
+                title: "晚餐：新肥仔文美食",
+                desc: "在「新馬路」站搭 3A 或 10A 公車，至「城市日前地」站下車。",
+                icon: "fa-utensils",
+                lat: 22.1890,
+                lng: 113.5480,
+                color: "bg-rose-600",
+                img: "https://images.unsplash.com/photo-1559842145-ee001d81e35d?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "必點水蟹粥！綿密鮮甜，長輩不需費力咀嚼，小孩超愛，零負評晚餐！",
+                tags: ["公車直達", "水蟹粥"]
+            },
+            {
+                id: "show",
+                time: "20:00",
+                title: "驚喜大秀：永利澳門",
+                desc: "從餐廳平坦步行8分鐘(或計程車3分)進入永利。看吉祥樹秀與音樂噴泉。",
+                icon: "fa-gem",
+                lat: 22.1880,
+                lng: 113.5450,
+                color: "bg-yellow-500",
+                img: "https://images.unsplash.com/photo-1572986426743-3069bbca2f07?auto=format&fit=crop&q=80&w=600&h=400",
+                tips: "全程冷氣！長輩看金樹討吉利，小孩看水舞興奮。看完門口搭3A公車一秒回飯店睡覺！",
+                tags: ["免費大秀", "完美句點"]
+            }
+        ];
+
+        let map;
+        let markers = {};
+        let currentPolyline = null;
+        let routePolylines = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            renderItinerary();
+        });
+
+        function initMap() {
+            // Center map on Macau
+            map = L.map('map', {
+                zoomControl: false // Move to bottom right later
+            }).setView([22.1950, 113.5380], 15);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Add standard OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Create markers for all points
+            itineraryData.forEach((item, index) => {
+                // Create custom icon using FontAwesome
+                const customIcon = L.divIcon({
+                    className: 'custom-icon-wrapper',
+                    html: `<div class="custom-marker" id="marker-${index}"><i class="fa-solid ${item.icon}"></i></div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                });
+
+                const marker = L.marker([item.lat, item.lng], { icon: customIcon }).addTo(map);
+                
+                // Add tooltip
+                marker.bindTooltip(`<b>${item.time}</b><br>${item.title}`, { 
+                    direction: 'top', 
+                    offset: [0, -15],
+                    className: 'font-sans text-sm rounded shadow-lg'
+                });
+
+                // Click marker to trigger list scroll
+                marker.on('click', () => {
+                    activateItem(index);
+                    const el = document.getElementById(`card-${index}`);
+                    if(el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                });
+
+                markers[index] = marker;
+            });
+
+            // Draw a faint background line for the whole day
+            const allCoords = itineraryData.map(item => [item.lat, item.lng]);
+            L.polyline(allCoords, {
+                color: '#94a3b8',
+                weight: 3,
+                opacity: 0.5,
+                dashArray: '5, 10'
+            }).addTo(map);
+        }
+
+        function renderItinerary() {
+            const container = document.getElementById('itinerary-list');
+            let html = '';
+
+            itineraryData.forEach((item, index) => {
+                let tagsHtml = item.tags.map(tag => 
+                    `<span class="text-xs font-bold text-pink-600 bg-pink-100 px-2 py-1 rounded-full">${tag}</span>`
+                ).join('');
+
+                html += `
+                    <div id="card-${index}" class="itinerary-card bg-white border border-gray-100 rounded-xl p-4 shadow-sm cursor-pointer relative overflow-hidden group" onclick="activateItem(${index})">
+                        
+                        <!-- Connecting Line Visual -->
+                        ${index !== itineraryData.length - 1 ? '<div class="absolute left-8 top-16 bottom-0 w-0.5 bg-gray-200 -mb-10 z-0"></div>' : ''}
+                        
+                        <div class="flex gap-4 relative z-10">
+                            <!-- Time & Icon -->
+                            <div class="flex flex-col items-center">
+                                <div class="text-sm font-bold text-gray-500 mb-1">${item.time}</div>
+                                <div class="w-10 h-10 rounded-full ${item.color} text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid ${item.icon}"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Content -->
+                            <div class="flex-1 pb-2">
+                                <h3 class="text-lg font-bold text-gray-800 leading-tight mb-1">${item.title}</h3>
+                                <div class="flex flex-wrap gap-1 mb-2">
+                                    ${tagsHtml}
+                                </div>
+                                <p class="text-sm text-gray-600 mb-3 leading-relaxed">${item.desc}</p>
+                                
+                                <img src="${item.img}" alt="${item.title}" class="w-full h-32 object-cover rounded-lg mb-3 shadow-sm" onerror="this.src='https://placehold.co/600x400/eee/999?text=Image+Not+Found'">
+                                
+                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 rounded-r text-sm text-yellow-800 shadow-inner">
+                                    <i class="fa-solid fa-lightbulb text-yellow-500 mr-1"></i>
+                                    <span class="font-bold">專家溫馨提醒：</span> ${item.tips}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function activateItem(index) {
+            const item = itineraryData[index];
+
+            // 1. Update UI Selection
+            document.querySelectorAll('.itinerary-card').forEach(el => el.classList.remove('active'));
+            document.getElementById(`card-${index}`).classList.add('active');
+
+            // 2. Update Map Markers
+            document.querySelectorAll('.custom-marker').forEach(el => el.classList.remove('active'));
+            const markerEl = document.getElementById(`marker-${index}`);
+            if (markerEl) markerEl.classList.add('active');
+
+            // 3. Animate Map View
+            map.flyTo([item.lat, item.lng], 16, {
+                duration: 1.5,
+                easeLinearity: 0.25
+            });
+
+            // Open tooltip
+            markers[index].openTooltip();
+
+            // 4. Draw Animated Route from Previous Point
+            if (currentPolyline) {
+                map.removeLayer(currentPolyline);
+            }
+
+            if (index > 0) {
+                const prevItem = itineraryData[index - 1];
+                const latlngs = [
+                    [prevItem.lat, prevItem.lng],
+                    [item.lat, item.lng]
+                ];
+
+                // Create a brightly colored, dashed, animated polyline
+                currentPolyline = L.polyline(latlngs, {
+                    color: '#ec4899', // Pink
+                    weight: 5,
+                    opacity: 0.8,
+                    className: 'animated-path'
+                }).addTo(map);
+                
+                // Fit bounds to show both previous and current point if they are far
+                setTimeout(() => {
+                    const bounds = L.latLngBounds(latlngs);
+                    // Add some padding
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16, duration: 1 });
+                }, 1500); // Wait for flyTo to finish
+            }
+        }
+    </script>
+</body>
+</html>
