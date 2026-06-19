@@ -30,7 +30,7 @@
                     },
                     colors: {
                         macau: {
-                            blue: '#007A87', // 澳門通的顏色
+                            blue: '#007A87', 
                             green: '#4CAF50',
                             gold: '#D4AF37',
                             light: '#F5F7FA',
@@ -43,11 +43,10 @@
     </script>
     <style>
         body {
-            background-color: #e2e8f0; /* Desktop background */
+            background-color: #e2e8f0; 
             -webkit-tap-highlight-color: transparent;
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
         }
-        /* Mobile app container styling */
         #root {
             width: 100%;
             height: 100vh;
@@ -57,7 +56,7 @@
         }
         .app-container {
             width: 100%;
-            max-width: 430px; /* iPhone 14 Pro Max width */
+            max-width: 430px; 
             height: 100%;
             background-color: #F8FAFC;
             position: relative;
@@ -66,7 +65,6 @@
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
-        /* Hide scrollbar for clean app look */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -74,7 +72,6 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        /* Leaflet custom map marker */
         .custom-map-marker {
             background-color: #007A87;
             color: white;
@@ -85,8 +82,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             border: 2px solid white;
         }
-        
-        /* Modal animation */
         @keyframes slideUp {
             from { transform: translateY(100%); }
             to { transform: translateY(0); }
@@ -200,9 +195,8 @@
 
             React.useEffect(() => {
                 if (!mapInstance.current && mapRef.current) {
-                    // 初始化地圖，中心點設為澳門
                     mapInstance.current = L.map(mapRef.current, {
-                        zoomControl: false // 手機版隱藏縮放控制
+                        zoomControl: false 
                     }).setView([22.1936, 113.5398], 13);
 
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -212,22 +206,18 @@
                     markersLayer.current = L.layerGroup().addTo(mapInstance.current);
                 }
 
-                // 清除舊標記
                 if (markersLayer.current) {
                     markersLayer.current.clearLayers();
                 }
 
-                // 收集所有點位以調整邊界
                 const bounds = [];
 
-                // 加入行程標記
                 if (itinerary && itinerary.length > 0) {
                     itinerary.forEach(day => {
                         day.events.forEach(event => {
                             if (event.lat && event.lng) {
                                 bounds.push([event.lat, event.lng]);
                                 
-                                // 根據類型選擇圖示
                                 let iconName = 'fas fa-map-marker-alt';
                                 if(event.type === 'food') iconName = 'fas fa-utensils';
                                 if(event.type === 'sight') iconName = 'fas fa-camera';
@@ -251,16 +241,13 @@
                     });
                 }
 
-                // 處理視角聚焦
                 if (focusLocation && mapInstance.current) {
                     mapInstance.current.setView([focusLocation.lat, focusLocation.lng], 16, { animate: true });
                 } else if (bounds.length > 0 && mapInstance.current) {
                     mapInstance.current.fitBounds(bounds, { padding: [20, 20] });
                 }
 
-                return () => {
-                    // Cleanup is handled manually to prevent React strict mode re-render issues with Leaflet
-                };
+                return () => {};
             }, [itinerary, focusLocation]);
 
             return <div ref={mapRef} className="w-full h-full z-0"></div>;
@@ -382,8 +369,8 @@
 
         const App = () => {
             const [user, setUser] = React.useState(null);
-            const [activeTab, setActiveTab] = React.useState('itinerary'); // itinerary, map, info
-            const [itinerary, setItinerary] = React.useState([]); // 初始為空，等待 DB 載入
+            const [activeTab, setActiveTab] = React.useState('itinerary'); 
+            const [itinerary, setItinerary] = React.useState([]); 
             const [toast, setToast] = React.useState(null);
             const [isModalOpen, setIsModalOpen] = React.useState(false);
             const [editingEvent, setEditingEvent] = React.useState(null);
@@ -391,14 +378,29 @@
             const [mapFocus, setMapFocus] = React.useState(null);
             const [activeDayIndex, setActiveDayIndex] = React.useState(0);
             const [isLoading, setIsLoading] = React.useState(true);
-            const [syncStatus, setSyncStatus] = React.useState(isFirebaseAvailable ? '雲端已同步' : '本機已儲存');
+            const [syncStatus, setSyncStatus] = React.useState(isFirebaseAvailable ? '連線中...' : '本機模式');
 
-            // 1. 初始化 Firebase (必須監聽登入狀態以獲得讀寫權限)
+            // 【核心修復】：建立保底解鎖函式，確保任何情況下 UI 都不會卡死
+            const fallbackToLocal = React.useCallback(() => {
+                const localData = localStorage.getItem('macau_itinerary_public');
+                if (localData) {
+                    setItinerary(JSON.parse(localData));
+                } else {
+                    setItinerary(INITIAL_DATA);
+                    localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
+                }
+                setSyncStatus('本機模式');
+                setIsLoading(false);
+            }, []);
+
+            // 1. 初始化與安全防護 (Error Boundary)
             React.useEffect(() => {
                 if (!isFirebaseAvailable || !auth) {
+                    fallbackToLocal();
                     return;
                 }
 
+                let isMounted = true;
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -408,57 +410,45 @@
                         }
                     } catch (e) {
                         console.error("Auth init error:", e);
+                        // 驗證失敗時直接解鎖畫面
+                        if (isMounted) fallbackToLocal();
                     }
                 };
                 initAuth();
                 
-                const unsubscribe = onAuthStateChanged(auth, setUser);
-                return () => unsubscribe();
-            }, []);
-
-            // 2. 從 Firestore 獲取「公開共用」的資料
-            React.useEffect(() => {
-                const fallbackToLocal = () => {
-                    const localData = localStorage.getItem('macau_itinerary_public');
-                    if (localData) {
-                        setItinerary(JSON.parse(localData));
-                    } else {
-                        setItinerary(INITIAL_DATA);
-                        localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    if (isMounted) {
+                        setUser(u);
+                        if (!u) fallbackToLocal(); // 失去登入狀態時啟動保底
                     }
-                    setIsLoading(false);
-                };
+                });
+                
+                return () => { isMounted = false; unsubscribe(); };
+            }, [fallbackToLocal]);
 
-                if (isFirebaseAvailable && db) {
-                    if (!user) return; // 必須等待使用者驗證完成才有權限讀取
+            // 2. 從 Firestore 即時獲取資料
+            React.useEffect(() => {
+                if (!isFirebaseAvailable || !db || !user) return; // 必須等待使用者驗證完成
 
-                    // 【關鍵修改】: 將路徑改為 Firebase 規則允許的合法公開節點結構
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
-                    const unsubscribe = onSnapshot(docRef, 
-                        (docSnap) => {
-                            if (docSnap.exists()) {
-                                setItinerary(docSnap.data().days);
-                                setSyncStatus('最新資料已同步');
-                            } else {
-                                // 第一次使用時，寫入預設資料
-                                setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
-                            }
-                            setIsLoading(false);
-                        },
-                        (error) => {
-                            console.error("Firestore 讀取錯誤:", error);
-                            showToast("無法連線雲端，切換為本機模式", "warning");
-                            setSyncStatus('連線異常 (本機模式)');
-                            fallbackToLocal();
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
+                const unsubscribe = onSnapshot(docRef, 
+                    (docSnap) => {
+                        if (docSnap.exists()) {
+                            setItinerary(docSnap.data().days);
+                            setSyncStatus('雲端已同步');
+                        } else {
+                            setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
                         }
-                    );
-                    return () => unsubscribe();
-                } else {
-                    fallbackToLocal();
-                }
-            }, [user]); // 加入對 user 的依賴
+                        setIsLoading(false);
+                    },
+                    (error) => {
+                        console.error("Firestore 讀取錯誤:", error);
+                        fallbackToLocal();
+                    }
+                );
+                return () => unsubscribe();
+            }, [user, fallbackToLocal]);
 
-            // 模擬即時推播通知 (每隔一段時間隨機出現)
             React.useEffect(() => {
                 const notifications = [
                     { msg: "重大消息：安德魯蛋塔機場店今日出爐時間提前！", type: "alert" },
@@ -466,14 +456,12 @@
                     { msg: "交通提醒：路氹金光大道目前車多壅塞，建議搭乘輕軌或提早出發。", type: "warning" },
                     { msg: "好康快報：威尼斯人部分品牌今日家庭套裝享8折優惠。", type: "success" }
                 ];
-
                 const timer = setInterval(() => {
-                    if(Math.random() > 0.6) { // 40% 機率跳出通知
+                    if(Math.random() > 0.6) { 
                         const randomNotif = notifications[Math.floor(Math.random() * notifications.length)];
                         showToast(randomNotif.msg, randomNotif.type);
                     }
-                }, 45000); // 每45秒檢查一次
-
+                }, 45000); 
                 return () => clearInterval(timer);
             }, []);
 
@@ -481,31 +469,28 @@
                 setToast({ message, type });
             };
 
-            // 3. 同步函式 (寫入共用節點)
+            // 3. 【核心修復】：完全移除阻擋型警告的同機與雲端雙軌同步函式
             const syncToDb = async (newItinerary) => {
-                // 【核心步驟 1】：必定強制備份至本機 (Local Storage)，確保任何情況下資料皆不遺失
+                // 必定將資料持久化存於本機
                 localStorage.setItem('macau_itinerary_public', JSON.stringify(newItinerary));
                 
-                // 💡 【修正重點】：直接向系統底層獲取最即時的認證狀態，避開 React 變數尚未更新的閉包陷阱
+                // 動態取得當下最新的驗證狀態，避免閉包變數過期的問題
                 const activeUser = user || (auth && auth.currentUser);
 
-                // 【核心步驟 2】：檢查雲端連線與 Firebase 授權狀態
+                // 若環境不支援或驗證尚未完成，平滑降級為本機模式 (不拋出任何警告干擾使用者)
                 if (!isFirebaseAvailable || !db || !activeUser) {
-                    setSyncStatus('僅本機儲存');
-                    showToast("尚未取得雲端權限，目前僅儲存於本機", "warning");
+                    setSyncStatus('本機已儲存');
                     return; 
                 }
                 
                 try {
                     setSyncStatus('同步中...');
-                    // 【核心步驟 3】：寫入合法的公開節點，強制推播給所有正在瀏覽的人
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
                     await setDoc(docRef, { days: newItinerary });
-                    setSyncStatus('已同步至所有人');
+                    setSyncStatus('雲端已同步');
                 } catch (error) {
                     console.error("資料儲存失敗:", error);
-                    setSyncStatus('同步失敗 (本機已存)');
-                    showToast("雲端同步失敗，系統將依賴背景重試機制", "alert");
+                    setSyncStatus('本機已儲存 (雲端異常)');
                 }
             };
 
@@ -515,29 +500,27 @@
                 
                 if (dayIndex > -1) {
                     if (eventData.id) {
-                        // Edit existing
                         updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
                             ev.id === eventData.id ? eventData : ev
                         );
-                        showToast(`行程已成功修改！(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`);
                     } else {
-                        // Add new
                         const newEvent = { 
                             ...eventData, 
                             id: Date.now().toString(),
-                            // Default coordinates if missing
                             lat: eventData.lat || 22.1936,
                             lng: eventData.lng || 113.5398
                         };
                         updatedItinerary[dayIndex].events.push(newEvent);
-                        // Sort by time
                         updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
-                        showToast(`已新增一筆行程！(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`);
                     }
                     
-                    // 先進行 Optimistic UI 更新 (讓操作者畫面立刻改變)，再進行嚴謹的背景同步
                     setItinerary(updatedItinerary);
                     syncToDb(updatedItinerary);
+                    
+                    // 動態提示文字
+                    const activeUser = user || (auth && auth.currentUser);
+                    const modeText = (isFirebaseAvailable && activeUser) ? '已同步' : '已存本機';
+                    showToast(`行程儲存成功！(${modeText})`);
                 }
             };
 
@@ -547,10 +530,12 @@
                 if (dayIndex > -1) {
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
                     
-                    // 先進行 Optimistic UI 更新，再觸發後續的本機與雲端同步
                     setItinerary(updatedItinerary);
-                    showToast(`行程已刪除。(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`, 'warning');
                     syncToDb(updatedItinerary);
+
+                    const activeUser = user || (auth && auth.currentUser);
+                    const modeText = (isFirebaseAvailable && activeUser) ? '已同步' : '已存本機';
+                    showToast(`行程已刪除。(${modeText})`, 'warning');
                 }
             };
 
@@ -584,7 +569,6 @@
 
             return (
                 <div className="app-container">
-                    {/* Header */}
                     <header className="bg-macau-blue text-white pt-10 pb-4 px-5 rounded-b-3xl shadow-md z-10 shrink-0 relative">
                         <div className="flex justify-between items-center">
                             <div>
@@ -597,7 +581,7 @@
                                 </div>
                                 <span className="text-[10px] text-blue-100 font-bold flex items-center">
                                     {isLoading ? <i className="fas fa-spinner fa-spin mr-1"></i> : 
-                                    (syncStatus === '最新資料已同步' || syncStatus === '已同步至所有人' ? <i className="fas fa-cloud text-green-300 mr-1"></i> : 
+                                    (syncStatus === '雲端已同步' ? <i className="fas fa-cloud text-green-300 mr-1"></i> : 
                                      syncStatus === '同步中...' ? <i className="fas fa-sync fa-spin text-blue-200 mr-1"></i> :
                                      <i className="fas fa-save text-yellow-300 mr-1"></i>)}
                                     {isLoading ? '資料載入中' : syncStatus}
@@ -606,13 +590,10 @@
                         </div>
                     </header>
 
-                    {/* Toast Notification */}
                     {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-                    {/* Main Content Area */}
                     <main className="flex-1 overflow-hidden relative">
                         
-                        {/* Itinerary Tab */}
                         <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'itinerary' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                             {isLoading ? (
                                 <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -621,7 +602,6 @@
                                 </div>
                             ) : (
                                 <>
-                                    {/* Day Selector */}
                                     <div className="flex px-4 py-3 space-x-2 overflow-x-auto no-scrollbar shrink-0">
                                         {itinerary.map((day, idx) => (
                                             <button 
@@ -634,7 +614,6 @@
                                         ))}
                                     </div>
 
-                                    {/* Event List */}
                                     <div className="overflow-y-auto h-[calc(100%-60px)] px-4 pb-24 no-scrollbar">
                                         <div className="mb-4">
                                             <h2 className="text-lg font-bold text-gray-800">{itinerary[activeDayIndex]?.title}</h2>
@@ -649,12 +628,10 @@
                                                     const typeConfig = getTypeIcon(ev.type);
                                                     return (
                                                         <div key={ev.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                                            {/* Timeline dot */}
                                                             <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm ${typeConfig.bg}`}>
                                                                 <i className={`${typeConfig.icon} text-lg`}></i>
                                                             </div>
                                                             
-                                                            {/* Event Card */}
                                                             <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white shadow-sm border border-gray-100 ml-4 md:ml-0">
                                                                 <div className="flex justify-between items-start mb-1">
                                                                     <span className="text-sm font-black text-macau-blue bg-blue-50 px-2 py-0.5 rounded-md">{ev.time} {ev.endTime ? `- ${ev.endTime}` : ''}</span>
@@ -670,7 +647,6 @@
                                                                 <h3 className="font-bold text-gray-800 text-base">{ev.title}</h3>
                                                                 <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ev.desc}</p>
                                                                 
-                                                                {/* View on Map Button */}
                                                                 <button onClick={() => handleViewOnMap(ev.lat, ev.lng)} className="mt-3 text-xs font-semibold text-macau-blue flex items-center bg-blue-50/50 px-3 py-1.5 rounded-lg w-fit hover:bg-blue-100 transition-colors">
                                                                     <i className="fas fa-map-marker-alt mr-1"></i> 地圖查看
                                                                 </button>
@@ -681,7 +657,6 @@
                                             )}
                                         </div>
 
-                                        {/* Add Button */}
                                         <button onClick={() => openAddModal(itinerary[activeDayIndex].id)} className="w-full mt-6 bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl flex items-center justify-center hover:bg-gray-50 hover:border-macau-blue hover:text-macau-blue transition-colors">
                                             <i className="fas fa-plus mr-2"></i> 新增行程
                                         </button>
@@ -690,24 +665,20 @@
                             )}
                         </div>
 
-                        {/* Map Tab */}
                         <div className={`absolute inset-0 bg-gray-100 transition-opacity duration-300 ${activeTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                             <MapView itinerary={itinerary} focusLocation={mapFocus} />
-                            {/* Overlay Controls */}
                             <div className="absolute top-4 left-4 right-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-3 rounded-xl shadow-lg border border-white/20 flex items-center justify-between">
                                 <span className="font-bold text-gray-800 text-sm">澳門景點地圖</span>
                                 <span className="text-xs bg-macau-gold text-white px-2 py-1 rounded-md font-bold">互動模式</span>
                             </div>
                         </div>
 
-                        {/* Info Tab */}
                         <div className={`absolute inset-0 bg-[#F8FAFC] transition-opacity duration-300 ${activeTab === 'info' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
                             <InfoView />
                         </div>
 
                     </main>
 
-                    {/* Bottom Navigation Bar */}
                     <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center absolute bottom-0 w-full z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
                         <button onClick={() => setActiveTab('itinerary')} className={`flex flex-col items-center p-2 w-16 transition-colors ${activeTab === 'itinerary' ? 'text-macau-blue' : 'text-gray-400'}`}>
                             <i className={`text-2xl mb-1 ${activeTab === 'itinerary' ? 'fas fa-calendar-check' : 'far fa-calendar-check'}`}></i>
@@ -723,7 +694,6 @@
                         </button>
                     </nav>
 
-                    {/* Modals */}
                     <EventModal 
                         isOpen={isModalOpen} 
                         onClose={() => setIsModalOpen(false)} 
