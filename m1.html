@@ -380,74 +380,73 @@
             const [isLoading, setIsLoading] = React.useState(true);
             const [syncStatus, setSyncStatus] = React.useState(isFirebaseAvailable ? '連線中...' : '本機模式');
 
-            // 【核心修復】：建立保底解鎖函式，確保任何情況下 UI 都不會卡死
-            const fallbackToLocal = React.useCallback(() => {
-                const localData = localStorage.getItem('macau_itinerary_public');
-                if (localData) {
-                    setItinerary(JSON.parse(localData));
-                } else {
-                    setItinerary(INITIAL_DATA);
-                    localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
-                }
-                setSyncStatus('本機模式');
-                setIsLoading(false);
-            }, []);
-
-            // 1. 初始化與安全防護 (Error Boundary)
+            // 1. 初始化 Firebase (加上 Token 失效的容錯機制)
             React.useEffect(() => {
                 if (!isFirebaseAvailable || !auth) {
-                    fallbackToLocal();
                     return;
                 }
 
-                let isMounted = true;
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
+                            try {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } catch (tokenErr) {
+                                console.warn("Custom token failed, fallback to anonymous", tokenErr);
+                                await signInAnonymously(auth);
+                            }
                         } else {
                             await signInAnonymously(auth);
                         }
                     } catch (e) {
                         console.error("Auth init error:", e);
-                        // 驗證失敗時直接解鎖畫面
-                        if (isMounted) fallbackToLocal();
                     }
                 };
                 initAuth();
                 
-                const unsubscribe = onAuthStateChanged(auth, (u) => {
-                    if (isMounted) {
-                        setUser(u);
-                        if (!u) fallbackToLocal(); // 失去登入狀態時啟動保底
-                    }
-                });
-                
-                return () => { isMounted = false; unsubscribe(); };
-            }, [fallbackToLocal]);
-
-            // 2. 從 Firestore 即時獲取資料
-            React.useEffect(() => {
-                if (!isFirebaseAvailable || !db || !user) return; // 必須等待使用者驗證完成
-
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
-                const unsubscribe = onSnapshot(docRef, 
-                    (docSnap) => {
-                        if (docSnap.exists()) {
-                            setItinerary(docSnap.data().days);
-                            setSyncStatus('雲端已同步');
-                        } else {
-                            setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
-                        }
-                        setIsLoading(false);
-                    },
-                    (error) => {
-                        console.error("Firestore 讀取錯誤:", error);
-                        fallbackToLocal();
-                    }
-                );
+                const unsubscribe = onAuthStateChanged(auth, setUser);
                 return () => unsubscribe();
-            }, [user, fallbackToLocal]);
+            }, []);
+
+            // 2. 從 Firestore 獲取「公開共用」的資料
+            React.useEffect(() => {
+                const fallbackToLocal = () => {
+                    const localData = localStorage.getItem('macau_itinerary_public');
+                    if (localData) {
+                        setItinerary(JSON.parse(localData));
+                    } else {
+                        setItinerary(INITIAL_DATA);
+                        localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
+                    }
+                    setIsLoading(false);
+                };
+
+                if (isFirebaseAvailable && db) {
+                    if (!user) return; // 必須等待使用者驗證完成
+
+                    // 【關鍵修正】：嚴格遵守 Firebase 環境安全規則，使用標準的 public/data/... 結構
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
+                    const unsubscribe = onSnapshot(docRef, 
+                        (docSnap) => {
+                            if (docSnap.exists()) {
+                                setItinerary(docSnap.data().days);
+                                setSyncStatus('雲端已同步');
+                            } else {
+                                setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
+                            }
+                            setIsLoading(false);
+                        },
+                        (error) => {
+                            console.error("Firestore 讀取錯誤:", error);
+                            setSyncStatus('連線異常 (本機模式)');
+                            fallbackToLocal();
+                        }
+                    );
+                    return () => unsubscribe();
+                } else {
+                    fallbackToLocal();
+                }
+            }, [user]);
 
             React.useEffect(() => {
                 const notifications = [
@@ -469,28 +468,25 @@
                 setToast({ message, type });
             };
 
-            // 3. 【核心修復】：完全移除阻擋型警告的同機與雲端雙軌同步函式
+            // 3. 同步函式 (寫入共用節點)
             const syncToDb = async (newItinerary) => {
-                // 必定將資料持久化存於本機
                 localStorage.setItem('macau_itinerary_public', JSON.stringify(newItinerary));
                 
-                // 動態取得當下最新的驗證狀態，避免閉包變數過期的問題
-                const activeUser = user || (auth && auth.currentUser);
-
-                // 若環境不支援或驗證尚未完成，平滑降級為本機模式 (不拋出任何警告干擾使用者)
-                if (!isFirebaseAvailable || !db || !activeUser) {
-                    setSyncStatus('本機已儲存');
+                if (!isFirebaseAvailable || !db || !user) {
+                    setSyncStatus('僅本機儲存');
                     return; 
                 }
                 
                 try {
                     setSyncStatus('同步中...');
+                    // 【關鍵修正】：路徑必須與讀取時完全一致，並符合安全規則
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
                     await setDoc(docRef, { days: newItinerary });
                     setSyncStatus('雲端已同步');
                 } catch (error) {
-                    console.error("資料儲存失敗:", error);
-                    setSyncStatus('本機已儲存 (雲端異常)');
+                    console.error("Firestore 寫入錯誤:", error);
+                    setSyncStatus('雲端拒絕寫入 (僅存本機)');
+                    showToast("雲端同步失敗，請檢查權限", "alert");
                 }
             };
 
@@ -503,6 +499,7 @@
                         updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
                             ev.id === eventData.id ? eventData : ev
                         );
+                        showToast('行程已修改');
                     } else {
                         const newEvent = { 
                             ...eventData, 
@@ -512,15 +509,11 @@
                         };
                         updatedItinerary[dayIndex].events.push(newEvent);
                         updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
+                        showToast('已新增一筆行程');
                     }
                     
                     setItinerary(updatedItinerary);
                     syncToDb(updatedItinerary);
-                    
-                    // 動態提示文字
-                    const activeUser = user || (auth && auth.currentUser);
-                    const modeText = (isFirebaseAvailable && activeUser) ? '已同步' : '已存本機';
-                    showToast(`行程儲存成功！(${modeText})`);
                 }
             };
 
@@ -531,11 +524,8 @@
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
                     
                     setItinerary(updatedItinerary);
+                    showToast('行程已刪除', 'warning');
                     syncToDb(updatedItinerary);
-
-                    const activeUser = user || (auth && auth.currentUser);
-                    const modeText = (isFirebaseAvailable && activeUser) ? '已同步' : '已存本機';
-                    showToast(`行程已刪除。(${modeText})`, 'warning');
                 }
             };
 
