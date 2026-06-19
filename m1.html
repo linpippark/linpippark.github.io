@@ -393,10 +393,9 @@
             const [isLoading, setIsLoading] = React.useState(true);
             const [syncStatus, setSyncStatus] = React.useState(isFirebaseAvailable ? '雲端已同步' : '本機已儲存');
 
-            // 1. 初始化 Firebase 登入與 Auth 監聽
+            // 1. 初始化 Firebase (必須監聽登入狀態以獲得讀寫權限)
             React.useEffect(() => {
                 if (!isFirebaseAvailable || !auth) {
-                    setUser({ uid: 'local-preview-user' });
                     return;
                 }
 
@@ -417,28 +416,31 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. 從 Firestore 或 LocalStorage 獲取資料
+            // 2. 從 Firestore 獲取「公開共用」的資料
             React.useEffect(() => {
-                if (!user) return;
-                
                 const fallbackToLocal = () => {
-                    const localData = localStorage.getItem('macau_itinerary');
+                    const localData = localStorage.getItem('macau_itinerary_public');
                     if (localData) {
                         setItinerary(JSON.parse(localData));
                     } else {
                         setItinerary(INITIAL_DATA);
-                        localStorage.setItem('macau_itinerary', JSON.stringify(INITIAL_DATA));
+                        localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
                     }
                     setIsLoading(false);
                 };
 
                 if (isFirebaseAvailable && db) {
-                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'itineraryData', 'main_plan');
+                    if (!user) return; // 必須等待使用者驗證完成才有權限讀取
+
+                    // 【關鍵修改】: 將路徑改為 Firebase 規則允許的合法公開節點結構
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
                     const unsubscribe = onSnapshot(docRef, 
                         (docSnap) => {
                             if (docSnap.exists()) {
                                 setItinerary(docSnap.data().days);
+                                setSyncStatus('最新資料已同步');
                             } else {
+                                // 第一次使用時，寫入預設資料
                                 setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
                             }
                             setIsLoading(false);
@@ -446,7 +448,7 @@
                         (error) => {
                             console.error("Firestore 讀取錯誤:", error);
                             showToast("無法連線雲端，切換為本機模式", "warning");
-                            setSyncStatus('本機模式');
+                            setSyncStatus('連線異常 (本機模式)');
                             fallbackToLocal();
                         }
                     );
@@ -454,7 +456,7 @@
                 } else {
                     fallbackToLocal();
                 }
-            }, [user]);
+            }, [user]); // 加入對 user 的依賴
 
             // 模擬即時推播通知 (每隔一段時間隨機出現)
             React.useEffect(() => {
@@ -479,22 +481,23 @@
                 setToast({ message, type });
             };
 
-            // 3. 同步函式 (支援雲端與本機備用)
+            // 3. 同步函式 (寫入共用節點)
             const syncToDb = async (newItinerary) => {
                 // 必定備份至本機
-                localStorage.setItem('macau_itinerary', JSON.stringify(newItinerary));
+                localStorage.setItem('macau_itinerary_public', JSON.stringify(newItinerary));
                 
-                if (!user || !isFirebaseAvailable || !db) return;
+                if (!isFirebaseAvailable || !db || !user) return; // 寫入前再次確認權限
                 
                 try {
                     setSyncStatus('同步中...');
-                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'itineraryData', 'main_plan');
+                    // 【關鍵修改】: 寫入到合法的公開節點
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
                     await setDoc(docRef, { days: newItinerary });
-                    setSyncStatus('雲端已同步');
+                    setSyncStatus('已同步至所有人');
                 } catch (error) {
                     console.error("資料儲存失敗:", error);
                     setSyncStatus('同步失敗');
-                    showToast("雲端同步失敗，已儲存於本機", "alert");
+                    showToast("雲端同步失敗，僅儲存於本機", "alert");
                 }
             };
 
@@ -508,7 +511,7 @@
                         updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
                             ev.id === eventData.id ? eventData : ev
                         );
-                        showToast(`行程已成功修改！(${isFirebaseAvailable ? '已同步雲端' : '已儲存本機'})`);
+                        showToast(`行程已成功修改！(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`);
                     } else {
                         // Add new
                         const newEvent = { 
@@ -521,9 +524,9 @@
                         updatedItinerary[dayIndex].events.push(newEvent);
                         // Sort by time
                         updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
-                        showToast(`已新增一筆行程！(${isFirebaseAvailable ? '已同步雲端' : '已儲存本機'})`);
+                        showToast(`已新增一筆行程！(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`);
                     }
-                    // Optimistic UI 更新並同步
+                    // 先進行 Optimistic UI 更新 (讓操作者畫面立刻改變)，再進行背景同步
                     setItinerary(updatedItinerary);
                     syncToDb(updatedItinerary);
                 }
@@ -535,9 +538,9 @@
                 if (dayIndex > -1) {
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
                     
-                    // Optimistic UI 更新並同步
+                    // 先進行 Optimistic UI 更新，再進行背景同步
                     setItinerary(updatedItinerary);
-                    showToast(`行程已刪除。(${isFirebaseAvailable ? '已同步雲端' : '已儲存本機'})`, 'warning');
+                    showToast(`行程已刪除。(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`, 'warning');
                     syncToDb(updatedItinerary);
                 }
             };
@@ -585,7 +588,7 @@
                                 </div>
                                 <span className="text-[10px] text-blue-100 font-bold flex items-center">
                                     {isLoading ? <i className="fas fa-spinner fa-spin mr-1"></i> : 
-                                    (syncStatus === '雲端已同步' ? <i className="fas fa-cloud text-green-300 mr-1"></i> : 
+                                    (syncStatus === '最新資料已同步' || syncStatus === '已同步至所有人' ? <i className="fas fa-cloud text-green-300 mr-1"></i> : 
                                      syncStatus === '同步中...' ? <i className="fas fa-sync fa-spin text-blue-200 mr-1"></i> :
                                      <i className="fas fa-save text-yellow-300 mr-1"></i>)}
                                     {isLoading ? '資料載入中' : syncStatus}
