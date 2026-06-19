@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>澳門親子自由行規劃</title>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Pin Babel version to avoid recent standalone bugs -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <!-- Google Fonts: Inter & Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        macau: {
+                            blue: '#007A87', // 澳門通的顏色
+                            green: '#4CAF50',
+                            gold: '#D4AF37',
+                            light: '#F5F7FA',
+                            dark: '#2D3748'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #e2e8f0; /* Desktop background */
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        /* Mobile app container styling */
+        #root {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            justify-content: center;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 430px; /* iPhone 14 Pro Max width */
+            height: 100%;
+            background-color: #F8FAFC;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        /* Hide scrollbar for clean app look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Leaflet custom map marker */
+        .custom-map-marker {
+            background-color: #007A87;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 2px solid white;
+        }
+        
+        /* Modal animation */
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-animate {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Use data-type="module" to prevent Babel import errors -->
+    <script type="text/babel" data-type="module">
+        const INITIAL_DATA = [
+            {
+                id: 'day1',
+                day: 'Day 1',
+                title: '老城區美食散步',
+                date: '2026-07-03',
+                events: [
+                    { id: '1-1', time: '08:30', endTime: '09:30', title: '懷舊早餐', desc: '南屏雅敘（厚蛋三文治）或 倫記軟滑腸粉。準備「澳門通」。', lat: 22.1966, lng: 113.5367, type: 'food' },
+                    { id: '1-2', time: '09:30', endTime: '12:00', title: '經典地標漫遊', desc: '議事亭前地 -> 玫瑰堂 -> 大三巴牌坊。沿途品嘗潘榮記金錢餅、大堂炸雞。', lat: 22.1976, lng: 113.5408, type: 'sight' },
+                    { id: '1-3', time: '12:00', endTime: '13:00', title: '在地午餐', desc: '喜臨門麵家、恆友咖哩牛雜 或 六記粥麵。', lat: 22.1945, lng: 113.5398, type: 'food' },
+                    { id: '1-4', time: '13:00', endTime: '16:00', title: '飯店午休避暑', desc: '搭乘公車回藝舍飯店休息，避開烈日。', lat: 22.1922, lng: 113.5351, type: 'hotel' },
+                    { id: '1-5', time: '16:30', endTime: '18:00', title: '地道下午茶', desc: '榮暉咖啡美食 或 杏香園甜品店。', lat: 22.1950, lng: 113.5380, type: 'food' },
+                    { id: '1-6', time: '18:30', endTime: '20:30', title: '晚餐時段', desc: '榮記牛雜（大三巴附近） 或 新肥仔文美食（適合家庭）。', lat: 22.1980, lng: 113.5410, type: 'food' }
+                ]
+            },
+            {
+                id: 'day2',
+                day: 'Day 2',
+                title: '官也街與威尼斯人',
+                date: '2026-07-04',
+                events: [
+                    { id: '2-1', time: '08:30', endTime: '09:30', title: '經典老店早餐', desc: '南屏雅敘或盛記白粥。', lat: 22.1966, lng: 113.5367, type: 'food' },
+                    { id: '2-2', time: '09:30', endTime: '10:00', title: '前往氹仔', desc: '搭乘 MT4 號巴士前往奧林匹克大馬路站。', lat: 22.1533, lng: 113.5569, type: 'transport' },
+                    { id: '2-3', time: '10:00', endTime: '12:30', title: '官也街美食與採購', desc: '安德魯蛋塔、莫義記、大利來記豬扒包、誠昌飯店水蟹粥。購買晃記/英記伴手禮。', lat: 22.1537, lng: 113.5573, type: 'shopping' },
+                    { id: '2-4', time: '12:30', endTime: '15:30', title: '伴手禮撤退 & 午休', desc: '回藝舍飯店放伴手禮，吹冷氣休息。', lat: 22.1922, lng: 113.5351, type: 'hotel' },
+                    { id: '2-5', time: '16:00', endTime: '18:00', title: '龍環葡韻 & 自動步行系統', desc: '參觀薄荷綠葡式建築，經手扶梯步道直通威尼斯人。', lat: 22.1519, lng: 113.5594, type: 'sight' },
+                    { id: '2-6', time: '18:00', endTime: '21:00', title: '威尼斯人逛街 & 晚餐', desc: '大運河購物中心。晚餐推薦威尼斯人一樓「北方館」。戶外賞巴黎人鐵塔夜景。', lat: 22.1472, lng: 113.5606, type: 'sight' }
+                ]
+            },
+            {
+                id: 'day3',
+                day: 'Day 3',
+                title: '澳門回程',
+                date: '2026-07-05',
+                events: [
+                    { id: '3-1', time: '08:30', endTime: '09:30', title: '飯店周邊早餐', desc: '司打口榮暉咖啡美食（雞湯米線）或 盲公竹昇麵。吃一間即可。', lat: 22.1920, lng: 113.5355, type: 'food' },
+                    { id: '3-2', time: '09:45', endTime: '11:30', title: '伴手禮主力採買', desc: '最香餅家（杏仁餅），買完順路放回飯店。', lat: 22.1940, lng: 113.5370, type: 'shopping' },
+                    { id: '3-3', time: '11:30', endTime: '12:30', title: '輕鬆午餐', desc: '十月初五街地道茶餐廳。', lat: 22.1955, lng: 113.5360, type: 'food' },
+                    { id: '3-4', time: '12:30', endTime: '13:20', title: '整理打包與退房', desc: '整理行李，上廁所，裝滿水壺。', lat: 22.1922, lng: 113.5351, type: 'hotel' },
+                    { id: '3-5', time: '13:30', endTime: '14:00', title: '前往機場', desc: '司打口站搭 26 號公車（25-35分）或叫計程車（15分）。最晚 13:30 出發。', lat: 22.1496, lng: 113.5785, type: 'transport' },
+                    { id: '3-6', time: '14:00', endTime: '15:00', title: '機場報到與最後美食', desc: '安檢後於禁區內購買安德魯蛋塔，零風險。', lat: 22.1496, lng: 113.5785, type: 'sight' }
+                ]
+            }
+        ];
+
+        const Toast = ({ message, type, onClose }) => {
+            React.useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgColors = {
+                success: 'bg-green-500',
+                info: 'bg-macau-blue',
+                warning: 'bg-yellow-500',
+                alert: 'bg-red-500'
+            };
+            const icons = {
+                success: <i className="fas fa-check-circle text-xl mr-2"></i>,
+                info: <i className="fas fa-info-circle text-xl mr-2"></i>,
+                warning: <i className="fas fa-exclamation-triangle text-xl mr-2"></i>,
+                alert: <i className="fas fa-bell text-xl mr-2"></i>
+            };
+
+            return (
+                <div className={`fixed top-12 left-1/2 transform -translate-x-1/2 w-11/12 max-w-sm z-50 ${bgColors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center transition-all duration-300 animate-bounce`}>
+                    {icons[type]}
+                    <span className="font-medium text-sm">{message}</span>
+                </div>
+            );
+        };
+
+        const MapView = ({ itinerary, focusLocation }) => {
+            const mapRef = React.useRef(null);
+            const mapInstance = React.useRef(null);
+            const markersLayer = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!mapInstance.current && mapRef.current) {
+                    // 初始化地圖，中心點設為澳門
+                    mapInstance.current = L.map(mapRef.current, {
+                        zoomControl: false // 手機版隱藏縮放控制
+                    }).setView([22.1936, 113.5398], 13);
+
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(mapInstance.current);
+
+                    markersLayer.current = L.layerGroup().addTo(mapInstance.current);
+                }
+
+                // 清除舊標記
+                if (markersLayer.current) {
+                    markersLayer.current.clearLayers();
+                }
+
+                // 收集所有點位以調整邊界
+                const bounds = [];
+
+                // 加入行程標記
+                itinerary.forEach(day => {
+                    day.events.forEach(event => {
+                        if (event.lat && event.lng) {
+                            bounds.push([event.lat, event.lng]);
+                            
+                            // 根據類型選擇圖示
+                            let iconName = 'fas fa-map-marker-alt';
+                            if(event.type === 'food') iconName = 'fas fa-utensils';
+                            if(event.type === 'sight') iconName = 'fas fa-camera';
+                            if(event.type === 'hotel') iconName = 'fas fa-bed';
+                            if(event.type === 'transport') iconName = 'fas fa-bus';
+                            if(event.type === 'shopping') iconName = 'fas fa-shopping-bag';
+
+                            const customIcon = L.divIcon({
+                                className: 'custom-map-marker',
+                                html: `<i class="${iconName} text-lg"></i>`,
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16],
+                                popupAnchor: [0, -16]
+                            });
+
+                            L.marker([event.lat, event.lng], { icon: customIcon })
+                                .bindPopup(`<b>${event.time} ${event.title}</b><br>${event.desc}`)
+                                .addTo(markersLayer.current);
+                        }
+                    });
+                });
+
+                // 處理視角聚焦
+                if (focusLocation && mapInstance.current) {
+                    mapInstance.current.setView([focusLocation.lat, focusLocation.lng], 16, { animate: true });
+                } else if (bounds.length > 0 && mapInstance.current) {
+                    mapInstance.current.fitBounds(bounds, { padding: [20, 20] });
+                }
+
+                return () => {
+                    // Cleanup is handled manually to prevent React strict mode re-render issues with Leaflet
+                };
+            }, [itinerary, focusLocation]);
+
+            return <div ref={mapRef} className="w-full h-full z-0"></div>;
+        };
+
+        const EventModal = ({ isOpen, onClose, onSave, event, dayId }) => {
+            const [formData, setFormData] = React.useState({
+                time: '09:00', endTime: '10:00', title: '', desc: '', type: 'sight'
+            });
+
+            React.useEffect(() => {
+                if (event) {
+                    setFormData(event);
+                } else {
+                    setFormData({ time: '09:00', endTime: '10:00', title: '', desc: '', type: 'sight', lat: 22.1936, lng: 113.5398 });
+                }
+            }, [event, isOpen]);
+
+            if (!isOpen) return null;
+
+            const handleChange = (e) => {
+                setFormData({ ...formData, [e.target.name]: e.target.value });
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave(formData, dayId);
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center sm:items-center">
+                    <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl p-6 modal-animate h-[80vh] sm:h-auto overflow-y-auto no-scrollbar">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-bold text-gray-800">{event ? '編輯行程' : '新增行程'}</h2>
+                            <button onClick={onClose} className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200">
+                                <i className="fas fa-times text-lg"></i>
+                            </button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="flex space-x-4">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">開始時間</label>
+                                    <input type="time" name="time" value={formData.time} onChange={handleChange} required className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-macau-blue outline-none" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">結束時間</label>
+                                    <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-macau-blue outline-none" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">行程標題</label>
+                                <input type="text" name="title" value={formData.title} onChange={handleChange} required placeholder="例如：議事亭前地" className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-macau-blue outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">類型</label>
+                                <select name="type" value={formData.type} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-macau-blue outline-none bg-white">
+                                    <option value="sight">景點</option>
+                                    <option value="food">美食</option>
+                                    <option value="shopping">購物</option>
+                                    <option value="transport">交通</option>
+                                    <option value="hotel">住宿</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">詳細說明 / 備註</label>
+                                <textarea name="desc" value={formData.desc} onChange={handleChange} rows="3" placeholder="注意事項或必吃餐點..." className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-macau-blue outline-none resize-none"></textarea>
+                            </div>
+                            <button type="submit" className="w-full bg-macau-blue text-white py-4 rounded-xl font-bold text-lg hover:bg-[#006A75] transition-colors mt-6 shadow-md shadow-macau-blue/30">
+                                儲存行程
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const InfoView = () => {
+            return (
+                <div className="p-5 space-y-6 overflow-y-auto no-scrollbar h-full pb-24">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">行前須知與預算</h2>
+                    
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <div className="flex items-center text-macau-blue mb-3">
+                            <i className="fas fa-wallet text-2xl mr-2"></i>
+                            <h3 className="text-lg font-bold">公費建議 (每成人)</h3>
+                        </div>
+                        <p className="text-3xl font-black text-gray-800">1,500 <span className="text-sm font-normal text-gray-500">HKD</span></p>
+                        <p className="text-sm text-gray-500 mt-2">總計預算約 6,000 HKD (4大1小)，涵蓋餐飲、交通、備用金與基礎伴手禮。</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100">
+                            <i className="fas fa-credit-card text-orange-500 text-2xl mb-2"></i>
+                            <h4 className="font-bold text-gray-800 text-sm">澳門通卡</h4>
+                            <p className="text-xs text-gray-600 mt-1">必買，搭公車半價，便利商店可用。押金30 MOP。</p>
+                        </div>
+                        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                            <i className="fas fa-money-bill-wave text-blue-500 text-2xl mb-2"></i>
+                            <h4 className="font-bold text-gray-800 text-sm">支付方式</h4>
+                            <p className="text-xs text-gray-600 mt-1">MOP最划算。支援微信/支付寶，減少現金找零。</p>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-gray-800 mb-3 flex items-center">
+                            <i className="fas fa-exclamation-circle text-macau-gold mr-2"></i> 長幼同行提醒
+                        </h3>
+                        <ul className="space-y-3 text-sm text-gray-600">
+                            <li className="flex items-start"><i className="fas fa-shoe-prints mt-0.5 text-gray-400 mr-2"></i> 穿著防滑舒適運動鞋，保護長輩關節。</li>
+                            <li className="flex items-start"><i className="fas fa-sun mt-0.5 text-gray-400 mr-2"></i> 注意防曬補水，嚴格遵守午休安排。</li>
+                            <li className="flex items-start"><i className="fas fa-cookie mt-0.5 text-gray-400 mr-2"></i> 隨身攜帶小零食安撫孩童情緒。</li>
+                            <li className="flex items-start"><i className="fas fa-utensils mt-0.5 text-gray-400 mr-2"></i> 點餐可主動要求「少鹽、少糖、少辣」。</li>
+                        </ul>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = React.useState('itinerary'); // itinerary, map, info
+            const [itinerary, setItinerary] = React.useState(INITIAL_DATA);
+            const [toast, setToast] = React.useState(null);
+            const [isModalOpen, setIsModalOpen] = React.useState(false);
+            const [editingEvent, setEditingEvent] = React.useState(null);
+            const [editingDayId, setEditingDayId] = React.useState(null);
+            const [mapFocus, setMapFocus] = React.useState(null);
+            const [activeDayIndex, setActiveDayIndex] = React.useState(0);
+
+            // 模擬即時推播通知 (每隔一段時間隨機出現)
+            React.useEffect(() => {
+                const notifications = [
+                    { msg: "重大消息：安德魯蛋塔機場店今日出爐時間提前！", type: "alert" },
+                    { msg: "天氣提醒：明日午後有陣雨，請記得攜帶雨具。", type: "info" },
+                    { msg: "交通提醒：路氹金光大道目前車多壅塞，建議搭乘輕軌或提早出發。", type: "warning" },
+                    { msg: "好康快報：威尼斯人部分品牌今日家庭套裝享8折優惠。", type: "success" }
+                ];
+
+                const timer = setInterval(() => {
+                    if(Math.random() > 0.6) { // 40% 機率跳出通知
+                        const randomNotif = notifications[Math.floor(Math.random() * notifications.length)];
+                        showToast(randomNotif.msg, randomNotif.type);
+                    }
+                }, 45000); // 每45秒檢查一次
+
+                return () => clearInterval(timer);
+            }, []);
+
+            const showToast = (message, type = 'success') => {
+                setToast({ message, type });
+            };
+
+            const handleSaveEvent = (eventData, dayId) => {
+                let updatedItinerary = [...itinerary];
+                const dayIndex = updatedItinerary.findIndex(d => d.id === dayId);
+                
+                if (dayIndex > -1) {
+                    if (eventData.id) {
+                        // Edit existing
+                        updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
+                            ev.id === eventData.id ? eventData : ev
+                        );
+                        showToast('行程已成功修改！');
+                    } else {
+                        // Add new
+                        const newEvent = { 
+                            ...eventData, 
+                            id: Date.now().toString(),
+                            // Default coordinates if missing
+                            lat: eventData.lat || 22.1936,
+                            lng: eventData.lng || 113.5398
+                        };
+                        updatedItinerary[dayIndex].events.push(newEvent);
+                        // Sort by time
+                        updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
+                        showToast('已新增一筆行程！');
+                    }
+                    setItinerary(updatedItinerary);
+                }
+            };
+
+            const handleDeleteEvent = (eventId, dayId) => {
+                let updatedItinerary = [...itinerary];
+                const dayIndex = updatedItinerary.findIndex(d => d.id === dayId);
+                if (dayIndex > -1) {
+                    updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
+                    setItinerary(updatedItinerary);
+                    showToast('行程已刪除。', 'warning');
+                }
+            };
+
+            const openAddModal = (dayId) => {
+                setEditingEvent(null);
+                setEditingDayId(dayId);
+                setIsModalOpen(true);
+            };
+
+            const openEditModal = (event, dayId) => {
+                setEditingEvent(event);
+                setEditingDayId(dayId);
+                setIsModalOpen(true);
+            };
+
+            const handleViewOnMap = (lat, lng) => {
+                setMapFocus({ lat, lng });
+                setActiveTab('map');
+            };
+
+            const getTypeIcon = (type) => {
+                switch(type) {
+                    case 'food': return { icon: 'fas fa-utensils', bg: 'text-orange-500 bg-orange-100' };
+                    case 'sight': return { icon: 'fas fa-camera', bg: 'text-blue-500 bg-blue-100' };
+                    case 'shopping': return { icon: 'fas fa-shopping-bag', bg: 'text-purple-500 bg-purple-100' };
+                    case 'transport': return { icon: 'fas fa-bus', bg: 'text-green-500 bg-green-100' };
+                    case 'hotel': return { icon: 'fas fa-bed', bg: 'text-indigo-500 bg-indigo-100' };
+                    default: return { icon: 'fas fa-map-marker-alt', bg: 'text-gray-500 bg-gray-100' };
+                }
+            };
+
+            return (
+                <div className="app-container">
+                    {/* Header */}
+                    <header className="bg-macau-blue text-white pt-10 pb-4 px-5 rounded-b-3xl shadow-md z-10 shrink-0">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-xl font-bold">澳門四天三夜自由行</h1>
+                                <p className="text-xs text-blue-100 mt-1"><i className="fas fa-users mr-1"></i>專為一家五口定制・長輩與孩童</p>
+                            </div>
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <i className="fas fa-bell text-xl"></i>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Toast Notification */}
+                    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 overflow-hidden relative">
+                        
+                        {/* Itinerary Tab */}
+                        <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'itinerary' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+                            {/* Day Selector */}
+                            <div className="flex px-4 py-3 space-x-2 overflow-x-auto no-scrollbar shrink-0">
+                                {itinerary.map((day, idx) => (
+                                    <button 
+                                        key={day.id}
+                                        onClick={() => setActiveDayIndex(idx)}
+                                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-colors ${activeDayIndex === idx ? 'bg-macau-blue text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200'}`}
+                                    >
+                                        {day.day}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Event List */}
+                            <div className="overflow-y-auto h-[calc(100%-60px)] px-4 pb-24 no-scrollbar">
+                                <div className="mb-4">
+                                    <h2 className="text-lg font-bold text-gray-800">{itinerary[activeDayIndex].title}</h2>
+                                    <p className="text-xs text-gray-500">{itinerary[activeDayIndex].date}</p>
+                                </div>
+
+                                <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
+                                    {itinerary[activeDayIndex].events.length === 0 ? (
+                                        <p className="text-center text-gray-400 py-10">尚無行程，點擊下方按鈕新增。</p>
+                                    ) : (
+                                        itinerary[activeDayIndex].events.map((ev, index) => {
+                                            const typeConfig = getTypeIcon(ev.type);
+                                            return (
+                                                <div key={ev.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                                    {/* Timeline dot */}
+                                                    <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm ${typeConfig.bg}`}>
+                                                        <i className={`${typeConfig.icon} text-lg`}></i>
+                                                    </div>
+                                                    
+                                                    {/* Event Card */}
+                                                    <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white shadow-sm border border-gray-100 ml-4 md:ml-0">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="text-sm font-black text-macau-blue bg-blue-50 px-2 py-0.5 rounded-md">{ev.time} {ev.endTime ? `- ${ev.endTime}` : ''}</span>
+                                                            <div className="flex space-x-1">
+                                                                <button onClick={() => openEditModal(ev, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-lg">
+                                                                    <i className="fas fa-pencil-alt text-sm"></i>
+                                                                </button>
+                                                                <button onClick={() => handleDeleteEvent(ev.id, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 rounded-lg">
+                                                                    <i className="fas fa-trash text-sm"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <h3 className="font-bold text-gray-800 text-base">{ev.title}</h3>
+                                                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ev.desc}</p>
+                                                        
+                                                        {/* View on Map Button */}
+                                                        <button onClick={() => handleViewOnMap(ev.lat, ev.lng)} className="mt-3 text-xs font-semibold text-macau-blue flex items-center bg-blue-50/50 px-3 py-1.5 rounded-lg w-fit hover:bg-blue-100 transition-colors">
+                                                            <i className="fas fa-map-marker-alt mr-1"></i> 地圖查看
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+
+                                {/* Add Button */}
+                                <button onClick={() => openAddModal(itinerary[activeDayIndex].id)} className="w-full mt-6 bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl flex items-center justify-center hover:bg-gray-50 hover:border-macau-blue hover:text-macau-blue transition-colors">
+                                    <i className="fas fa-plus mr-2"></i> 新增行程
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Map Tab */}
+                        <div className={`absolute inset-0 bg-gray-100 transition-opacity duration-300 ${activeTab === 'map' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+                            <MapView itinerary={itinerary} focusLocation={mapFocus} />
+                            {/* Overlay Controls */}
+                            <div className="absolute top-4 left-4 right-4 z-[400] bg-white/90 backdrop-blur-md px-4 py-3 rounded-xl shadow-lg border border-white/20 flex items-center justify-between">
+                                <span className="font-bold text-gray-800 text-sm">澳門景點地圖</span>
+                                <span className="text-xs bg-macau-gold text-white px-2 py-1 rounded-md font-bold">互動模式</span>
+                            </div>
+                        </div>
+
+                        {/* Info Tab */}
+                        <div className={`absolute inset-0 bg-[#F8FAFC] transition-opacity duration-300 ${activeTab === 'info' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
+                            <InfoView />
+                        </div>
+
+                    </main>
+
+                    {/* Bottom Navigation Bar */}
+                    <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-6 flex justify-between items-center absolute bottom-0 w-full z-20" style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
+                        <button onClick={() => setActiveTab('itinerary')} className={`flex flex-col items-center p-2 w-16 transition-colors ${activeTab === 'itinerary' ? 'text-macau-blue' : 'text-gray-400'}`}>
+                            <i className={`text-2xl mb-1 ${activeTab === 'itinerary' ? 'fas fa-calendar-check' : 'far fa-calendar-check'}`}></i>
+                            <span className="text-[10px] font-medium">行程</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('map'); setMapFocus(null); }} className={`flex flex-col items-center p-2 w-16 transition-colors ${activeTab === 'map' ? 'text-macau-blue' : 'text-gray-400'}`}>
+                            <i className={`text-2xl mb-1 ${activeTab === 'map' ? 'fas fa-map' : 'far fa-map'}`}></i>
+                            <span className="text-[10px] font-medium">地圖</span>
+                        </button>
+                        <button onClick={() => setActiveTab('info')} className={`flex flex-col items-center p-2 w-16 transition-colors ${activeTab === 'info' ? 'text-macau-blue' : 'text-gray-400'}`}>
+                            <i className={`text-2xl mb-1 ${activeTab === 'info' ? 'fas fa-info-circle' : 'fas fa-info-circle'}`}></i>
+                            <span className="text-[10px] font-medium">指南</span>
+                        </button>
+                    </nav>
+
+                    {/* Modals */}
+                    <EventModal 
+                        isOpen={isModalOpen} 
+                        onClose={() => setIsModalOpen(false)} 
+                        onSave={handleSaveEvent}
+                        event={editingEvent}
+                        dayId={editingDayId}
+                    />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
