@@ -7,18 +7,14 @@
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Pin Babel version to avoid recent standalone bugs -->
     <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Leaflet for Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <!-- Google Fonts: Inter & Noto Sans TC -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 
     <script>
@@ -94,7 +90,6 @@
 <body>
     <div id="root"></div>
 
-    <!-- Use data-type="module" to prevent Babel import errors -->
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -151,7 +146,7 @@
                 title: '澳門回程',
                 date: '2026-07-05',
                 events: [
-                    { id: '3-1', time: '08:30', endTime: '09:30', title: '飯店周邊早餐', desc: '司打口榮暉咖啡美食（雞湯米線）或 盲公竹昇麵。吃一間即可。', lat: 22.1920, lng: 113.5355, type: 'food' },
+                    { id: '3-1', time: '08:30', endTime: '09:30', title: '飯店周邊早餐', desc: '司打口榮暉咖啡美食（雞湯米線）做為參考，盲公竹昇麵。吃一間即可。', lat: 22.1920, lng: 113.5355, type: 'food' },
                     { id: '3-2', time: '09:45', endTime: '11:30', title: '伴手禮主力採買', desc: '最香餅家（杏仁餅），買完順路放回飯店。', lat: 22.1940, lng: 113.5370, type: 'shopping' },
                     { id: '3-3', time: '11:30', endTime: '12:30', title: '輕鬆午餐', desc: '十月初五街地道茶餐廳。', lat: 22.1955, lng: 113.5360, type: 'food' },
                     { id: '3-4', time: '12:30', endTime: '13:20', title: '整理打包與退房', desc: '整理行李，上廁所，裝滿水壺。', lat: 22.1922, lng: 113.5351, type: 'hotel' },
@@ -368,7 +363,7 @@
         };
 
         const App = () => {
-            const [user, setUser] = React.useState(null);
+            const [isAuthReady, setIsAuthReady] = React.useState(false);
             const [activeTab, setActiveTab] = React.useState('itinerary'); 
             const [itinerary, setItinerary] = React.useState([]); 
             const [toast, setToast] = React.useState(null);
@@ -380,74 +375,82 @@
             const [isLoading, setIsLoading] = React.useState(true);
             const [syncStatus, setSyncStatus] = React.useState(isFirebaseAvailable ? '連線中...' : '本機模式');
 
-            // 1. 初始化 Firebase (加上 Token 失效的容錯機制)
+            // 建立本機資料保底讀取函式
+            const loadLocalFallback = React.useCallback(() => {
+                const localData = localStorage.getItem('macau_itinerary_public');
+                if (localData) {
+                    setItinerary(JSON.parse(localData));
+                } else {
+                    setItinerary(INITIAL_DATA);
+                    localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
+                }
+                setIsLoading(false);
+            }, []);
+
+            // 💡【核心改動 1】：保證登入認證成功後才開啟閘門
             React.useEffect(() => {
                 if (!isFirebaseAvailable || !auth) {
+                    loadLocalFallback();
                     return;
                 }
 
-                const initAuth = async () => {
+                const triggerLogin = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            try {
-                                await signInWithCustomToken(auth, __initial_auth_token);
-                            } catch (tokenErr) {
-                                console.warn("Custom token failed, fallback to anonymous", tokenErr);
-                                await signInAnonymously(auth);
-                            }
+                            await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
                             await signInAnonymously(auth);
                         }
                     } catch (e) {
-                        console.error("Auth init error:", e);
+                        console.error("Firebase 登入失敗，啟動本機保底:", e);
+                        loadLocalFallback();
                     }
                 };
-                initAuth();
-                
-                const unsubscribe = onAuthStateChanged(auth, setUser);
-                return () => unsubscribe();
-            }, []);
 
-            // 2. 從 Firestore 獲取「公開共用」的資料
-            React.useEffect(() => {
-                const fallbackToLocal = () => {
-                    const localData = localStorage.getItem('macau_itinerary_public');
-                    if (localData) {
-                        setItinerary(JSON.parse(localData));
+                triggerLogin();
+
+                const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // 認證完畢，正式開啟 Firestore 讀寫閘門
+                        setIsAuthReady(true);
                     } else {
-                        setItinerary(INITIAL_DATA);
-                        localStorage.setItem('macau_itinerary_public', JSON.stringify(INITIAL_DATA));
+                        loadLocalFallback();
                     }
-                    setIsLoading(false);
-                };
+                });
 
-                if (isFirebaseAvailable && db) {
-                    if (!user) return; // 必須等待使用者驗證完成
+                return () => unsubscribe();
+            }, [loadLocalFallback]);
 
-                    // 【關鍵修正】：嚴格遵守 Firebase 環境安全規則，使用標準的 public/data/... 結構
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
-                    const unsubscribe = onSnapshot(docRef, 
-                        (docSnap) => {
-                            if (docSnap.exists()) {
-                                setItinerary(docSnap.data().days);
-                                setSyncStatus('雲端已同步');
-                            } else {
-                                setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
-                            }
-                            setIsLoading(false);
-                        },
-                        (error) => {
-                            console.error("Firestore 讀取錯誤:", error);
-                            setSyncStatus('連線異常 (本機模式)');
-                            fallbackToLocal();
+            // 💡【核心改動 2】：閘門開啟後，才安全地開啟 Firestore 即時數據監聽
+            React.useEffect(() => {
+                if (!isAuthReady || !db) return;
+
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
+                
+                const unsubscribe = onSnapshot(docRef, 
+                    (docSnap) => {
+                        if (docSnap.exists()) {
+                            setItinerary(docSnap.data().days);
+                            setSyncStatus('雲端已同步');
+                        } else {
+                            // 節點無資料時，由第一個進來的人初始化雲端
+                            setDoc(docRef, { days: INITIAL_DATA })
+                                .then(() => setSyncStatus('雲端已同步'))
+                                .catch(console.error);
                         }
-                    );
-                    return () => unsubscribe();
-                } else {
-                    fallbackToLocal();
-                }
-            }, [user]);
+                        setIsLoading(false);
+                    },
+                    (error) => {
+                        console.error("Firestore 即時監聽失敗，切換為本機容錯:", error);
+                        loadLocalFallback();
+                        setSyncStatus('僅本機儲存');
+                    }
+                );
 
+                return () => unsubscribe();
+            }, [isAuthReady, loadLocalFallback]);
+
+            // 模擬即時推播通知 (每隔一段時間隨機出現)
             React.useEffect(() => {
                 const notifications = [
                     { msg: "重大消息：安德魯蛋塔機場店今日出爐時間提前！", type: "alert" },
@@ -468,25 +471,28 @@
                 setToast({ message, type });
             };
 
-            // 3. 同步函式 (寫入共用節點)
+            // 💡【核心改動 3】：雙軌防鎖死同步函式
             const syncToDb = async (newItinerary) => {
+                // 第一步：不論雲端狀態如何，本機絕對先保存成功，杜絕資料遺失
                 localStorage.setItem('macau_itinerary_public', JSON.stringify(newItinerary));
                 
-                if (!isFirebaseAvailable || !db || !user) {
+                // 第二步：動態讀取底層認證憑證，直接破解 React 狀態更新的延遲盲點
+                const currentAuthenticatedUser = auth ? auth.currentUser : null;
+
+                if (!isFirebaseAvailable || !db || !currentAuthenticatedUser) {
                     setSyncStatus('僅本機儲存');
                     return; 
                 }
                 
                 try {
                     setSyncStatus('同步中...');
-                    // 【關鍵修正】：路徑必須與讀取時完全一致，並符合安全規則
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'itinerary', 'main_plan');
+                    // 第三步：直接推入合法的公開共用廣播節點
                     await setDoc(docRef, { days: newItinerary });
                     setSyncStatus('雲端已同步');
                 } catch (error) {
-                    console.error("Firestore 寫入錯誤:", error);
-                    setSyncStatus('雲端拒絕寫入 (僅存本機)');
-                    showToast("雲端同步失敗，請檢查權限", "alert");
+                    console.error("雲端存檔遭拒絕:", error);
+                    setSyncStatus('僅本機儲存 (同步失敗)');
                 }
             };
 
@@ -499,7 +505,6 @@
                         updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
                             ev.id === eventData.id ? eventData : ev
                         );
-                        showToast('行程已修改');
                     } else {
                         const newEvent = { 
                             ...eventData, 
@@ -509,11 +514,14 @@
                         };
                         updatedItinerary[dayIndex].events.push(newEvent);
                         updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
-                        showToast('已新增一筆行程');
                     }
                     
+                    // Optimistic UI：先更新使用者手機畫面，再執行背景同步
                     setItinerary(updatedItinerary);
                     syncToDb(updatedItinerary);
+                    
+                    const hasCloudAccess = isFirebaseAvailable && (auth && auth.currentUser);
+                    showToast(`行程儲存成功！(${hasCloudAccess ? '已同步給所有人' : '已存至本機'})`);
                 }
             };
 
@@ -524,8 +532,10 @@
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
                     
                     setItinerary(updatedItinerary);
-                    showToast('行程已刪除', 'warning');
                     syncToDb(updatedItinerary);
+
+                    const hasCloudAccess = isFirebaseAvailable && (auth && auth.currentUser);
+                    showToast(`行程已成功刪除。(${hasCloudAccess ? '已同步給所有人' : '已存至本機'})`, 'warning');
                 }
             };
 
@@ -563,7 +573,7 @@
                         <div className="flex justify-between items-center">
                             <div>
                                 <h1 className="text-xl font-bold">澳門四天三夜自由行</h1>
-                                <p className="text-xs text-blue-100 mt-1"><i className="fas fa-users mr-1"></i>專為一家五口定制・長輩與孩童</p>
+                                <p className="text-xs text-blue-100 mt-1"><i className="fas fa-users mr-1"></i>專為一家五口定制・長輩與孩童1.0</p>
                             </div>
                             <div className="flex flex-col items-end">
                                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mb-1">
