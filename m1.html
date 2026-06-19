@@ -101,6 +101,17 @@
 
     <!-- Use data-type="module" to prevent Babel import errors -->
     <script type="text/babel" data-type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Setup
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
         const INITIAL_DATA = [
             {
                 id: 'day1',
@@ -201,33 +212,35 @@
                 const bounds = [];
 
                 // 加入行程標記
-                itinerary.forEach(day => {
-                    day.events.forEach(event => {
-                        if (event.lat && event.lng) {
-                            bounds.push([event.lat, event.lng]);
-                            
-                            // 根據類型選擇圖示
-                            let iconName = 'fas fa-map-marker-alt';
-                            if(event.type === 'food') iconName = 'fas fa-utensils';
-                            if(event.type === 'sight') iconName = 'fas fa-camera';
-                            if(event.type === 'hotel') iconName = 'fas fa-bed';
-                            if(event.type === 'transport') iconName = 'fas fa-bus';
-                            if(event.type === 'shopping') iconName = 'fas fa-shopping-bag';
+                if (itinerary && itinerary.length > 0) {
+                    itinerary.forEach(day => {
+                        day.events.forEach(event => {
+                            if (event.lat && event.lng) {
+                                bounds.push([event.lat, event.lng]);
+                                
+                                // 根據類型選擇圖示
+                                let iconName = 'fas fa-map-marker-alt';
+                                if(event.type === 'food') iconName = 'fas fa-utensils';
+                                if(event.type === 'sight') iconName = 'fas fa-camera';
+                                if(event.type === 'hotel') iconName = 'fas fa-bed';
+                                if(event.type === 'transport') iconName = 'fas fa-bus';
+                                if(event.type === 'shopping') iconName = 'fas fa-shopping-bag';
 
-                            const customIcon = L.divIcon({
-                                className: 'custom-map-marker',
-                                html: `<i class="${iconName} text-lg"></i>`,
-                                iconSize: [32, 32],
-                                iconAnchor: [16, 16],
-                                popupAnchor: [0, -16]
-                            });
+                                const customIcon = L.divIcon({
+                                    className: 'custom-map-marker',
+                                    html: `<i class="${iconName} text-lg"></i>`,
+                                    iconSize: [32, 32],
+                                    iconAnchor: [16, 16],
+                                    popupAnchor: [0, -16]
+                                });
 
-                            L.marker([event.lat, event.lng], { icon: customIcon })
-                                .bindPopup(`<b>${event.time} ${event.title}</b><br>${event.desc}`)
-                                .addTo(markersLayer.current);
-                        }
+                                L.marker([event.lat, event.lng], { icon: customIcon })
+                                    .bindPopup(`<b>${event.time} ${event.title}</b><br>${event.desc}`)
+                                    .addTo(markersLayer.current);
+                            }
+                        });
                     });
-                });
+                }
 
                 // 處理視角聚焦
                 if (focusLocation && mapInstance.current) {
@@ -359,14 +372,58 @@
         };
 
         const App = () => {
+            const [user, setUser] = React.useState(null);
             const [activeTab, setActiveTab] = React.useState('itinerary'); // itinerary, map, info
-            const [itinerary, setItinerary] = React.useState(INITIAL_DATA);
+            const [itinerary, setItinerary] = React.useState([]); // 初始為空，等待 DB 載入
             const [toast, setToast] = React.useState(null);
             const [isModalOpen, setIsModalOpen] = React.useState(false);
             const [editingEvent, setEditingEvent] = React.useState(null);
             const [editingDayId, setEditingDayId] = React.useState(null);
             const [mapFocus, setMapFocus] = React.useState(null);
             const [activeDayIndex, setActiveDayIndex] = React.useState(0);
+            const [isLoading, setIsLoading] = React.useState(true);
+
+            // 1. 初始化 Firebase 登入與 Auth 監聽
+            React.useEffect(() => {
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+                initAuth();
+                
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            // 2. 從 Firestore 即時監聽與獲取行程資料
+            React.useEffect(() => {
+                if (!user) return;
+                
+                // 設定單一文件路徑：儲存使用者的完整行程表
+                const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'itineraryData', 'main_plan');
+                
+                const unsubscribe = onSnapshot(docRef, 
+                    (docSnap) => {
+                        if (docSnap.exists()) {
+                            setItinerary(docSnap.data().days);
+                        } else {
+                            // 若資料庫尚未有資料，寫入初始預設資料 (INITIAL_DATA)
+                            setDoc(docRef, { days: INITIAL_DATA }).catch(console.error);
+                        }
+                        setIsLoading(false);
+                    },
+                    (error) => {
+                        console.error("Firestore 讀取錯誤:", error);
+                        showToast("無法同步資料，請檢查網路連線", "alert");
+                        setIsLoading(false);
+                    }
+                );
+
+                return () => unsubscribe();
+            }, [user]);
 
             // 模擬即時推播通知 (每隔一段時間隨機出現)
             React.useEffect(() => {
@@ -391,6 +448,18 @@
                 setToast({ message, type });
             };
 
+            // 3. 雲端同步函式
+            const syncToDb = async (newItinerary) => {
+                if (!user) return;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'itineraryData', 'main_plan');
+                    await setDoc(docRef, { days: newItinerary });
+                } catch (error) {
+                    console.error("資料儲存失敗:", error);
+                    showToast("雲端同步失敗，請重試", "alert");
+                }
+            };
+
             const handleSaveEvent = (eventData, dayId) => {
                 let updatedItinerary = [...itinerary];
                 const dayIndex = updatedItinerary.findIndex(d => d.id === dayId);
@@ -401,7 +470,7 @@
                         updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.map(ev => 
                             ev.id === eventData.id ? eventData : ev
                         );
-                        showToast('行程已成功修改！');
+                        showToast('行程已成功修改！(已同步至雲端)');
                     } else {
                         // Add new
                         const newEvent = { 
@@ -414,9 +483,11 @@
                         updatedItinerary[dayIndex].events.push(newEvent);
                         // Sort by time
                         updatedItinerary[dayIndex].events.sort((a, b) => a.time.localeCompare(b.time));
-                        showToast('已新增一筆行程！');
+                        showToast('已新增一筆行程！(已同步至雲端)');
                     }
+                    // Optimistic UI 更新並同步至 Firebase
                     setItinerary(updatedItinerary);
+                    syncToDb(updatedItinerary);
                 }
             };
 
@@ -425,8 +496,11 @@
                 const dayIndex = updatedItinerary.findIndex(d => d.id === dayId);
                 if (dayIndex > -1) {
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
+                    
+                    // Optimistic UI 更新並同步至 Firebase
                     setItinerary(updatedItinerary);
-                    showToast('行程已刪除。', 'warning');
+                    showToast('行程已刪除。(已同步至雲端)', 'warning');
+                    syncToDb(updatedItinerary);
                 }
             };
 
@@ -461,14 +535,20 @@
             return (
                 <div className="app-container">
                     {/* Header */}
-                    <header className="bg-macau-blue text-white pt-10 pb-4 px-5 rounded-b-3xl shadow-md z-10 shrink-0">
+                    <header className="bg-macau-blue text-white pt-10 pb-4 px-5 rounded-b-3xl shadow-md z-10 shrink-0 relative">
                         <div className="flex justify-between items-center">
                             <div>
                                 <h1 className="text-xl font-bold">澳門四天三夜自由行</h1>
                                 <p className="text-xs text-blue-100 mt-1"><i className="fas fa-users mr-1"></i>專為一家五口定制・長輩與孩童</p>
                             </div>
-                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                                <i className="fas fa-bell text-xl"></i>
+                            <div className="flex flex-col items-end">
+                                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm mb-1">
+                                    <i className="fas fa-bell text-xl"></i>
+                                </div>
+                                <span className="text-[10px] text-blue-100 font-bold flex items-center">
+                                    {isLoading ? <i className="fas fa-spinner fa-spin mr-1"></i> : <i className="fas fa-cloud text-green-300 mr-1"></i>}
+                                    {isLoading ? '資料載入中' : '雲端已同步'}
+                                </span>
                             </div>
                         </div>
                     </header>
@@ -481,71 +561,80 @@
                         
                         {/* Itinerary Tab */}
                         <div className={`absolute inset-0 transition-opacity duration-300 ${activeTab === 'itinerary' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}>
-                            {/* Day Selector */}
-                            <div className="flex px-4 py-3 space-x-2 overflow-x-auto no-scrollbar shrink-0">
-                                {itinerary.map((day, idx) => (
-                                    <button 
-                                        key={day.id}
-                                        onClick={() => setActiveDayIndex(idx)}
-                                        className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-colors ${activeDayIndex === idx ? 'bg-macau-blue text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200'}`}
-                                    >
-                                        {day.day}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Event List */}
-                            <div className="overflow-y-auto h-[calc(100%-60px)] px-4 pb-24 no-scrollbar">
-                                <div className="mb-4">
-                                    <h2 className="text-lg font-bold text-gray-800">{itinerary[activeDayIndex].title}</h2>
-                                    <p className="text-xs text-gray-500">{itinerary[activeDayIndex].date}</p>
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                    <i className="fas fa-circle-notch fa-spin text-4xl mb-3 text-macau-blue"></i>
+                                    <p className="font-bold">從雲端讀取行程中...</p>
                                 </div>
+                            ) : (
+                                <>
+                                    {/* Day Selector */}
+                                    <div className="flex px-4 py-3 space-x-2 overflow-x-auto no-scrollbar shrink-0">
+                                        {itinerary.map((day, idx) => (
+                                            <button 
+                                                key={day.id}
+                                                onClick={() => setActiveDayIndex(idx)}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-colors ${activeDayIndex === idx ? 'bg-macau-blue text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200'}`}
+                                            >
+                                                {day.day}
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
-                                    {itinerary[activeDayIndex].events.length === 0 ? (
-                                        <p className="text-center text-gray-400 py-10">尚無行程，點擊下方按鈕新增。</p>
-                                    ) : (
-                                        itinerary[activeDayIndex].events.map((ev, index) => {
-                                            const typeConfig = getTypeIcon(ev.type);
-                                            return (
-                                                <div key={ev.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                                    {/* Timeline dot */}
-                                                    <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm ${typeConfig.bg}`}>
-                                                        <i className={`${typeConfig.icon} text-lg`}></i>
-                                                    </div>
-                                                    
-                                                    {/* Event Card */}
-                                                    <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white shadow-sm border border-gray-100 ml-4 md:ml-0">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <span className="text-sm font-black text-macau-blue bg-blue-50 px-2 py-0.5 rounded-md">{ev.time} {ev.endTime ? `- ${ev.endTime}` : ''}</span>
-                                                            <div className="flex space-x-1">
-                                                                <button onClick={() => openEditModal(ev, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-lg">
-                                                                    <i className="fas fa-pencil-alt text-sm"></i>
-                                                                </button>
-                                                                <button onClick={() => handleDeleteEvent(ev.id, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 rounded-lg">
-                                                                    <i className="fas fa-trash text-sm"></i>
+                                    {/* Event List */}
+                                    <div className="overflow-y-auto h-[calc(100%-60px)] px-4 pb-24 no-scrollbar">
+                                        <div className="mb-4">
+                                            <h2 className="text-lg font-bold text-gray-800">{itinerary[activeDayIndex]?.title}</h2>
+                                            <p className="text-xs text-gray-500">{itinerary[activeDayIndex]?.date}</p>
+                                        </div>
+
+                                        <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
+                                            {!itinerary[activeDayIndex]?.events || itinerary[activeDayIndex].events.length === 0 ? (
+                                                <p className="text-center text-gray-400 py-10">尚無行程，點擊下方按鈕新增。</p>
+                                            ) : (
+                                                itinerary[activeDayIndex].events.map((ev, index) => {
+                                                    const typeConfig = getTypeIcon(ev.type);
+                                                    return (
+                                                        <div key={ev.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                                            {/* Timeline dot */}
+                                                            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm ${typeConfig.bg}`}>
+                                                                <i className={`${typeConfig.icon} text-lg`}></i>
+                                                            </div>
+                                                            
+                                                            {/* Event Card */}
+                                                            <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white shadow-sm border border-gray-100 ml-4 md:ml-0">
+                                                                <div className="flex justify-between items-start mb-1">
+                                                                    <span className="text-sm font-black text-macau-blue bg-blue-50 px-2 py-0.5 rounded-md">{ev.time} {ev.endTime ? `- ${ev.endTime}` : ''}</span>
+                                                                    <div className="flex space-x-1">
+                                                                        <button onClick={() => openEditModal(ev, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-blue-500 bg-gray-50 rounded-lg">
+                                                                            <i className="fas fa-pencil-alt text-sm"></i>
+                                                                        </button>
+                                                                        <button onClick={() => handleDeleteEvent(ev.id, itinerary[activeDayIndex].id)} className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 rounded-lg">
+                                                                            <i className="fas fa-trash text-sm"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <h3 className="font-bold text-gray-800 text-base">{ev.title}</h3>
+                                                                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ev.desc}</p>
+                                                                
+                                                                {/* View on Map Button */}
+                                                                <button onClick={() => handleViewOnMap(ev.lat, ev.lng)} className="mt-3 text-xs font-semibold text-macau-blue flex items-center bg-blue-50/50 px-3 py-1.5 rounded-lg w-fit hover:bg-blue-100 transition-colors">
+                                                                    <i className="fas fa-map-marker-alt mr-1"></i> 地圖查看
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        <h3 className="font-bold text-gray-800 text-base">{ev.title}</h3>
-                                                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{ev.desc}</p>
-                                                        
-                                                        {/* View on Map Button */}
-                                                        <button onClick={() => handleViewOnMap(ev.lat, ev.lng)} className="mt-3 text-xs font-semibold text-macau-blue flex items-center bg-blue-50/50 px-3 py-1.5 rounded-lg w-fit hover:bg-blue-100 transition-colors">
-                                                            <i className="fas fa-map-marker-alt mr-1"></i> 地圖查看
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })
-                                    )}
-                                </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
 
-                                {/* Add Button */}
-                                <button onClick={() => openAddModal(itinerary[activeDayIndex].id)} className="w-full mt-6 bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl flex items-center justify-center hover:bg-gray-50 hover:border-macau-blue hover:text-macau-blue transition-colors">
-                                    <i className="fas fa-plus mr-2"></i> 新增行程
-                                </button>
-                            </div>
+                                        {/* Add Button */}
+                                        <button onClick={() => openAddModal(itinerary[activeDayIndex].id)} className="w-full mt-6 bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl flex items-center justify-center hover:bg-gray-50 hover:border-macau-blue hover:text-macau-blue transition-colors">
+                                            <i className="fas fa-plus mr-2"></i> 新增行程
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Map Tab */}
