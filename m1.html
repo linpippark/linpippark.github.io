@@ -486,8 +486,11 @@
                 // 【核心步驟 1】：必定強制備份至本機 (Local Storage)，確保任何情況下資料皆不遺失
                 localStorage.setItem('macau_itinerary_public', JSON.stringify(newItinerary));
                 
+                // 💡 【修正重點】：直接向系統底層獲取最即時的認證狀態，避開 React 變數尚未更新的閉包陷阱
+                const activeUser = user || (auth && auth.currentUser);
+
                 // 【核心步驟 2】：檢查雲端連線與 Firebase 授權狀態
-                if (!isFirebaseAvailable || !db || !user) {
+                if (!isFirebaseAvailable || !db || !activeUser) {
                     setSyncStatus('僅本機儲存');
                     showToast("尚未取得雲端權限，目前僅儲存於本機", "warning");
                     return; 
@@ -532,7 +535,7 @@
                         showToast(`已新增一筆行程！(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`);
                     }
                     
-                    // 【重點邏輯】：先進行 Optimistic UI 更新 (讓操作者畫面立刻改變)，再進行嚴謹的背景同步
+                    // 先進行 Optimistic UI 更新 (讓操作者畫面立刻改變)，再進行嚴謹的背景同步
                     setItinerary(updatedItinerary);
                     syncToDb(updatedItinerary);
                 }
@@ -544,7 +547,7 @@
                 if (dayIndex > -1) {
                     updatedItinerary[dayIndex].events = updatedItinerary[dayIndex].events.filter(ev => ev.id !== eventId);
                     
-                    // 【重點邏輯】：先進行 Optimistic UI 更新，再觸發後續的本機與雲端同步
+                    // 先進行 Optimistic UI 更新，再觸發後續的本機與雲端同步
                     setItinerary(updatedItinerary);
                     showToast(`行程已刪除。(${isFirebaseAvailable ? '已同步給所有人' : '已儲存本機'})`, 'warning');
                     syncToDb(updatedItinerary);
