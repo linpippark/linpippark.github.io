@@ -168,6 +168,69 @@
                 </div>
             </div>
 
+            <!-- Turnover Analysis Dashboard -->
+            <div class="glass-card p-4 mb-6 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF9898] to-[#FFE99A]"></div>
+                <div class="flex items-center mb-4">
+                    <div class="bg-gradient-to-br from-[#FF9898] to-[#FFAAAA] text-white rounded-full h-10 w-10 flex items-center justify-center mr-3 shadow-md">
+                        <i class="fas fa-chart-line text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/06/30各單位現職人數統計</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <div v-for="(stat, index) in turnoverAnalysis" :key="stat.dept" 
+                         class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex flex-col relative overflow-hidden hover:shadow-md transition group">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 rounded-full bg-red-50 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+                        <div class="flex justify-between items-center mb-2 z-10">
+                            <span class="text-sm font-bold text-gray-700 bg-gray-50 px-2 py-1 rounded"><i class="fas fa-users mr-1 text-[#FFD586]"></i>{{ stat.dept }}</span>
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-full" 
+                                  :class="stat.rateFloat >= 40 ? 'bg-red-100 text-red-600' : (stat.rateFloat >= 25 ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600')">
+                                {{ stat.rateFloat >= 40 ? '高風險' : (stat.rateFloat >= 25 ? '需注意' : '穩定') }}
+                            </span>
+                        </div>
+                        <div class="flex items-end gap-1 z-10">
+                            <span class="text-3xl font-extrabold" 
+                                  :class="stat.rateFloat >= 40 ? 'text-red-500' : (stat.rateFloat >= 25 ? 'text-orange-500' : 'text-green-500')">
+                                {{ stat.rate }}%
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2 z-10 flex justify-between">
+                            <span>現職: {{ stat.current }}</span>
+                            <span>歷史離職: {{ stat.offboardCount }}</span>
+                        </div>
+                        <!-- 視覺化進度條 -->
+                        <div class="w-full bg-gray-100 rounded-full h-1.5 mt-2 z-10">
+                            <div class="h-1.5 rounded-full" 
+                                 :class="stat.rateFloat >= 40 ? 'bg-red-400' : (stat.rateFloat >= 25 ? 'bg-orange-400' : 'bg-green-400')"
+                                 :style="`width: ${stat.rateFloat > 100 ? 100 : stat.rateFloat}%`"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HR Expert Analysis -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                    <h3 class="text-sm font-bold text-indigo-800 mb-2 flex items-center"><i class="fas fa-user-tie mr-2"></i>專家觀點 (HR Expert Insights)</h3>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                        <li class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-red-400 mt-1 mr-2 flex-shrink-0"></i>
+                            <div><strong class="text-red-600">行政支援單位警訊：</strong>「行二」與「行一」雖編制較小，但歷史離職率高達50.0%與40.0%，顯示基層支援單位可能面臨勞務分配不均、缺乏成就感或職涯發展受限的問題。建議立即針對這兩個單位進行深入面談，並檢視工作流程。</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
+                            <div><strong class="text-orange-600">中高流動率群體：</strong>「三組」(28.6%)與「二組」(25.6%)維持在中等偏高的流動狀態。這在核心業務單位中可能屬於常態性汰換，但仍需關注是否有特定主管的管理風格或專案壓力導致人才流失，建議定期追蹤這些單位的員工滿意度。</div>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-shield-alt text-green-500 mt-1 mr-2 flex-shrink-0"></i>
+                            <div><strong class="text-green-600">穩定指標：</strong>「一組」目前是流動率最低(16.7%)的單位，顯示該單位的團隊凝聚力與工作負荷相對平衡。HR可進一步萃取該單位主管的管理經驗，作為其他單位留才策略的標竿參考。</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- Tables Section -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -283,6 +346,15 @@
                     // 圖表實例
                     onboardChartInstance: null,
                     offboardChartInstance: null,
+
+                    // 單位現職人數參考資料(2026/06/30資料)
+                    currentEmployees: {
+                        '一組': 20,
+                        '二組': 29,
+                        '三組': 15,
+                        '行一': 6,
+                        '行二': 5
+                    },
 
                     // 初始資料載入 (使用自增 ID 以供操作)
                     autoId: 100,
@@ -451,6 +523,28 @@
 
                     // 取前三名，如果平手，原陣列排序在前的優先，符合需求
                     return validRecords.slice(0, 3);
+                },
+                turnoverAnalysis() {
+                    const depts = Object.keys(this.currentEmployees);
+                    let stats = depts.map(dept => {
+                        // 統計該單位的歷史離職總數
+                        const offboardCount = this.offboardList.filter(item => item.dept === dept).length;
+                        const current = this.currentEmployees[dept];
+                        const total = current + offboardCount;
+                        const rate = total === 0 ? 0 : (offboardCount / total) * 100;
+                        return {
+                            dept,
+                            offboardCount,
+                            current,
+                            total,
+                            rate: rate.toFixed(1),
+                            rateFloat: rate
+                        };
+                    });
+                    
+                    // 依離職率由高至低排序
+                    stats.sort((a, b) => b.rateFloat - a.rateFloat);
+                    return stats;
                 }
             },
             watch: {
