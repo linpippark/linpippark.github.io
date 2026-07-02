@@ -319,7 +319,8 @@
             '03': 176, // 22 days
             '04': 176, // 22 days
             '05': 168, // 21 days
-            '06': 168  // 21 days
+            '06': 168, // 21 days
+            '07': 184  // 23 days
         };
 
         const employees = {
@@ -382,18 +383,19 @@
                     { date: '2026-06-09', hours: 8, isErrand: false },
                     { date: '2026-06-24', hours: 1, isErrand: false },
                     { date: '2026-06-29', hours: 4, isErrand: false },
-                    { date: '2026-06-30', hours: 8, isErrand: false }
+                    { date: '2026-06-30', hours: 8, isErrand: false },
+                    { date: '2026-07-04', hours: 2, isErrand: false }
                 ]
             }
         };
 
-        const months = ['01', '02', '03', '04', '05', '06'];
-        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月'];
+        const months = ['01', '02', '03', '04', '05', '06', '07'];
+        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月'];
 
         // Aggregate Data processing
         let statsData = {
-            '狼人': { leave: [0,0,0,0,0,0], errand: [0,0,0,0,0,0] },
-            '爽人': { leave: [0,0,0,0,0,0], errand: [0,0,0,0,0,0] }
+            '狼人': { leave: [0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0] },
+            '爽人': { leave: [0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0] }
         };
 
         let totalLeaveWolf = 0;
@@ -416,7 +418,7 @@
             Object.keys(employees).forEach(emp => {
                 employees[emp].records.forEach(rec => {
                     const monthIndex = parseInt(rec.date.split('-')[1]) - 1;
-                    if (monthIndex >= 0 && monthIndex <= 5) {
+                    if (monthIndex >= 0 && monthIndex <= 6) {
                         if (rec.isErrand) {
                             statsData[emp].errand[monthIndex] += rec.hours;
                         } else {
