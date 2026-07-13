@@ -177,7 +177,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/06/30各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/07/13各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -211,7 +211,29 @@
                     </div>
                 </div>
 
-
+                <!-- HR Expert Analysis -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                    <div @click="showExpertInsights = !showExpertInsights" class="p-3 cursor-pointer flex items-center justify-between hover:bg-blue-100/50 transition rounded-t-lg" :class="{'rounded-b-lg': !showExpertInsights}">
+                        <h3 class="text-sm font-bold text-indigo-800 flex items-center"><i class="fas fa-user-tie mr-2"></i>專家觀點 (HR Expert Insights)</h3>
+                        <i class="fas" :class="showExpertInsights ? 'fa-chevron-up text-indigo-600' : 'fa-chevron-down text-indigo-400'"></i>
+                    </div>
+                    <div v-show="showExpertInsights" class="px-4 pb-4">
+                        <ul class="text-sm text-gray-700 space-y-2">
+                            <li class="flex items-start">
+                                <i class="fas fa-exclamation-triangle text-red-400 mt-1 mr-2 flex-shrink-0"></i>
+                                <div><strong class="text-red-600">行政支援單位高度警戒：</strong>「行二」(54.5%) 與「行一」(44.4%) 的離職率高居不下，且歷史離職人數已逼近或超越現有編制。這顯示基層單位的業務分工、薪資結構或職涯發展可能存在系統性問題，強烈建議立即啟動專案訪談，並評估是否需要重新分配工作。</div>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
+                                <div><strong class="text-orange-600">核心業務單位流動趨勢：</strong>「三組」(27.3%) 與「二組」(24.4%) 處於中偏高的流動率。核心單位適度流動有助於新陳代謝，但三組比例稍微偏高，HR 應關注近期是否有重大專案壓力或內部管理風格變動，以防關鍵人才流失。</div>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-shield-alt text-green-500 mt-1 mr-2 flex-shrink-0"></i>
+                                <div><strong class="text-green-600">穩定團隊的標竿：</strong>「一組」在經歷近期人員異動後，離職率仍保持在相對低點 (20.8%)，是目前最穩定的單位。可進一步分析該單位的工作氣氛、主管領導模式與排班彈性，將其優良做法分享給其他單位參考。</div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <!-- Tables Section -->
@@ -319,6 +341,7 @@
                 return {
                     lastUpdated: '',
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
+                    showExpertInsights: false, // 控制專家觀點區塊的顯示與隱藏
                     filters: {
                         year: 'all',
                         dept: 'all'
@@ -330,12 +353,12 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/06/30資料)
+                    // 單位現職人數參考資料(2026/07/13資料)
                     currentEmployees: {
-                        '一組': 20,
-                        '二組': 29,
-                        '三組': 15,
-                        '行一': 6,
+                        '一組': 19,
+                        '二組': 31,
+                        '三組': 16,
+                        '行一': 5,
                         '行二': 5
                     },
 
@@ -372,7 +395,7 @@
                         { id: 52, date: '2026-06-01', originalName: '孫榮田', dept: '三組' },
                         { id: 53, date: '2026-06-08', originalName: '吳惠芳', dept: '行二' },
                         { id: 58, date: '2026-07-06', originalName: '李依瑾', dept: '三組' },
-                        { id: 59, date: '2026-05-18', originalName: '蔡雅玲', dept: '行一', remark: 'Acc' },
+                        { id: 59, date: '2026-05-18', originalName: '蔡雅玲', dept: '行二', remark: 'Acc' },
                     ],
 
                     // 離職資料
@@ -406,7 +429,8 @@
                         { id: 54, date: '2026-06-08', originalName: '黃敏毓', dept: '二組' },
                         { id: 55, date: '2026-06-10', originalName: '許嘉益', dept: '行一' },
                         { id: 56, date: '2026-06-26', originalName: '黃昱綸', dept: '二組' },
-                        { id: 57, date: '2026-05-18', originalName: '茍穎書', dept: '一組' }
+                        { id: 57, date: '2026-05-18', originalName: '茍穎書', dept: '一組' },
+                        { id: 60, date: '2026-07-10', originalName: '蔡雅玲', dept: '行二' }
                     ]
                 }
             },
