@@ -72,16 +72,7 @@
             </h1>
         </header>
 
-        <!-- Marquee -->
-        <div class="p-2 font-bold overflow-hidden whitespace-nowrap shadow flex items-center text-gray-800"
-            style="background-color: #FFE99A;">
-            <span class="flex-shrink-0 bg-[#FF9898] text-white px-3 py-1 rounded-full text-sm mr-3 shadow-sm">
-                <i class="fas fa-bullhorn mr-1"></i> 最新動態
-            </span>
-            <marquee behavior="scroll" direction="left" class="flex-grow text-lg tracking-wide">
-                {{ marqueeText }}
-            </marquee>
-        </div>
+
 
         <!-- Main Content Area -->
         <div class="container mx-auto mt-6 px-4">
@@ -121,6 +112,43 @@
                         <i class="fas" :class="showCharts ? 'fa-eye-slash' : 'fa-chart-pie'"></i> {{ showCharts ?
                         '隱藏統計表' : '顯示統計表' }}
                     </button>
+                </div>
+            </div>
+
+            <!-- Recent Status Dashboard -->
+            <div class="bg-white rounded-xl shadow-sm border border-[#FF9898]/20 mb-6 p-5">
+                <div class="flex flex-col md:flex-row gap-5 justify-center">
+                    
+                    <!-- Current Month -->
+                    <div class="flex-1 bg-gradient-to-r from-[#FFF0F0] to-white rounded-lg p-4 border border-[#FF9898]/30 flex flex-col justify-center shadow-sm hover:shadow transition">
+                        <div class="text-[#FF9898] font-bold mb-2 flex items-center text-base"><i class="fas fa-calendar-day mr-2"></i>本月動態 ({{ recentStatusSummary.current.label }})</div>
+                        <div class="text-sm space-y-2 mt-2">
+                            <div class="flex items-start">
+                                <span class="inline-block bg-[#FFE99A] text-gray-800 rounded px-2 py-0.5 mr-2 font-bold text-xs whitespace-nowrap shadow-sm">到職</span>
+                                <span class="text-gray-700 leading-relaxed font-bold">{{ recentStatusSummary.current.onboard.length ? recentStatusSummary.current.onboard.join('、') : '無' }}</span>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="inline-block bg-[#FF9898] text-white rounded px-2 py-0.5 mr-2 font-bold text-xs whitespace-nowrap shadow-sm">離職</span>
+                                <span class="text-gray-600 leading-relaxed">{{ recentStatusSummary.current.offboard.length ? recentStatusSummary.current.offboard.join('、') : '無' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Last Month -->
+                    <div class="flex-1 bg-gradient-to-r from-[#FFF0F0] to-white rounded-lg p-4 border border-[#FF9898]/30 flex flex-col justify-center shadow-sm hover:shadow transition">
+                        <div class="text-[#FF9898] font-bold mb-2 flex items-center text-base"><i class="fas fa-history mr-2"></i>上月回顧 ({{ recentStatusSummary.last.label }})</div>
+                        <div class="text-sm space-y-2 mt-2">
+                            <div class="flex items-start">
+                                <span class="inline-block bg-[#FFE99A] text-gray-800 rounded px-2 py-0.5 mr-2 font-bold text-xs whitespace-nowrap shadow-sm">到職</span>
+                                <span class="text-gray-700 leading-relaxed font-bold">{{ recentStatusSummary.last.onboard.length ? recentStatusSummary.last.onboard.join('、') : '無' }}</span>
+                            </div>
+                            <div class="flex items-start">
+                                <span class="inline-block bg-[#FF9898] text-white rounded px-2 py-0.5 mr-2 font-bold text-xs whitespace-nowrap shadow-sm">離職</span>
+                                <span class="text-gray-600 leading-relaxed">{{ recentStatusSummary.last.offboard.length ? recentStatusSummary.last.offboard.join('、') : '無' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -177,7 +205,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/07/13各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/07/16各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -221,15 +249,15 @@
                         <ul class="text-sm text-gray-700 space-y-2">
                             <li class="flex items-start">
                                 <i class="fas fa-exclamation-triangle text-red-400 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-red-600">行政支援單位高度警戒：</strong>「行二」(54.5%) 與「行一」(44.4%) 的離職率高居不下，且歷史離職人數已逼近或超越現有編制。這顯示基層單位的業務分工、薪資結構或職涯發展可能存在系統性問題，強烈建議立即啟動專案訪談，並評估是否需要重新分配工作。</div>
+                                <div><strong class="text-red-600">行政支援單位高度警戒：</strong>「行二」(54.5%) 與「行一」(44.4%) 離職率依然高居不下，歷史離職人數逼近或超越現行編制。強烈建議深入檢視基層行政體系的薪資結構、業務範疇與發展性，並考慮重新調整工作配置。</div>
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-orange-600">核心業務單位流動趨勢：</strong>「三組」(27.3%) 與「二組」(24.4%) 處於中偏高的流動率。核心單位適度流動有助於新陳代謝，但三組比例稍微偏高，HR 應關注近期是否有重大專案壓力或內部管理風格變動，以防關鍵人才流失。</div>
+                                <div><strong class="text-orange-600">一組穩定度下降：</strong>原本相對穩定的「一組」，近期出現連續離職狀況，離職率攀升至 25.0%，跨過了「需注意」的門檻。建議 HR 立即主動關懷該單位近期是否面臨專案壓力陡增或管理層面變動，預防骨牌效應。</div>
                             </li>
                             <li class="flex items-start">
-                                <i class="fas fa-shield-alt text-green-500 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-green-600">穩定團隊的標竿：</strong>「一組」在經歷近期人員異動後，離職率仍保持在相對低點 (20.8%)，是目前最穩定的單位。可進一步分析該單位的工作氣氛、主管領導模式與排班彈性，將其優良做法分享給其他單位參考。</div>
+                                <i class="fas fa-users-cog text-blue-500 mt-1 mr-2 flex-shrink-0"></i>
+                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>除了飆升的一組，「三組」(27.3%) 與「二組」(24.4%) 亦維持中等流動水準。三大核心業務單位目前流動率皆在四分之一左右。適度流動雖有助新陳代謝，但仍需建立核心技術與知識的留存機制，避免青黃不接。</div>
                             </li>
                         </ul>
                     </div>
@@ -328,7 +356,7 @@
         <!-- 頁尾版權宣告 -->
         <footer class="text-center py-6 mt-8 text-sm text-gray-500 font-medium">
             <p>Copyright &copy; 2026 Pip_Lin 版權所有</p>
-            <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v1.5.11</p>
+            <p class="text-xs text-[#FFAAAA] mt-1 font-bold tracking-wider">herolist v2.0</p>
             <p class="text-xs text-gray-400 mt-2"><i class="fas fa-sync-alt mr-1"></i>最後更新日期：{{ lastUpdated }}</p>
         </footer>
     </div>
@@ -353,9 +381,9 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/07/13資料)
+                    // 單位現職人數參考資料(2026/07/16資料)
                     currentEmployees: {
-                        '一組': 19,
+                        '一組': 18,
                         '二組': 31,
                         '三組': 16,
                         '行一': 5,
@@ -449,9 +477,8 @@
                 filteredOffboard() {
                     return this.filterAndSortList(this.offboardList);
                 },
-                marqueeText() {
+                recentStatusSummary() {
                     const now = new Date();
-                    // 為了展示邏輯，這裡以系統實際時間為基準抓取當月/上月
                     const currentMonth = now.getMonth() + 1;
                     const currentYear = now.getFullYear();
 
@@ -462,42 +489,25 @@
                         lastMonthYear--;
                     }
 
-                    // 抓取離職名單
-                    const currentMonthOffNames = this.offboardList
+                    const filterByMonth = (list, year, month) => list
                         .filter(item => {
                             const d = new Date(item.date);
-                            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
+                            return d.getFullYear() === year && (d.getMonth() + 1) === month;
                         })
-                        .map(item => this.maskName(item.originalName));
+                        .map(item => `${this.maskName(item.originalName)}(${item.dept})`);
 
-                    const lastMonthOffNames = this.offboardList
-                        .filter(item => {
-                            const d = new Date(item.date);
-                            return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
-                        })
-                        .map(item => this.maskName(item.originalName));
-
-                    // 抓取到職名單
-                    const currentMonthOnNames = this.onboardList
-                        .filter(item => {
-                            const d = new Date(item.date);
-                            return d.getFullYear() === currentYear && (d.getMonth() + 1) === currentMonth;
-                        })
-                        .map(item => this.maskName(item.originalName));
-
-                    const lastMonthOnNames = this.onboardList
-                        .filter(item => {
-                            const d = new Date(item.date);
-                            return d.getFullYear() === lastMonthYear && (d.getMonth() + 1) === lastMonth;
-                        })
-                        .map(item => this.maskName(item.originalName));
-
-                    const cOffText = currentMonthOffNames.length > 0 ? currentMonthOffNames.join('、') : '無';
-                    const lOffText = lastMonthOffNames.length > 0 ? lastMonthOffNames.join('、') : '無';
-                    const cOnText = currentMonthOnNames.length > 0 ? currentMonthOnNames.join('、') : '無';
-                    const lOnText = lastMonthOnNames.length > 0 ? lastMonthOnNames.join('、') : '無';
-
-                    return `⭐ 本月(${currentMonth}月)到職：${cOnText} ｜ 🌙 上月(${lastMonth}月)到職：${lOnText} ｜ 🚩 本月(${currentMonth}月)離職：${cOffText} ｜ 🍂 上月(${lastMonth}月)離職：${lOffText} ⭐`;
+                    return {
+                        current: {
+                            label: `${currentMonth}月份`,
+                            onboard: filterByMonth(this.onboardList, currentYear, currentMonth),
+                            offboard: filterByMonth(this.offboardList, currentYear, currentMonth)
+                        },
+                        last: {
+                            label: `${lastMonth}月份`,
+                            onboard: filterByMonth(this.onboardList, lastMonthYear, lastMonth),
+                            offboard: filterByMonth(this.offboardList, lastMonthYear, lastMonth)
+                        }
+                    };
                 },
                 shortestTenureStats() {
                     let validRecords = [];
