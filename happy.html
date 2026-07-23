@@ -171,10 +171,15 @@
         <div id="view-general" class="fade-in space-y-8">
             
             <!-- Detailed Stats Table (Moved to Top) -->
+            <!-- New Prominent Leave Summary -->
+            <div id="prominent-leave-summary" class="glass-card p-8 flex justify-center items-center gap-10 bg-gradient-to-r from-orange-50 to-pink-50 shadow-md">
+                <div id="leave-summary-header" class="flex flex-col md:flex-row gap-12 w-full justify-center"></div>
+            </div>
+
+            <!-- Detailed Stats Table (Moved to Top) -->
             <div class="glass-card p-0 overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white flex-wrap gap-4">
                     <h3 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-table-list mr-2 text-primary-green"></i> 每月詳細統計數據</h3>
-                    <div id="leave-summary-header" class="text-sm bg-gray-50 px-4 py-2 rounded-full border border-gray-100 flex gap-4 shadow-sm"></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse stats-table">
@@ -288,6 +293,29 @@
                         </div>
                     </div>
                 </div>
+
+            <!-- Boss's Review Section -->
+            <div id="boss-review-section" class="glass-card p-8 mt-8 border-t-4 border-red-500 bg-red-50/20">
+                <h3 class="text-2xl font-bold text-red-800 mb-6 flex items-center">
+                    <i class="fa-solid fa-gavel mr-3 text-red-600"></i> 老闆的真實考績與用人觀點
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Wolf Boss Review -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
+                        <h4 class="text-lg font-bold text-primary-orange mb-3 border-b border-orange-100 pb-2">狼人 (Wolf) - 評價：優等，穩定軍心的主力</h4>
+                        <p class="text-gray-700 leading-relaxed text-sm">
+                            「狼人是團隊裡穩定產出的主力。雖然特休高達 30 天且已經休了約一半，但他極度自律，請假多半安排在週四、週五，不僅不影響專案進度，還能看出他懂得分工與時間管理。這種懂得自我調節的『老鳥』，是公司不可或缺的資產。考績上絕對是給優等，甚至值得提拔他帶領新人，把這種高效率的工作節奏傳承下去。」
+                        </p>
+                    </div>
+                    <!-- Chill Boss Review -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-pink-100">
+                        <h4 class="text-lg font-bold text-[#FF61F8] mb-3 border-b border-pink-100 pb-2">爽人 (Chill) - 評價：墊底，團隊不穩定因素</h4>
+                        <p class="text-gray-700 leading-relaxed text-sm">
+                            「老實說，爽人的出勤狀況讓管理層非常頭痛。全年特休只有 7 天，請假天數卻高達 23 天，嚴重超標！這種頻繁、密集且零碎的請假模式，極大程度地干擾了團隊協作與專案推進。雖然他個人願意承擔扣薪，但公司花錢雇人要的是『產能與團隊穩定度』，而不是一個隨時可能不在位置上的人。從用人觀點來看，爽人的工作態度缺乏責任感，不可替代性極低。考績只能給墊底，若狀況無改善，必定會列入優先汰換名單。」
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ================= CALENDAR VIEW ================= -->
@@ -397,7 +425,8 @@
                     { date: '2026-07-15', hours: 1, isErrand: false },
                     { date: '2026-07-20', hours: 8, isErrand: false },
                     { date: '2026-07-21', hours: 4, isErrand: false },
-                    { date: '2026-07-22', hours: 8, isErrand: false }
+                    { date: '2026-07-22', hours: 8, isErrand: false },
+                    { date: '2026-07-23', hours: 8, isErrand: false }
                 ]
             }
         };
@@ -449,10 +478,22 @@
             // Calculate Days and Hours for Leave Summary
             const summaryEl = document.getElementById('leave-summary-header');
             if (summaryEl) {
+                const currentMonthIdx = 6; // July
+                const wolfCurrentMonthLeave = statsData['狼人'].leave[currentMonthIdx];
+                const chillCurrentMonthLeave = statsData['爽人'].leave[currentMonthIdx];
+
                 summaryEl.innerHTML = `
-                    <span class="text-primary-orange font-semibold flex items-center gap-1"><i class="fa-solid fa-user-ninja"></i> 狼人: 共30天 / 已休 ${formatDaysHours(usedLeaveWolf)}</span>
-                    <span class="text-gray-300">|</span>
-                    <span class="text-[#FF61F8] font-semibold flex items-center gap-1"><i class="fa-solid fa-umbrella-beach"></i> 爽人: 共7天 / 已休 ${formatDaysHours(usedLeaveChill)}</span>
+                    <div class="flex flex-col items-center text-center">
+                        <span class="text-primary-orange font-bold text-2xl md:text-3xl flex items-center gap-3"><i class="fa-solid fa-user-ninja"></i> 狼人</span>
+                        <span class="text-gray-600 font-medium mt-2 flex items-center gap-2">全年特休 30 天 / 整年已休 <strong class="text-primary-orange font-black text-xl px-2 py-1 bg-orange-100 rounded-md border border-orange-300 shadow-sm">${formatDaysHours(usedLeaveWolf)}</strong></span>
+                        <span class="text-gray-500 font-medium mt-2 text-sm">當月已休 <strong class="text-gray-700 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${formatDaysHours(wolfCurrentMonthLeave)}</strong></span>
+                    </div>
+                    <div class="hidden md:block w-px h-28 bg-gray-300 mx-4"></div>
+                    <div class="flex flex-col items-center text-center mt-6 md:mt-0">
+                        <span class="text-[#FF61F8] font-bold text-2xl md:text-3xl flex items-center gap-3"><i class="fa-solid fa-umbrella-beach"></i> 爽人</span>
+                        <span class="text-gray-600 font-medium mt-2 flex items-center gap-2">全年特休 7 天 / 整年已休 <strong class="text-[#FF61F8] font-black text-xl px-2 py-1 bg-[#FF61F8]/10 rounded-md border border-[#FF61F8]/40 shadow-sm">${formatDaysHours(usedLeaveChill)}</strong></span>
+                        <span class="text-gray-500 font-medium mt-2 text-sm">當月已休 <strong class="text-gray-700 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">${formatDaysHours(chillCurrentMonthLeave)}</strong></span>
+                    </div>
                 `;
             }
 
