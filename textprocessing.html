@@ -70,7 +70,7 @@
     <nav class="flex justify-center bg-secondaryBlue shadow-md sticky top-0 z-20">
         <button class="tab-btn active px-8 py-4 font-bold bg-accentYellow text-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab1')">TextShower</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab2')">TextTear</button>
-        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">Tool 03</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">TextPrompt</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">Tool 04</button>
     </nav>
 
@@ -133,11 +133,85 @@
             </div>
         </div>
 
-        <!-- =================== TAB 3: Placeholder =================== -->
-        <div id="tab3" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col justify-center items-center gap-6 border-t-8 border-primaryBlue min-h-[500px]">
-            <i class="fas fa-tools text-6xl text-secondaryBlue opacity-50 mb-4"></i>
-            <h2 class="text-3xl font-bold text-secondaryBlue opacity-70 tracking-widest">TOOL 03 準備中</h2>
-            <p class="text-gray-400">未來擴充功能將在此實裝</p>
+        <!-- =================== TAB 3: TextPrompt =================== -->
+        <div id="tab3" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
+            <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
+                TextPrompt 
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-2">
+                
+                <!-- 左側：輸入控制區 -->
+                <section class="lg:col-span-5 space-y-6">
+                    <!-- Text Inputs -->
+                    <div class="space-y-4">
+                        <div>
+                            <label for="tp-dec" class="block text-sm font-bold text-primaryBlue mb-1">DEC (Technology/Product Name)</label>
+                            <input type="text" id="tp-dec" placeholder="e.g., Artificial Intelligence" 
+                                class="w-full px-4 py-3 bg-lightBeige bg-opacity-30 border border-secondaryBlue rounded-xl focus:outline-none focus:ring-4 focus:ring-accentYellow transition-all text-gray-800">
+                        </div>
+                        <div>
+                            <label for="tp-ipc" class="block text-sm font-bold text-primaryBlue mb-1">IPC (Field/Classification)</label>
+                            <input type="text" id="tp-ipc" placeholder="e.g., Medical Image Analysis" 
+                                class="w-full px-4 py-3 bg-lightBeige bg-opacity-30 border border-secondaryBlue rounded-xl focus:outline-none focus:ring-4 focus:ring-accentYellow transition-all text-gray-800">
+                        </div>
+                    </div>
+
+                    <!-- Number & Date Inputs -->
+                    <div class="space-y-4 bg-gray-50 p-5 rounded-xl border border-lightBeige">
+                        <div>
+                            <label for="tp-x_val" class="block text-sm font-bold text-primaryBlue mb-1">X (Number of Items)</label>
+                            <input type="number" id="tp-x_val" placeholder="e.g., 5" min="1"
+                                class="w-full px-4 py-2 border border-secondaryBlue rounded-lg focus:outline-none focus:ring-2 focus:ring-accentYellow transition-all">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-primaryBlue mb-2 mt-4">Date Setting (yyyy/mm/dd)</label>
+                            <div class="grid grid-cols-3 gap-3 border-t border-lightBeige pt-3">
+                                <div>
+                                    <label for="tp-yyyy" class="block text-xs text-gray-500 mb-1">Year (yyyy)</label>
+                                    <input type="number" id="tp-yyyy" placeholder="2026" min="1900" max="2100"
+                                        class="w-full px-3 py-2 border border-secondaryBlue rounded-lg focus:outline-none focus:ring-2 focus:ring-accentYellow transition-all text-center">
+                                </div>
+                                <div>
+                                    <label for="tp-mm" class="block text-xs text-gray-500 mb-1">Month (mm)</label>
+                                    <input type="number" id="tp-mm" placeholder="12" min="1" max="12"
+                                        class="w-full px-3 py-2 border border-secondaryBlue rounded-lg focus:outline-none focus:ring-2 focus:ring-accentYellow transition-all text-center">
+                                </div>
+                                <div>
+                                    <label for="tp-dd" class="block text-xs text-gray-500 mb-1">Day (dd)</label>
+                                    <input type="number" id="tp-dd" placeholder="31" min="1" max="31"
+                                        class="w-full px-3 py-2 border border-secondaryBlue rounded-lg focus:outline-none focus:ring-2 focus:ring-accentYellow transition-all text-center">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="tp-btn-generate" 
+                        class="w-full bg-accentYellow text-primaryBlue font-bold py-3 px-6 rounded-xl shadow-md hover:bg-yellow-400 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                        </svg>
+                        Generate
+                    </button>
+                </section>
+
+                <!-- 右側：輸出結果區 -->
+                <section class="lg:col-span-7 flex flex-col h-full gap-2 relative">
+                    <div class="absolute right-0 top-0 flex gap-2 z-10">
+                         <button id="tp-btn-copy" class="text-sm bg-primaryBlue hover:bg-secondaryBlue text-lightBeige font-bold py-1.5 px-4 rounded-lg shadow transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            Copy Result
+                        </button>
+                    </div>
+                    
+                    <textarea id="tp-output-area" readonly
+                        class="w-full flex-grow min-h-[450px] p-5 pt-12 bg-gray-50 border border-secondaryBlue rounded-xl text-gray-800 text-lg leading-relaxed focus:outline-none resize-none shadow-inner"
+                    >Please fill in the variables on the left and click "Generate".</textarea>
+                </section>
+            </div>
         </div>
 
         <!-- =================== TAB 4: Placeholder =================== -->
@@ -431,6 +505,94 @@
             }
             window.getSelection().removeAllRanges();
         }
+
+        // ==========================================
+        // TAB 3: Prompt Generator 邏輯
+        // ==========================================
+        const rawTemplate = `你是一位資深且經驗豐富的「DEC」之「IPC」領域，用這幾個敘述並與關鍵字作為檢索式，或是依照你的專業可再延伸其他相關字或衍伸字組合成合適的檢索式，用這檢索式透過「深度學習」與你的專業知識，幫我檢索最相關的專利文件或是學術文章，檢索出來的結果用一個表格呈現，所檢索出來的文件都必須有相似度百分比，最相關最相似100%，最沒相關也不相似的以0%表示，但你只要呈現最高相關百分比大於97.5%相似度的文獻，專利文獻至少要6筆以上，如果有期刊文獻的話期刊文獻至少要2筆以上，用一個表格呈現專利的公開號或公告號或期刊名稱、相似度百分比、日期，完整詳細的呈現上述的相關內容，並要有會選擇這文件的原因。所找的文獻要顯示公開號或公告號，公告日期或公開日期在「yyyy」年「mm」月「dd」日之前。
+-------
+你是一位具有33年以上經驗的「DEC」之「IPC」領域，非常熟悉了解「IPC」的資深專業人士，現在要做專利技術比對，請閱讀我上傳的文獻檔案，詳細仔細地閱讀理解後利用「深度學習」方式比對相似的段落並用百分比表示相似程度，列出對應的段落描述與段落編號，依據你專業的豐富的經驗與專業知識並用心專注閱讀後，內容依序填入下面的1~「X」項目的標題其內容描述對應的文獻檔案內容段落並指出來是哪個段落有相似，必需利用表格呈現列出顯示，可以直接複製的格式，不要用圖表及CSV呈現，表格的格式列格式為：第一列為「序號」、第二列為「項目標題」、第三列為「對應的文獻段落處指出文章對應的段落」、第四列為「採用原因或無法對應原因」、第五列為「相似度百分比」，用0%到100%百分比來定義相關程度百分比來表示，最高相關就是100%、最不相關的為0%以此類推。但有一點須注意，當你沒辦法比對到或是文獻不相似請用「深度學習」方式透過你對於「IPC」領域通常知識或是「IPC」領域習知技術來說明表示。最後平均總相似度的百分比是多少。接將有比對到的段落用上傳的文件段落直接呈現英文段落，也必須顯示有比對過的段落或頁數。
+須注意以下a~c：
+a.對應的文獻段落處呈現原本的語言，若是繁體中文就顯示繁體中文、簡體中文就顯示簡體中文、英文就顯示英文
+b.如果有「方法」關鍵字請盡量找到對應的流程圖或方法描述
+c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」關鍵字請盡量找到對應的硬體架構圖`;
+
+        const tpBtnGenerate = document.getElementById('tp-btn-generate');
+        const tpBtnCopy = document.getElementById('tp-btn-copy');
+        const tpOutputArea = document.getElementById('tp-output-area');
+
+        // 生成邏輯
+        tpBtnGenerate.addEventListener('click', () => {
+            const dec = document.getElementById('tp-dec').value.trim();
+            const ipc = document.getElementById('tp-ipc').value.trim();
+            const xVal = document.getElementById('tp-x_val').value.trim();
+            const yyyy = document.getElementById('tp-yyyy').value.trim();
+            const mm = document.getElementById('tp-mm').value.trim();
+            const dd = document.getElementById('tp-dd').value.trim();
+
+            let resultText = rawTemplate;
+
+            const replacePlaceholder = (text, placeholder, value) => {
+                const regex = new RegExp(`「${placeholder}」`, 'g');
+                return text.replace(regex, value ? value : `「${placeholder}」`);
+            };
+
+            resultText = replacePlaceholder(resultText, 'DEC', dec);
+            resultText = replacePlaceholder(resultText, 'IPC', ipc);
+            resultText = replacePlaceholder(resultText, 'X', xVal);
+            resultText = replacePlaceholder(resultText, 'yyyy', yyyy);
+            resultText = replacePlaceholder(resultText, 'mm', mm);
+            resultText = replacePlaceholder(resultText, 'dd', dd);
+
+            tpOutputArea.value = resultText;
+            
+            // 按鈕動態回饋 (套用您的品牌色)
+            const originalHTML = tpBtnGenerate.innerHTML;
+            tpBtnGenerate.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Generated
+            `;
+            tpBtnGenerate.classList.replace('bg-accentYellow', 'bg-green-500');
+            tpBtnGenerate.classList.replace('text-primaryBlue', 'text-white');
+            
+            setTimeout(() => {
+                tpBtnGenerate.innerHTML = originalHTML;
+                tpBtnGenerate.classList.replace('bg-green-500', 'bg-accentYellow');
+                tpBtnGenerate.classList.replace('text-white', 'text-primaryBlue');
+            }, 2000);
+        });
+
+        // 複製邏輯
+        tpBtnCopy.addEventListener('click', () => {
+            if (tpOutputArea.value === 'Please fill in the variables on the left and click "Generate".' || tpOutputArea.value === '') {
+                return; 
+            }
+
+            tpOutputArea.select();
+            tpOutputArea.setSelectionRange(0, 99999); 
+
+            try {
+                document.execCommand('copy');
+                const originalHTML = tpBtnCopy.innerHTML;
+                tpBtnCopy.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Copied!
+                `;
+                tpBtnCopy.classList.replace('bg-primaryBlue', 'bg-green-500');
+                
+                setTimeout(() => {
+                    tpBtnCopy.innerHTML = originalHTML;
+                    tpBtnCopy.classList.replace('bg-green-500', 'bg-primaryBlue');
+                }, 2000);
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            window.getSelection().removeAllRanges();
+        });
     </script>
     <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
