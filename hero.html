@@ -70,6 +70,10 @@
                 <span class="text-3xl ml-4 font-normal"
                     style="font-family: 'Zhi Mang Xing', cursive; color: #FFE99A; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); letter-spacing: 2px;">「天地英雄氣，千秋尚凜然」</span>
             </h1>
+            <div class="flex flex-col text-sm md:text-right bg-white/20 px-3 py-1.5 rounded-lg shadow-sm border border-white/30 backdrop-blur-sm mt-3 md:mt-0">
+                <div class="font-bold tracking-wide"><i class="fas fa-calendar-alt mr-1"></i>今日：{{ currentDate }}</div>
+                <div class="text-xs opacity-90 mt-0.5"><i class="fas fa-history mr-1"></i>更新：{{ lastUpdated }}</div>
+            </div>
         </header>
 
 
@@ -367,7 +371,9 @@
         createApp({
             data() {
                 return {
-                    lastUpdated: '',
+                    currentDate: '', // 今日日期
+                    lastUpdated: '2026/08/11 08:55:10', // 鎖定更新時間，重新整理不會變更
+
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
                     showExpertInsights: false, // 控制專家觀點區塊的顯示與隱藏
                     filters: {
@@ -916,7 +922,15 @@
                 }
             },
             mounted() {
-                this.setLastUpdated();
+                // 設定今日日期 (格式: yyyy-MM-dd)
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                this.currentDate = `${yyyy}-${mm}-${dd}`;
+
+                // 移除自動更新最後修改時間，改由靜態鎖定，以滿足「不能按下REFRESH後作任何變化」需求
+                // this.setLastUpdated();
 
                 // 鎖定滑鼠右鍵選單
                 document.addEventListener('contextmenu', event => {
