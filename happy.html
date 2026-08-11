@@ -143,7 +143,11 @@
 <body>
 
     <!-- Header Section -->
-    <header class="header-gradient shadow-lg pb-16 pt-10 px-6 sm:px-10 mb-8 rounded-b-3xl">
+    <header class="header-gradient shadow-lg pb-16 pt-6 px-6 sm:px-10 mb-8 rounded-b-3xl">
+        <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row justify-between items-center text-green-100 text-sm font-medium border-b border-white/20 pb-3">
+            <div><i class="fa-regular fa-calendar mr-1"></i> 今日日期: <span id="current-system-date"></span></div>
+            <div class="opacity-80 mt-1 md:mt-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i> 報表最後更新: 2026-08-11 08:37:34</div>
+        </div>
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
                 <a href="javascript:void(0)" onclick="switchView('general')" class="block hover:opacity-80 transition cursor-pointer">
@@ -304,7 +308,7 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
                         <h4 class="text-lg font-bold text-primary-orange mb-3 border-b border-orange-100 pb-2">狼人 (Wolf) - 評價：優等，穩定軍心的主力</h4>
                         <p class="text-gray-700 leading-relaxed text-sm">
-                            「狼人是團隊裡穩定產出的主力。特休高達 30 天，截至目前已累計請休近 15 天（14天7小時），幾乎用掉一半額度，但整體表現依然可圈可點。他的請假模式雖以週末前後居多，偶爾也會在週間靈活調度半天，顯示他懂得在不影響專案推進的前提下妥善安排個人時間。這種高度自律、懂得平衡工作與生活節奏的『老鳥』風格，正是公司留才最需要的核心資產。考績上毫無懸念給優等，甚至值得培養他帶領新人，把這種高效穩健的工作文化傳承下去。」
+                            「狼人是團隊裡穩定產出的主力。雖然特休高達 30 天且已經休了約一半，但他極度自律，請假多半安排在週四、週五，不僅不影響專案進度，還能看出他懂得分工與時間管理。這種懂得自我調節的『老鳥』，是公司不可或缺的資產。考績上絕對是給優等，甚至值得提拔他帶領新人，把這種高效率的工作節奏傳承下去。」
                         </p>
                     </div>
                     <!-- Chill Boss Review -->
@@ -349,7 +353,7 @@
             '05': 168, // 21 days
             '06': 168, // 21 days
             '07': 184, // 23 days
-            '08': 176  // 22 days
+            '08': 168  // 21 days
         };
 
         const employees = {
@@ -381,8 +385,7 @@
                     { date: '2026-07-08', hours: 8, isErrand: false },
                     { date: '2026-07-16', hours: 4, isErrand: false },
                     { date: '2026-07-22', hours: 8, isErrand: false },
-                    { date: '2026-07-29', hours: 3, isErrand: false },
-                    { date: '2026-08-03', hours: 4, isErrand: false }
+                    { date: '2026-07-29', hours: 3, isErrand: false }
                 ]
             },
             '爽人': {
@@ -432,7 +435,9 @@
                     { date: '2026-07-23', hours: 8, isErrand: false },
                     { date: '2026-07-24', hours: 8, isErrand: false },
                     { date: '2026-07-30', hours: 2, isErrand: false },
-                    { date: '2026-07-31', hours: 1, isErrand: false }
+                    { date: '2026-07-31', hours: 1, isErrand: false },
+                    { date: '2026-08-06', hours: 1, isErrand: false },
+                    { date: '2026-08-10', hours: 4, isErrand: false }
                 ]
             }
         };
@@ -739,6 +744,13 @@
 
         // Initialization
         document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const dateSpan = document.getElementById('current-system-date');
+            if (dateSpan) dateSpan.innerText = `${yyyy}-${mm}-${dd}`;
+
             processData();
             renderTable();
             renderCharts();
