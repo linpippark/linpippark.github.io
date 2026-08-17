@@ -209,7 +209,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/08/14各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/08/17各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -257,11 +257,11 @@
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-orange-600">一組穩定度下降：</strong>原本相對穩定的「一組」，近期再度出現離職狀況，離職率攀升至 25.0%，跨過了「需注意」的門檻。建議 HR 立即主動關懷該單位近期是否面臨專案壓力陡增或管理層面變動，預防骨牌效應。</div>
+                                <div><strong class="text-orange-600">一組暫解警報：</strong>受惠於新進人員報到，「一組」離職率微幅回降至 24.0%，脫離了「需注意」的門檻。建議 HR 協助新進人員融入，並持續關懷該單位的專案壓力，以穩固團隊戰力。</div>
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-users-cog text-blue-500 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>除了飆升的一組，「三組」(25.0%) 與「二組」(24.4%) 亦維持中等流動水準。三大核心業務單位目前流動率皆在四分之一左右。適度流動雖有助新陳代謝，但仍需建立核心技術與知識的留存機制，避免青黃不接。</div>
+                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>隨著「一組」與「二組」(23.8%) 均有新血加入，加上「三組」(25.0%)，三大核心單位整體流動率目前約維持在四分之一左右。適度流動與新血注入有助新陳代謝，但仍需落實核心技術與知識的傳承與留存機制。</div>
                             </li>
                         </ul>
                     </div>
@@ -372,7 +372,7 @@
             data() {
                 return {
                     currentDate: '', // 今日日期
-                    lastUpdated: '2026/08/14 13:55:55', // 鎖定更新時間，重新整理不會變更
+                    lastUpdated: '2026/08/17 10:08:18', // 鎖定更新時間，重新整理不會變更
 
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
                     showExpertInsights: false, // 控制專家觀點區塊的顯示與隱藏
@@ -387,10 +387,10 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/08/14資料)
+                    // 單位現職人數參考資料(2026/08/17資料)
                     currentEmployees: {
-                        '一組': 18,
-                        '二組': 31,
+                        '一組': 19,
+                        '二組': 32,
                         '三組': 18,
                         '行一': 5,
                         '行二': 4
@@ -433,6 +433,8 @@
                         { id: 63, date: '2026-07-20', originalName: '吳政謙', dept: '三組' },
                         { id: 64, date: '2026-08-03', originalName: '張以琳', dept: '三組' },
                         { id: 65, date: '2026-08-03', originalName: '黃麗香', dept: '行二', remark: '會計' },
+                        { id: 68, date: '2026-08-17', originalName: '謝智勛', dept: '二組' },
+                        { id: 69, date: '2026-08-17', originalName: '徐佳琨', dept: '一組' }
                     ],
 
                     // 離職資料
