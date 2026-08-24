@@ -130,61 +130,62 @@
     <!-- 粒子特效容器 -->
     <div id="particles-js" class="absolute inset-0 z-0"></div>
     
+<body class="relative flex flex-col min-h-screen overflow-hidden">
+
+    <div id="particles-js" class="absolute inset-0 z-0"></div>
+    
     <!-- 復古螢幕特效 -->
     <div class="scanlines"></div>
     <div class="vignette"></div>
 
-    <main class="relative z-10 flex flex-col items-center justify-center flex-grow p-4 md:p-8 w-full min-h-screen max-w-5xl mx-auto">
+    <main class="relative z-10 flex flex-col items-center justify-center flex-grow p-4 sm:p-6 md:p-8 w-full h-full max-w-5xl mx-auto overflow-y-auto">
         
-        <!-- 頭部警告資訊 -->
-        <div class="mb-10 text-center w-full">
-            <div class="inline-block bg-red-900/30 border border-red-700 text-red-500 px-4 py-1 text-xs md:text-sm tracking-[0.3em] uppercase mb-6 rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.2)]">
+        <div class="mb-6 md:mb-10 text-center w-full mt-8 md:mt-0">
+            <div class="inline-block bg-red-900/30 border border-red-700 text-red-500 px-3 py-1 md:px-4 md:py-1 text-[10px] sm:text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-4 md:mb-6 rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.2)]">
                 系統嚴重警告：全面崩潰即將發生
             </div>
-            <div class="glitch-wrapper block mb-4">
-                <h1 class="glitch text-4xl md:text-6xl lg:text-7xl" data-text="一個時代的終結">一個時代的終結</h1>
+            <div class="glitch-wrapper block mb-3 md:mb-4 w-full">
+                <h1 class="glitch text-3xl sm:text-5xl md:text-6xl lg:text-7xl break-words" data-text="一個時代的終結">一個時代的終結</h1>
             </div>
-            <p class="text-gray-400 text-sm md:text-base tracking-widest uppercase opacity-80 bg-black/50 inline-block px-4 py-2 rounded">
-                Wade 的離去 <span class="text-red-500 font-bold mx-2">||</span> 資訊單位的殞落
+            <p class="text-gray-400 text-[10px] sm:text-xs md:text-base tracking-wider md:tracking-widest uppercase opacity-80 bg-black/50 inline-block px-3 py-1.5 md:px-4 md:py-2 rounded">
+                Wade 的離去 <span class="text-red-500 font-bold mx-1 md:mx-2">||</span> 資訊單位的殞落
             </p>
         </div>
 
-        <!-- 倒數計時器容器 (使用 Grid 解決跑版問題) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full mb-12">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 w-full max-w-4xl mx-auto mb-8 md:mb-12">
             
             <!-- 天 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
-                <span id="days" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">000</span>
-                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">剩餘天數</span>
+            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
+                <span id="days" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">000</span>
+                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">剩餘天數</span>
             </div>
             
             <!-- 時 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
-                <span id="hours" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">小時</span>
+            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
+                <span id="hours" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">小時</span>
             </div>
 
             <!-- 分 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
-                <span id="minutes" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">分鐘</span>
+            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
+                <span id="minutes" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">分鐘</span>
             </div>
 
             <!-- 秒 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
-                <span id="seconds" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">秒鐘</span>
+            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
+                <span id="seconds" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">秒鐘</span>
             </div>
             
         </div>
 
-        <!-- 系統殘存壽命進度條 -->
-        <div class="w-full max-w-3xl bg-black/60 p-4 rounded border border-gray-800">
-            <div class="flex justify-between text-xs md:text-sm text-gray-400 mb-2 font-digital tracking-widest">
+        <div class="w-full max-w-3xl bg-black/60 p-3 md:p-4 rounded border border-gray-800 mb-8 md:mb-0">
+            <div class="flex justify-between text-[10px] sm:text-xs md:text-sm text-gray-400 mb-1.5 md:mb-2 font-digital tracking-wider md:tracking-widest">
                 <span>[ 系統殘存生命力評估 ]</span>
                 <span id="health-percentage" class="text-red-500 font-bold animate-pulse">計算中...</span>
             </div>
-            <div class="h-3 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-700 shadow-inner relative">
+            <div class="h-2 md:h-3 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-700 shadow-inner relative">
                 <!-- 網格裝飾 -->
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwIDBMMCAwaDB2MTBoMTBWMHoiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjMjIyIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] z-10 pointer-events-none opacity-30"></div>
                 <!-- 紅色血條 -->
@@ -192,11 +193,10 @@
             </div>
         </div>
 
-        <!-- 絕望留言區 -->
-        <div class="mt-12 w-full max-w-2xl text-center space-y-3 font-digital text-lg md:text-xl text-gray-500 opacity-70">
+        <div class="mt-6 md:mt-12 w-full max-w-2xl text-center space-y-2 md:space-y-3 font-digital text-base sm:text-lg md:text-xl text-gray-500 opacity-70 pb-8 md:pb-0">
             <p>「14 年的基礎架構心血... 即將灰飛煙滅。」</p>
             <p>「系統最高權限已排定移交至資歷 6 個月之新進人員。」</p>
-            <p class="text-red-900/80 mt-4 text-sm md:text-base">>> 願伺服器能饒恕我們的靈魂_</p>
+            <p class="text-red-900/80 mt-3 md:mt-4 text-xs sm:text-sm md:text-base">>> 願伺服器能饒恕我們的靈魂_</p>
         </div>
 
     </main>
