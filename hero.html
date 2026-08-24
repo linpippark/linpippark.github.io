@@ -111,6 +111,10 @@
                     </div>
                 </div>
                 <div class="flex gap-2">
+                    <button @click="toggleNameMask"
+                        class="bg-gradient-to-r from-gray-300 to-gray-400 text-white font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
+                        <i class="fas" :class="isNameMasked ? 'fa-eye' : 'fa-eye-slash'"></i> {{ isNameMasked ? '顯示完整姓名' : '隱藏完整姓名' }}
+                    </button>
                     <button @click="toggleCharts"
                         class="bg-gradient-to-r from-purple-300 to-indigo-300 text-white font-bold px-4 py-2 rounded shadow hover:opacity-80 transition">
                         <i class="fas" :class="showCharts ? 'fa-eye-slash' : 'fa-chart-pie'"></i> {{ showCharts ?
@@ -209,7 +213,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/08/17各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/08/24各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -253,7 +257,7 @@
                         <ul class="text-sm text-gray-700 space-y-2">
                             <li class="flex items-start">
                                 <i class="fas fa-exclamation-triangle text-red-400 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-red-600">行政支援單位高度警戒：</strong>「行二」(66.7%) 與「行一」(44.4%) 離職率依然高居不下，歷史離職人數逼近或超越現行編制。強烈建議深入檢視基層行政體系的薪資結構、業務範疇與發展性，並考慮重新調整工作配置。</div>
+                                <div><strong class="text-red-600">行政單位持續警戒：</strong>「行二」雖有新進人員報到使離職率微降至 61.5%，但與「行一」(44.4%) 的離職率依然高居不下，歷史離職人數仍超越或逼近現行編制。強烈建議深入檢視基層行政體系的薪資結構、業務範疇與發展性，並考慮重新調整工作配置。</div>
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
@@ -372,8 +376,9 @@
             data() {
                 return {
                     currentDate: '', // 今日日期
-                    lastUpdated: '2026/08/17 10:08:18', // 鎖定更新時間，重新整理不會變更
+                    lastUpdated: '2026/08/24 10:39:30', // 鎖定更新時間，重新整理不會變更
 
+                    isNameMasked: true, // 姓名遮罩狀態
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
                     showExpertInsights: false, // 控制專家觀點區塊的顯示與隱藏
                     filters: {
@@ -387,13 +392,13 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/08/17資料)
+                    // 單位現職人數參考資料(2026/08/24資料)
                     currentEmployees: {
                         '一組': 19,
                         '二組': 32,
                         '三組': 18,
                         '行一': 5,
-                        '行二': 4
+                        '行二': 5
                     },
 
                     // 初始資料載入 (使用自增 ID 以供操作)
@@ -434,7 +439,8 @@
                         { id: 64, date: '2026-08-03', originalName: '張以琳', dept: '三組' },
                         { id: 65, date: '2026-08-03', originalName: '黃麗香', dept: '行二', remark: '會計' },
                         { id: 68, date: '2026-08-17', originalName: '謝智勛', dept: '二組' },
-                        { id: 69, date: '2026-08-17', originalName: '徐佳琨', dept: '一組' }
+                        { id: 69, date: '2026-08-17', originalName: '徐佳琨', dept: '一組' },
+                        { id: 70, date: '2026-08-24', originalName: '郭婉蓉', dept: '行二' }
                     ],
 
                     // 離職資料
@@ -593,6 +599,28 @@
                 }
             },
             methods: {
+                // 切換姓名遮罩狀態
+                async toggleNameMask() {
+                    if (this.isNameMasked) {
+                        const { value: password } = await Swal.fire({
+                            title: '輸入密碼',
+                            input: 'password',
+                            inputPlaceholder: '請輸入密碼解鎖',
+                            showCancelButton: true,
+                            confirmButtonText: '確認',
+                            cancelButtonText: '取消',
+                            confirmButtonColor: '#FF9898',
+                        });
+                        
+                        if (password === 'respect') {
+                            this.isNameMasked = false;
+                        } else if (password) {
+                            Swal.fire({ title: '密碼錯誤', icon: 'error', confirmButtonColor: '#FF9898' });
+                        }
+                    } else {
+                        this.isNameMasked = true; // 直接隱藏
+                    }
+                },
                 // 切換統計表顯示狀態
                 toggleCharts() {
                     this.showCharts = !this.showCharts;
@@ -606,6 +634,7 @@
                 // 姓名去識別化
                 maskName(name) {
                     if (!name) return '';
+                    if (!this.isNameMasked) return name; // 未開啟遮罩直接回傳
                     if (name.length === 2) return name[0] + 'Ｏ';
                     if (name.length >= 3) {
                         let arr = name.split('');
