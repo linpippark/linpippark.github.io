@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統末日倒數 - 一個時代的終結</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-main: #d1d5db; /* gray-300 */
+            --alert-color: #ef4444; /* red-500 */
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+            height: 100vh;
+        }
+
+        .font-digital {
+            font-family: 'VT323', monospace;
+        }
+
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, transparent 30%, #000 100%);
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        .glitch-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .glitch {
+            position: relative;
+            color: white;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 10px rgba(255,0,0,0.5);
+        }
+        
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+        }
+        
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 red;
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 #00ffcc;
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(10px, 9999px, 31px, 0); }
+            20% { clip: rect(61px, 9999px, 16px, 0); }
+            40% { clip: rect(29px, 9999px, 58px, 0); }
+            60% { clip: rect(89px, 9999px, 98px, 0); }
+            80% { clip: rect(4px, 9999px, 73px, 0); }
+            100% { clip: rect(53px, 9999px, 44px, 0); }
+        }
+        
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(65px, 9999px, 100px, 0); }
+            20% { clip: rect(3px, 9999px, 20px, 0); }
+            40% { clip: rect(45px, 9999px, 50px, 0); }
+            60% { clip: rect(12px, 9999px, 60px, 0); }
+            80% { clip: rect(80px, 9999px, 85px, 0); }
+            100% { clip: rect(25px, 9999px, 35px, 0); }
+        }
+
+        .countdown-box {
+            background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(0,0,0,0.9) 100%);
+            box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.05), 0 0 20px rgba(0,0,0,0.8);
+            border: 1px solid #333;
+            border-top: 1px solid #555;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .countdown-box::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.5), transparent);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col">
+
+    <!-- 粒子特效容器 -->
+    <div id="particles-js" class="absolute inset-0 z-0"></div>
+    
+    <!-- 復古螢幕特效 -->
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <main class="relative z-10 flex flex-col items-center justify-center flex-grow p-4 md:p-8 w-full min-h-screen max-w-5xl mx-auto">
+        
+        <!-- 頭部警告資訊 -->
+        <div class="mb-10 text-center w-full">
+            <div class="inline-block bg-red-900/30 border border-red-700 text-red-500 px-4 py-1 text-xs md:text-sm tracking-[0.3em] uppercase mb-6 rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.2)]">
+                系統嚴重警告：全面崩潰即將發生
+            </div>
+            <div class="glitch-wrapper block mb-4">
+                <h1 class="glitch text-4xl md:text-6xl lg:text-7xl" data-text="一個時代的終結">一個時代的終結</h1>
+            </div>
+            <p class="text-gray-400 text-sm md:text-base tracking-widest uppercase opacity-80 bg-black/50 inline-block px-4 py-2 rounded">
+                Wade 的離去 <span class="text-red-500 font-bold mx-2">||</span> 資訊單位的殞落
+            </p>
+        </div>
+
+        <!-- 倒數計時器容器 (使用 Grid 解決跑版問題) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full mb-12">
+            
+            <!-- 天 -->
+            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
+                <span id="days" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">000</span>
+                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">剩餘天數</span>
+            </div>
+            
+            <!-- 時 -->
+            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
+                <span id="hours" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">小時</span>
+            </div>
+
+            <!-- 分 -->
+            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
+                <span id="minutes" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">分鐘</span>
+            </div>
+
+            <!-- 秒 -->
+            <div class="countdown-box flex flex-col items-center justify-center p-6 md:p-8 rounded-lg">
+                <span id="seconds" class="font-digital text-5xl md:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
+                <span class="text-gray-500 text-sm md:text-base tracking-[0.2em] mt-2 font-bold">秒鐘</span>
+            </div>
+            
+        </div>
+
+        <!-- 系統殘存壽命進度條 -->
+        <div class="w-full max-w-3xl bg-black/60 p-4 rounded border border-gray-800">
+            <div class="flex justify-between text-xs md:text-sm text-gray-400 mb-2 font-digital tracking-widest">
+                <span>[ 系統殘存生命力評估 ]</span>
+                <span id="health-percentage" class="text-red-500 font-bold animate-pulse">計算中...</span>
+            </div>
+            <div class="h-3 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-700 shadow-inner relative">
+                <!-- 網格裝飾 -->
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwIDBMMCAwaDB2MTBoMTBWMHoiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjMjIyIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] z-10 pointer-events-none opacity-30"></div>
+                <!-- 紅色血條 -->
+                <div id="health-bar" class="h-full bg-red-600 transition-all duration-1000 ease-linear w-full shadow-[0_0_10px_rgba(220,38,38,0.8)] relative z-0"></div>
+            </div>
+        </div>
+
+        <!-- 絕望留言區 -->
+        <div class="mt-12 w-full max-w-2xl text-center space-y-3 font-digital text-lg md:text-xl text-gray-500 opacity-70">
+            <p>「14 年的基礎架構心血... 即將灰飛煙滅。」</p>
+            <p>「系統最高權限已排定移交至資歷 6 個月之新進人員。」</p>
+            <p class="text-red-900/80 mt-4 text-sm md:text-base">>> 願伺服器能饒恕我們的靈魂_</p>
+        </div>
+
+    </main>
+
+    <!-- 引入 particles.js 產生灰燼特效 -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    
+    <script>
+        // 目標離職日期：2026/08/31 23:59:59
+        const targetDate = new Date("2026-08-31T23:59:59").getTime();
+        
+        // 假設公司創立於14年前 (約2012年) 作為總生命週期的起點計算
+        const startDate = new Date("2012-08-31T00:00:00").getTime();
+        const totalLifespan = targetDate - startDate;
+
+        const daysEl = document.getElementById("days");
+        const hoursEl = document.getElementById("hours");
+        const minutesEl = document.getElementById("minutes");
+        const secondsEl = document.getElementById("seconds");
+        const healthBarEl = document.getElementById("health-bar");
+        const healthPercentageEl = document.getElementById("health-percentage");
+        const glitchTextEl = document.querySelector('.glitch');
+
+        // 補零函數
+        function pad(num, size) {
+            let s = num + "";
+            while (s.length < size) s = "0" + s;
+            return s;
+        }
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const timeRemaining = targetDate - now;
+
+            // 檢查是否已達末日
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                daysEl.innerText = "000";
+                hoursEl.innerText = "00";
+                minutesEl.innerText = "00";
+                secondsEl.innerText = "00";
+                
+                // 崩潰狀態視覺更新
+                glitchTextEl.innerText = "系統已全面崩潰";
+                glitchTextEl.setAttribute('data-text', '系統已全面崩潰');
+                healthBarEl.style.width = "0%";
+                healthPercentageEl.innerText = "0.000% - 連線中斷";
+                healthPercentageEl.classList.remove('animate-pulse');
+                document.body.style.backgroundColor = "#0a0000"; 
+                return;
+            }
+
+            // 計算天、時、分、秒
+            const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+
+            // 更新 DOM
+            daysEl.innerText = pad(days, 3);
+            hoursEl.innerText = pad(hours, 2);
+            minutesEl.innerText = pad(minutes, 2);
+            secondsEl.innerText = pad(seconds, 2);
+
+            // 計算系統殘存壽命百分比 (根據剩餘時間佔總生命週期的比例)
+            // 由於 14 年很長，這裡稍微放大剩餘時間的變化幅度，讓使用者能感覺到時間在流逝
+            const healthPercentage = (timeRemaining / (365 * 24 * 60 * 60 * 1000)) * 100; // 粗估剩餘年數轉百分比做示範
+            
+            // 為了視覺效果，我們設定一個最大值 100%，並顯示小數點後三位增加科技感
+            let displayPercent = Math.min(100, Math.max(0, healthPercentage * 30)); // 乘上倍數讓降幅明顯一點
+            
+            healthBarEl.style.width = displayPercent.toFixed(2) + "%";
+            healthPercentageEl.innerText = displayPercent.toFixed(3) + "%";
+        }
+
+        // 初次執行並設定每秒更新
+        updateCountdown();
+        const timerInterval = setInterval(updateCountdown, 1000);
+
+        // 初始化 Particles.js (灰燼飄落特效)
+        particlesJS("particles-js", {
+            "particles": {
+                "number": {
+                    "value": 60, // 粒子數量
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#6b7280" // 灰色灰燼
+                },
+                "shape": {
+                    "type": "circle",
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true,
+                    "anim": {
+                        "enable": true,
+                        "speed": 1,
+                        "opacity_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false
+                    }
+                },
+                "line_linked": {
+                    "enable": false // 關閉連線，使其像灰燼
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 1, // 緩慢飄落
+                    "direction": "bottom", // 向下
+                    "random": true,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": false
+                    },
+                    "onclick": {
+                        "enable": false
+                    },
+                    "resize": true
+                }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html>
