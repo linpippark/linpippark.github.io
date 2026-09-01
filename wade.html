@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>系統末日倒數 - 一個時代的終結</title>
+    <title>新資行一資訊單位 - 絕望的直播倒數</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=VT323&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #050505;
-            --text-main: #d1d5db; /* gray-300 */
-            --alert-color: #ef4444; /* red-500 */
+            /* 調整背景亮度，從純黑改為帶有廢墟感的深灰藍色 */
+            --bg-color: #1a1c23; 
+            --text-main: #8c92a1; 
+            --alert-color: #ff3333; 
+            --stream-color: #00ffcc;
+            --box-bg: rgba(25, 28, 36, 0.85); /* 稍微提亮的面板背景 */
         }
         
         body {
             background-color: var(--bg-color);
+            /* 增加一層微弱的噪點背景圖片，增加荒蕪感 */
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
             color: var(--text-main);
             font-family: 'Noto Sans TC', sans-serif;
             overflow-x: hidden;
@@ -29,10 +34,8 @@
 
         .scanlines {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            /* 掃描線對比度稍微降低，讓背景更清楚 */
             background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
             background-size: 100% 4px;
             z-index: 50;
@@ -42,196 +45,197 @@
 
         .vignette {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: radial-gradient(circle at center, transparent 30%, #000 100%);
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            /* 暗角範圍縮小，讓中央內容更亮更清楚 */
+            background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%);
             z-index: 40;
             pointer-events: none;
         }
 
-        .glitch-wrapper {
-            position: relative;
-            display: inline-block;
-        }
-        
         .glitch {
             position: relative;
-            color: white;
+            color: var(--alert-color); /* 標題改為刺眼的紅色加重悲壯感 */
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            text-shadow: 0 0 10px rgba(255,0,0,0.5);
+            text-shadow: 0 0 10px rgba(255,51,51,0.6);
+            animation: text-flicker 4s infinite;
         }
         
-        .glitch::before,
-        .glitch::after {
+        .glitch::before, .glitch::after {
             content: attr(data-text);
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-color);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent;
         }
         
         .glitch::before {
-            left: 2px;
-            text-shadow: -2px 0 red;
+            left: 3px;
+            text-shadow: -2px 0 var(--stream-color);
             clip: rect(24px, 550px, 90px, 0);
             animation: glitch-anim-2 3s infinite linear alternate-reverse;
         }
         
         .glitch::after {
-            left: -2px;
-            text-shadow: -2px 0 #00ffcc;
+            left: -3px;
+            text-shadow: -2px 0 #0000ff;
             clip: rect(85px, 550px, 140px, 0);
             animation: glitch-anim 2.5s infinite linear alternate-reverse;
         }
 
-        @keyframes glitch-anim {
-            0% { clip: rect(10px, 9999px, 31px, 0); }
-            20% { clip: rect(61px, 9999px, 16px, 0); }
-            40% { clip: rect(29px, 9999px, 58px, 0); }
-            60% { clip: rect(89px, 9999px, 98px, 0); }
-            80% { clip: rect(4px, 9999px, 73px, 0); }
-            100% { clip: rect(53px, 9999px, 44px, 0); }
-        }
-        
-        @keyframes glitch-anim-2 {
-            0% { clip: rect(65px, 9999px, 100px, 0); }
-            20% { clip: rect(3px, 9999px, 20px, 0); }
-            40% { clip: rect(45px, 9999px, 50px, 0); }
-            60% { clip: rect(12px, 9999px, 60px, 0); }
-            80% { clip: rect(80px, 9999px, 85px, 0); }
-            100% { clip: rect(25px, 9999px, 35px, 0); }
-        }
+        @keyframes glitch-anim { 0% { clip: rect(10px, 9999px, 31px, 0); } 20% { clip: rect(61px, 9999px, 16px, 0); } 40% { clip: rect(29px, 9999px, 58px, 0); } 60% { clip: rect(89px, 9999px, 98px, 0); } 80% { clip: rect(4px, 9999px, 73px, 0); } 100% { clip: rect(53px, 9999px, 44px, 0); } }
+        @keyframes glitch-anim-2 { 0% { clip: rect(65px, 9999px, 100px, 0); } 20% { clip: rect(3px, 9999px, 20px, 0); } 40% { clip: rect(45px, 9999px, 50px, 0); } 60% { clip: rect(12px, 9999px, 60px, 0); } 80% { clip: rect(80px, 9999px, 85px, 0); } 100% { clip: rect(25px, 9999px, 35px, 0); } }
+        @keyframes text-flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 22%, 24%, 55% { opacity: 0.3; text-shadow: none; } }
 
-        .countdown-box {
-            background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, rgba(0,0,0,0.9) 100%);
-            box-shadow: inset 0 0 15px rgba(255, 0, 0, 0.05), 0 0 20px rgba(0,0,0,0.8);
-            border: 1px solid #333;
-            border-top: 1px solid #555;
+        .broken-box {
+            background: var(--box-bg);
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0,0,0,0.3);
             position: relative;
-            overflow: hidden;
+            backdrop-filter: blur(4px);
         }
 
-        .countdown-box::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,0,0,0.5), transparent);
+        /* 即將到來的災難事件列表動畫 */
+        .event-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
         }
+        .event-list li::before {
+            content: '>';
+            position: absolute;
+            left: 0;
+            color: var(--alert-color);
+            animation: pulse-arrow 1.5s infinite;
+        }
+        @keyframes pulse-arrow { 0%, 100% { opacity: 1; transform: translateX(0); } 50% { opacity: 0.5; transform: translateX(3px); } }
+
+        .chat-scroll { animation: scroll-up 12s linear infinite; }
+        @keyframes scroll-up { 0% { transform: translateY(100%); } 100% { transform: translateY(-150%); } }
     </style>
 </head>
-<body class="relative flex flex-col">
-
-    <!-- 粒子特效容器 -->
-    <div id="particles-js" class="absolute inset-0 z-0"></div>
-    
 <body class="relative flex flex-col min-h-screen overflow-hidden">
 
     <div id="particles-js" class="absolute inset-0 z-0"></div>
-    
-    <!-- 復古螢幕特效 -->
     <div class="scanlines"></div>
     <div class="vignette"></div>
 
-    <main class="relative z-10 flex flex-col items-center justify-center flex-grow p-4 sm:p-6 md:p-8 w-full h-full max-w-5xl mx-auto overflow-y-auto">
+    <main class="relative z-10 flex flex-col items-center justify-start flex-grow p-4 sm:p-6 md:p-8 w-full h-full max-w-6xl mx-auto overflow-y-auto">
         
-        <div class="mb-6 md:mb-10 text-center w-full mt-8 md:mt-0">
-            <div class="inline-block bg-red-900/30 border border-red-700 text-red-500 px-3 py-1 md:px-4 md:py-1 text-[10px] sm:text-xs md:text-sm tracking-[0.2em] md:tracking-[0.3em] uppercase mb-4 md:mb-6 rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.2)]">
-                系統嚴重警告：全面崩潰即將發生
+        <div class="w-full flex justify-between items-center bg-[#111] border border-gray-700 p-2 md:p-3 mb-6 rounded shadow-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-3 h-3 bg-red-600 rounded-full animate-ping"></div>
+                <span class="text-gray-300 font-bold text-xs md:text-sm tracking-widest">[LIVE] 資訊災難實況：好厚實接管中</span>
             </div>
-            <div class="glitch-wrapper block mb-3 md:mb-4 w-full">
-                <h1 class="glitch text-3xl sm:text-5xl md:text-6xl lg:text-7xl break-words" data-text="一個時代的終結">一個時代的終結</h1>
+            <div class="text-[10px] md:text-xs text-gray-400 font-digital flex space-x-4">
+                <span>觀眾: 0</span>
+                <span>系統可用性: <span class="text-red-500 animate-pulse">4.2%</span></span>
             </div>
+        </div>
+
+        <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="broken-box p-4 border-l-4 border-l-gray-600">
+                <h3 class="text-gray-400 text-xs tracking-widest mb-3 border-b border-gray-700 pb-1">/// 時代的灰燼 ///</h3>
+                <p class="mb-1 text-gray-500 line-through decoration-gray-800 text-sm">
+                    <span class="mr-2 font-digital">2025.06.18</span> [奉先] 13年防線 (已殞落)
+                </p>
+                <p class="text-gray-500 line-through decoration-gray-800 text-sm">
+                    <span class="mr-2 font-digital">2026.08.31</span> [Wade] 14年根基 (已拔除)
+                </p>
+            </div>
+            <div class="broken-box p-4 border-l-4 border-l-red-600 bg-red-950/20">
+                <h3 class="text-red-400 text-xs tracking-widest mb-3 animate-pulse border-b border-red-900/50 pb-1">/// 當前絕境 ///</h3>
+                <p class="mb-1 text-gray-200 text-sm font-bold">
+                    <span class="text-red-400 mr-2 font-digital">2026.09.01</span> [好厚實] 菜鳥全面接管
+                </p>
+                <p class="text-gray-400 text-xs mt-2 italic bg-black/40 p-2 rounded">
+                    "嗨大家！今天機房好像有點熱，我來幫伺服器沖個水降溫..."
+                </p>
+            </div>
+        </div>
+
+        <div class="text-center w-full mb-8">
+            <h1 class="glitch text-3xl sm:text-5xl md:text-6xl break-words mb-2" data-text="距離系統徹底毀滅與離職">距離系統徹底毀滅與離職</h1>
+            <p class="text-gray-400 text-xs md:text-sm tracking-[0.3em] uppercase">Inevitable System Collapse Countdown</p>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-4xl mx-auto mb-8">
+            <div class="broken-box flex flex-col items-center justify-center py-6 md:py-8 rounded">
+                <span id="days" class="font-digital text-4xl sm:text-6xl text-gray-300 font-bold tracking-wider">000</span>
+                <span class="text-gray-500 text-xs sm:text-sm mt-2 font-bold tracking-widest">苟延殘喘 (天)</span>
+            </div>
+            <div class="broken-box flex flex-col items-center justify-center py-6 md:py-8 rounded">
+                <span id="hours" class="font-digital text-4xl sm:text-6xl text-gray-300 font-bold tracking-wider">00</span>
+                <span class="text-gray-500 text-xs sm:text-sm mt-2 font-bold tracking-widest">痛苦 (時)</span>
+            </div>
+            <div class="broken-box flex flex-col items-center justify-center py-6 md:py-8 rounded border-red-900/50">
+                <span id="minutes" class="font-digital text-4xl sm:text-6xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_5px_rgba(255,0,0,0.3)]">00</span>
+                <span class="text-red-800 text-xs sm:text-sm mt-2 font-bold tracking-widest">煎熬 (分)</span>
+            </div>
+            <div class="broken-box flex flex-col items-center justify-center py-6 md:py-8 rounded border-red-500/50 bg-red-950/10">
+                <span id="seconds" class="font-digital text-4xl sm:text-6xl text-red-400 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(255,0,0,0.8)] animate-pulse">00</span>
+                <span class="text-red-500 text-xs sm:text-sm mt-2 font-bold tracking-widest">崩潰 (秒)</span>
+            </div>
+        </div>
+
+        <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             
-            <div class="text-gray-400 text-[10px] sm:text-xs md:text-sm tracking-wider md:tracking-widest uppercase opacity-80 bg-black/60 inline-block px-4 py-3 md:px-6 md:py-4 rounded border border-red-900/50 text-left shadow-[inset_0_0_20px_rgba(0,0,0,0.8)]">
-                <p class="mb-2 text-gray-600 line-through decoration-red-900/80">
-                    <span class="text-red-800 font-bold mr-2">2025.06.18</span> 13年超強 MIS [奉先] 系統登出 (已殞落)
-                </p>
-                <p class="mb-3 text-gray-300">
-                    <span class="text-red-500 font-bold mr-2 animate-pulse">2026.08.31</span> 14年開朝元老 [Wade] 權限終止 (倒數中)
-                </p>
-                <div class="pt-2 border-t border-red-900/50 text-center mt-2">
-                    兩大支柱崩塌 <span class="text-red-500 font-bold mx-1 md:mx-2">||</span> 資訊單位末日
+            <!-- 即將引爆的災難節點 -->
+            <div class="broken-box p-5 lg:col-span-1 flex flex-col h-full border-t-4 border-t-yellow-600">
+                <h4 class="text-yellow-500 text-sm tracking-widest mb-4 font-bold border-b border-gray-700 pb-2">⚠ 即將引爆的災難節點</h4>
+                <ul class="event-list text-sm text-gray-300 space-y-3 flex-grow font-sans">
+                    <li><span class="font-bold text-gray-100">停電後機房重新覆電</span><br><span class="text-xs text-gray-500">"聽說總開關直接推上去就可以了？"</span></li>
+                    <li><span class="font-bold text-gray-100">SGS 外部稽核重新驗證</span><br><span class="text-xs text-gray-500">"文件？我昨天好像拿去墊便當了..."</span></li>
+                    <li><span class="font-bold text-gray-100">內部稽核</span><br><span class="text-xs text-gray-500">自己人查自己人，底牌全部曝光。</span></li>
+                    <li><span class="font-bold text-gray-100">管理審查會議</span><br><span class="text-xs text-gray-500">高層將面對滿江紅的 SLA 報表。</span></li>
+                    <li class="text-red-400"><span class="font-bold">經濟部稽核</span><br><span class="text-xs text-red-900">最終審判，法規與現實的殘酷碰撞。</span></li>
+                </ul>
+            </div>
+
+            <!-- 終端機與聊天室 (合併在右側) -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <!-- 錯誤日誌 -->
+                <div class="bg-black/90 border border-gray-700 p-4 rounded h-48 overflow-hidden relative text-left shadow-inner">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black z-10 pointer-events-none"></div>
+                    <div class="font-digital text-sm text-red-500 opacity-90 leading-relaxed absolute bottom-4 w-full pr-4" id="terminal-log">
+                        > SYSTEM: CHECKING CRITICAL PATHS...<br>
+                        > WARNING: POWER OUTAGE PROTOCOL [MISSING]<br>
+                        > WARNING: SGS AUDIT DOCS [NOT FOUND]<br>
+                        > [好厚實] executed: sudo reboot -f<br>
+                    </div>
+                </div>
+                
+                <!-- 直播聊天室 -->
+                <div class="broken-box p-3 rounded h-24 overflow-hidden relative text-xs text-left font-sans flex-grow">
+                    <div class="relative h-full overflow-hidden">
+                        <div class="absolute bottom-0 w-full space-y-1.5 pb-2 chat-scroll opacity-80">
+                            <p><span class="text-yellow-500 font-bold">QA_Team:</span> 外部稽核的資料準備好了嗎？</p>
+                            <p><span class="text-pink-400 font-bold">好厚實(MOD):</span> 欸斗...我現在在喬鏡頭，等等喔！</p>
+                            <p><span class="text-gray-400">User404:</span> 機房好像冒煙了</p>
+                            <p><span class="text-red-500 font-bold">SYSTEM:</span> UPS BATTERY LOW.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 w-full max-w-4xl mx-auto mb-8 md:mb-12">
-            
-            <!-- 天 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
-                <span id="days" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">000</span>
-                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">剩餘天數</span>
-            </div>
-            
-            <!-- 時 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
-                <span id="hours" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">小時</span>
-            </div>
-
-            <!-- 分 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
-                <span id="minutes" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">分鐘</span>
-            </div>
-
-            <!-- 秒 -->
-            <div class="countdown-box flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg">
-                <span id="seconds" class="font-digital text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-red-500 font-bold tracking-wider filter drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]">00</span>
-                <span class="text-gray-500 text-xs sm:text-sm md:text-base tracking-[0.1em] sm:tracking-[0.2em] mt-1 sm:mt-2 font-bold">秒鐘</span>
-            </div>
-            
-        </div>
-
-        <div class="w-full max-w-3xl bg-black/60 p-3 md:p-4 rounded border border-gray-800 mb-8 md:mb-0">
-            <div class="flex justify-between text-[10px] sm:text-xs md:text-sm text-gray-400 mb-1.5 md:mb-2 font-digital tracking-wider md:tracking-widest">
-                <span>[ 系統殘存生命力評估 ]</span>
-                <span id="health-percentage" class="text-red-500 font-bold animate-pulse">計算中...</span>
-            </div>
-            <div class="h-2 md:h-3 w-full bg-gray-900 rounded-full overflow-hidden border border-gray-700 shadow-inner relative">
-                <!-- 網格裝飾 -->
-                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwIDBMMCAwaDB2MTBoMTBWMHoiIGZpbGw9Im5vbmUiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjMjIyIiBzdHJva2Utd2lkdGg9IjEiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')] z-10 pointer-events-none opacity-30"></div>
-                <!-- 紅色血條 -->
-                <div id="health-bar" class="h-full bg-red-600 transition-all duration-1000 ease-linear w-full shadow-[0_0_10px_rgba(220,38,38,0.8)] relative z-0"></div>
-            </div>
-        </div>
-
-        <div class="mt-6 md:mt-12 w-full max-w-2xl text-center space-y-2 md:space-y-3 font-digital text-base sm:text-lg md:text-xl text-gray-500 opacity-70 pb-8 md:pb-0">
-            <p>「去年，奉先築起的城牆已塌...」</p>
-            <p>「如今，Wade 守護的根基將毀...」</p>
-            <p>「14 年的基礎架構心血... 即將徹底灰飛煙滅。」</p>
-            <p>「系統最高權限已排定移交至資歷 6 個月之新進人員。」</p>
-            <p class="text-red-900/80 mt-3 md:mt-4 text-xs sm:text-sm md:text-base">>> 願伺服器能饒恕我們的靈魂_</p>
+        <div class="mt-2 w-full max-w-3xl text-center space-y-2 text-sm md:text-base text-gray-400">
+            <p class="font-bold text-gray-300">防線已破，根基已毀。接下來的每一場稽核與復原，都是公開處刑。</p>
+            <p class="opacity-70 text-xs md:text-sm">這不是技術問題，這是一場無人能倖免的人為災難。</p>
         </div>
 
     </main>
 
-    <!-- 引入 particles.js 產生灰燼特效 -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    
     <script>
-        // 目標離職日期：2026/08/31 23:59:59
-        const targetDate = new Date("2026-08-31T23:59:59").getTime();
-        
-        // 假設公司創立於14年前 (約2012年) 作為總生命週期的起點計算
-        const startDate = new Date("2012-08-31T00:00:00").getTime();
-        const totalLifespan = targetDate - startDate;
+        // 設定離職目標日
+        const targetDate = new Date("2027-02-28T23:59:59").getTime();
 
         const daysEl = document.getElementById("days");
         const hoursEl = document.getElementById("hours");
         const minutesEl = document.getElementById("minutes");
         const secondsEl = document.getElementById("seconds");
-        const healthBarEl = document.getElementById("health-bar");
-        const healthPercentageEl = document.getElementById("health-percentage");
-        const glitchTextEl = document.querySelector('.glitch');
 
-        // 補零函數
         function pad(num, size) {
             let s = num + "";
             while (s.length < size) s = "0" + s;
@@ -242,109 +246,63 @@
             const now = new Date().getTime();
             const timeRemaining = targetDate - now;
 
-            // 檢查是否已達末日
             if (timeRemaining <= 0) {
                 clearInterval(timerInterval);
-                daysEl.innerText = "000";
-                hoursEl.innerText = "00";
-                minutesEl.innerText = "00";
-                secondsEl.innerText = "00";
-                
-                // 崩潰狀態視覺更新
-                glitchTextEl.innerText = "系統已全面崩潰";
-                glitchTextEl.setAttribute('data-text', '系統已全面崩潰');
-                healthBarEl.style.width = "0%";
-                healthPercentageEl.innerText = "0.000% - 連線中斷";
-                healthPercentageEl.classList.remove('animate-pulse');
-                document.body.style.backgroundColor = "#0a0000"; 
+                daysEl.innerText = "000"; hoursEl.innerText = "00";
+                minutesEl.innerText = "00"; secondsEl.innerText = "00";
+                document.querySelector('.glitch').innerText = "災難已降臨";
                 return;
             }
 
-            // 計算天、時、分、秒
             const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
             const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
 
-            // 更新 DOM
             daysEl.innerText = pad(days, 3);
             hoursEl.innerText = pad(hours, 2);
             minutesEl.innerText = pad(minutes, 2);
             secondsEl.innerText = pad(seconds, 2);
-
-            // 計算系統殘存壽命百分比 (根據剩餘時間佔總生命週期的比例)
-            // 由於 14 年很長，這裡稍微放大剩餘時間的變化幅度，讓使用者能感覺到時間在流逝
-            const healthPercentage = (timeRemaining / (365 * 24 * 60 * 60 * 1000)) * 100; // 粗估剩餘年數轉百分比做示範
-            
-            // 為了視覺效果，我們設定一個最大值 100%，並顯示小數點後三位增加科技感
-            let displayPercent = Math.min(100, Math.max(0, healthPercentage * 30)); // 乘上倍數讓降幅明顯一點
-            
-            healthBarEl.style.width = displayPercent.toFixed(2) + "%";
-            healthPercentageEl.innerText = displayPercent.toFixed(3) + "%";
         }
 
-        // 初次執行並設定每秒更新
         updateCountdown();
         const timerInterval = setInterval(updateCountdown, 1000);
 
-        // 初始化 Particles.js (灰燼飄落特效)
+        // 終端機亂碼訊息
+        const terminalLog = document.getElementById('terminal-log');
+        const errors = [
+            "> ALERT: SGS AUDITOR DETECTED AT FRONT DESK.",
+            "> [好厚實]: 'UPS 是什麼？可以吃嗎？'",
+            "> ERROR: POWER RESTORATION FAILED. MANUAL INTERVENTION REQUIRED.",
+            "> SYSTEM: PREPARING INTERNAL AUDIT REPORT... [DATA CORRUPTED]",
+            "> WARNING: MINISTRY OF ECONOMIC AFFAIRS AUDIT PENDING.",
+            "> [好厚實]: '大家快看！機房燈光閃得像夜店！'",
+            "> KERNEL PANIC: NO COMPETENT ADMIN FOUND TO HANDLE CRISIS."
+        ];
+
+        setInterval(() => {
+            if (Math.random() > 0.6) {
+                const randomError = errors[Math.floor(Math.random() * errors.length)];
+                terminalLog.innerHTML += randomError + "<br>";
+                const lines = terminalLog.innerHTML.split('<br>');
+                if(lines.length > 8) {
+                    terminalLog.innerHTML = lines.slice(lines.length - 8).join('<br>');
+                }
+            }
+        }, 2000);
+
+        // 初始化微弱的塵埃粒子，增加荒蕪感
         particlesJS("particles-js", {
             "particles": {
-                "number": {
-                    "value": 60, // 粒子數量
-                    "density": {
-                        "enable": true,
-                        "value_area": 800
-                    }
-                },
-                "color": {
-                    "value": "#6b7280" // 灰色灰燼
-                },
-                "shape": {
-                    "type": "circle",
-                },
-                "opacity": {
-                    "value": 0.5,
-                    "random": true,
-                    "anim": {
-                        "enable": true,
-                        "speed": 1,
-                        "opacity_min": 0.1,
-                        "sync": false
-                    }
-                },
-                "size": {
-                    "value": 3,
-                    "random": true,
-                    "anim": {
-                        "enable": false
-                    }
-                },
-                "line_linked": {
-                    "enable": false // 關閉連線，使其像灰燼
-                },
-                "move": {
-                    "enable": true,
-                    "speed": 1, // 緩慢飄落
-                    "direction": "bottom", // 向下
-                    "random": true,
-                    "straight": false,
-                    "out_mode": "out",
-                    "bounce": false,
-                }
+                "number": { "value": 30, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": ["#888888", "#555555", "#ff3333"] },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.5, "random": true, "anim": { "enable": true, "speed": 1, "opacity_min": 0.1, "sync": false } },
+                "size": { "value": 3, "random": true, "anim": { "enable": false } },
+                "line_linked": { "enable": false },
+                "move": { "enable": true, "speed": 1, "direction": "bottom", "random": true, "straight": false, "out_mode": "out", "bounce": false }
             },
-            "interactivity": {
-                "detect_on": "canvas",
-                "events": {
-                    "onhover": {
-                        "enable": false
-                    },
-                    "onclick": {
-                        "enable": false
-                    },
-                    "resize": true
-                }
-            },
+            "interactivity": { "detect_on": "canvas", "events": { "onhover": { "enable": false }, "onclick": { "enable": false }, "resize": true } },
             "retina_detect": true
         });
     </script>
