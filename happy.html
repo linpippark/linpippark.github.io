@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -147,7 +146,7 @@
     <header class="header-gradient shadow-lg pb-16 pt-6 px-6 sm:px-10 mb-8 rounded-b-3xl">
         <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row justify-between items-center text-green-100 text-sm font-medium border-b border-white/20 pb-3">
             <div><i class="fa-regular fa-calendar mr-1"></i> 今日日期: <span id="current-system-date"></span></div>
-            <div class="opacity-80 mt-1 md:mt-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i> 報表最後更新: 2026-08-21 10:47:52</div>
+            <div class="opacity-80 mt-1 md:mt-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i> 報表最後更新: 2026-09-10 15:08:04</div>
         </div>
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
@@ -234,7 +233,7 @@
                             </div>
                         </div>
                         <p class="text-gray-600 leading-relaxed">
-                            身為擁有 <strong class="text-primary-orange bg-orange-50 px-1 rounded">30 天特休的資深員工</strong>，狼人目前已經使用了 <strong class="text-primary-orange bg-orange-50 px-1 rounded">過半數的假期 (約 16 天)</strong>。他依然善於利用 <strong class="text-primary-orange bg-orange-50 px-1 rounded">零碎時段 (如 5H、3H) 或週四週五請假</strong>，巧妙地進行 <strong class="text-primary-orange bg-orange-50 px-1 rounded">彈性休息</strong>，完全不影響進度。這種模式顯示他深諳 <strong class="text-primary-orange bg-orange-50 px-1 rounded">工作與生活的平衡之道</strong>，是個懂得 <strong class="text-primary-orange bg-orange-50 px-1 rounded">提前規劃</strong>、<strong class="text-primary-orange bg-orange-50 px-1 rounded">極度高效率且自律</strong> 的工作者。
+                            身為擁有 <strong class="text-primary-orange bg-orange-50 px-1 rounded">30 天特休的資深員工</strong>，狼人進入 9 月後總休假天數控制在 <strong class="text-primary-orange bg-orange-50 px-1 rounded">約 18 天</strong>。他持續展現高超的時間管理技巧，除了利用 <strong class="text-primary-orange bg-orange-50 px-1 rounded">零碎時段</strong>，也能在專案空檔安排 <strong class="text-primary-orange bg-orange-50 px-1 rounded">全天休假 (8H)</strong> 進行 <strong class="text-primary-orange bg-orange-50 px-1 rounded">彈性休息</strong>，完全不影響工作進度。這種模式顯示他深諳 <strong class="text-primary-orange bg-orange-50 px-1 rounded">工作與生活的平衡之道</strong>，是個懂得 <strong class="text-primary-orange bg-orange-50 px-1 rounded">提前規劃</strong>、<strong class="text-primary-orange bg-orange-50 px-1 rounded">極度高效率且自律</strong> 的典範。
                         </p>
                     </div>
 
@@ -309,7 +308,7 @@
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-orange-100">
                         <h4 class="text-lg font-bold text-primary-orange mb-3 border-b border-orange-100 pb-2">狼人 (Wolf) - 評價：優等，穩定軍心的主力</h4>
                         <p class="text-gray-700 leading-relaxed text-sm">
-                            「狼人是團隊裡穩定產出的主力。雖然特休高達 30 天且已經休了過半，但他極度自律，近期甚至靈活運用半天或幾小時的零星請假來處理私事或調節體力，不僅完全不影響專案進度，還能看出他懂得分工與時間管理。這種懂得自我調節的『老鳥』，是公司不可或缺的資產。考績上絕對是給優等，甚至值得提拔他帶領新人，把這種高效率的工作節奏傳承下去。」
+                            「狼人是團隊裡穩定產出的絕對主力。即使進入下半年、特休已用過半，他的出勤依然極度自律且充滿策略性。近期他除了靈活運用幾小時的零星請假外，也能在不影響專案進度的前提下安排全天休假，展現了強大的分工與專案掌控能力。這種懂得自我調節、在休息與產出間取得完美平衡的『老鳥』，是公司不可或缺的頂級資產。考績上絕對是給予最高優等，且強烈建議提拔他帶領新人，把這種高效率的工作節奏傳承給整個團隊。」
                         </p>
                     </div>
                     <!-- Chill Boss Review -->
@@ -354,7 +353,8 @@
             '05': 168, // 21 days
             '06': 168, // 21 days
             '07': 184, // 23 days
-            '08': 168  // 21 days
+            '08': 168, // 21 days
+            '09': 176  // 22 days
         };
 
         const employees = {
@@ -387,7 +387,10 @@
                     { date: '2026-07-16', hours: 4, isErrand: false },
                     { date: '2026-07-22', hours: 8, isErrand: false },
                     { date: '2026-07-29', hours: 3, isErrand: false },
-                    { date: '2026-08-21', hours: 5, isErrand: false }
+                    { date: '2026-08-21', hours: 5, isErrand: false },
+                    { date: '2026-09-01', hours: 3, isErrand: false },
+                    { date: '2026-09-09', hours: 3, isErrand: false },
+                    { date: '2026-09-10', hours: 8, isErrand: false }
                 ]
             },
             '爽人': {
@@ -446,13 +449,13 @@
             }
         };
 
-        const months = ['01', '02', '03', '04', '05', '06', '07', '08'];
-        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
+        const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09'];
+        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月'];
 
         // Aggregate Data processing
         let statsData = {
-            '狼人': { leave: [0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0] },
-            '爽人': { leave: [0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0] }
+            '狼人': { leave: [0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0] },
+            '爽人': { leave: [0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0] }
         };
 
         let totalLeaveWolf = 0;
@@ -475,7 +478,7 @@
             Object.keys(employees).forEach(emp => {
                 employees[emp].records.forEach(rec => {
                     const monthIndex = parseInt(rec.date.split('-')[1]) - 1;
-                    if (monthIndex >= 0 && monthIndex <= 7) {
+                    if (monthIndex >= 0 && monthIndex <= 8) {
                         if (rec.isErrand) {
                             statsData[emp].errand[monthIndex] += rec.hours;
                         } else {
@@ -493,7 +496,7 @@
             // Calculate Days and Hours for Leave Summary
             const summaryEl = document.getElementById('leave-summary-header');
             if (summaryEl) {
-                const currentMonthIdx = 7; // August
+                const currentMonthIdx = 8; // September
                 const wolfCurrentMonthLeave = statsData['狼人'].leave[currentMonthIdx];
                 const chillCurrentMonthLeave = statsData['爽人'].leave[currentMonthIdx];
 
