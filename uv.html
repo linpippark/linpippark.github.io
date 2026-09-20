@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學宇宙大冒險</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入 Tone.js 用於音效 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #0b1021;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 讓 Canvas 背景固定在最底層 */
+        #space-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* 玻璃透視面板效果 */
+        .glass-panel {
+            background: rgba(20, 30, 60, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 卡片懸浮特效 */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 15px 30px rgba(0,255,255,0.3);
+            border-color: rgba(0,255,255,0.5);
+        }
+
+        /* 難度選擇按鈕動畫 */
+        .difficulty-btn {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .difficulty-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        /* 全螢幕視覺特效層 */
+        #fx-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        /* 隱藏滾動條 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center">
+    <!-- 動態星空背景 -->
+    <canvas id="space-canvas"></canvas>
+    <!-- 全螢幕特效覆蓋層 -->
+    <div id="fx-overlay"></div>
+
+    <div class="w-full max-w-6xl p-4 md:p-8 flex flex-col items-center relative z-10">
+        
+        <header class="text-center mb-6 w-full mt-2">
+            <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
+                <i class="fas fa-rocket mr-2 text-white"></i>數學宇宙大冒險
+            </h1>
+            <p class="text-gray-300">誰能先建立 10 座星際基地，誰就是宇宙霸主！</p>
+        </header>
+
+        <!-- 玩家資訊區與日誌 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mb-8">
+            <!-- 玩家 1 (父母) -->
+            <div class="glass-panel p-5 border-l-4 border-l-blue-500" id="panel-p1">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-bold text-blue-300"><i class="fas fa-user-astronaut"></i> 指揮官 (爸爸/媽媽)</h2>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-coins text-yellow-400"></i> 星幣</span>
+                        <span id="p1-coins" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-gem text-purple-400"></i> 礦石</span>
+                        <span id="p1-ore" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-bolt text-yellow-200"></i> 能源</span>
+                        <span id="p1-energy" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-building text-green-400"></i> 基地</span>
+                        <span id="p1-bases" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-blue-900 bg-opacity-40 p-2 rounded flex justify-between items-center col-span-2 border border-blue-500/30">
+                        <span><i class="fas fa-shield-alt text-cyan-400"></i> 星際護盾</span>
+                        <span id="p1-shield" class="font-bold text-lg text-cyan-300">0</span>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-gray-400">技能：建造基地資源需求減少。</div>
+            </div>
+
+            <!-- 任務日誌 -->
+            <div class="glass-panel p-4 flex flex-col h-64 md:h-auto">
+                <h3 class="text-center font-bold text-gray-200 mb-2 border-b border-gray-600 pb-2"><i class="fas fa-list-alt"></i> 航行日誌</h3>
+                <div id="game-log" class="flex-1 overflow-y-auto no-scrollbar space-y-2 text-sm text-gray-300 pr-2">
+                    <!-- 日誌內容會動態加入 -->
+                </div>
+            </div>
+
+            <!-- 玩家 2 (孩子) -->
+            <div class="glass-panel p-5 border-l-4 border-l-pink-500" id="panel-p2">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xl font-bold text-pink-300"><i class="fas fa-child"></i> 小探險家 (孩子)</h2>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-coins text-yellow-400"></i> 星幣</span>
+                        <span id="p2-coins" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-gem text-purple-400"></i> 礦石</span>
+                        <span id="p2-ore" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-bolt text-yellow-200"></i> 能源</span>
+                        <span id="p2-energy" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-black bg-opacity-40 p-2 rounded flex justify-between items-center">
+                        <span><i class="fas fa-building text-green-400"></i> 基地</span>
+                        <span id="p2-bases" class="font-bold text-lg">0</span>
+                    </div>
+                    <div class="bg-pink-900 bg-opacity-40 p-2 rounded flex justify-between items-center col-span-2 border border-pink-500/30">
+                        <span><i class="fas fa-shield-alt text-cyan-400"></i> 星際護盾</span>
+                        <span id="p2-shield" class="font-bold text-lg text-cyan-300">0</span>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-gray-400">技能：收集資源有 25% 機率雙倍。</div>
+            </div>
+        </div>
+
+        <!-- 控制台與答題區 -->
+        <div class="w-full">
+            <div class="glass-panel p-6" id="control-panel">
+                
+                <!-- 行動按鈕區 -->
+                <div id="action-buttons-container">
+                    <h2 class="text-2xl font-bold mb-4 text-center">選擇行動指令</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button onclick="prepareAction('collect')" class="bg-gradient-to-b from-purple-600 to-purple-900 hover:from-purple-500 hover:to-purple-700 p-4 rounded-xl font-bold card-hover flex flex-col items-center gap-2 border border-purple-500/50">
+                            <i class="fas fa-meteor text-3xl"></i>
+                            <span>探索收集</span>
+                        </button>
+                        <button onclick="prepareAction('shop')" class="bg-gradient-to-b from-yellow-600 to-yellow-900 hover:from-yellow-500 hover:to-yellow-700 p-4 rounded-xl font-bold card-hover flex flex-col items-center gap-2 border border-yellow-500/50">
+                            <i class="fas fa-shopping-cart text-3xl"></i>
+                            <span>星際商店</span>
+                        </button>
+                        <button onclick="prepareAction('build')" class="bg-gradient-to-b from-green-600 to-green-900 hover:from-green-500 hover:to-green-700 p-4 rounded-xl font-bold card-hover flex flex-col items-center gap-2 border border-green-500/50">
+                            <i class="fas fa-hammer text-3xl"></i>
+                            <span>建造基地</span>
+                        </button>
+                        <button onclick="prepareAction('chance')" class="bg-gradient-to-b from-red-600 to-red-900 hover:from-red-500 hover:to-red-700 p-4 rounded-xl font-bold card-hover flex flex-col items-center gap-2 border border-red-500/50">
+                            <i class="fas fa-dice text-3xl"></i>
+                            <span>命運機率</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 難度選擇區塊 (預設隱藏) -->
+                <div id="difficulty-selection" class="hidden mb-2 bg-gray-900 bg-opacity-80 p-6 rounded-xl border border-gray-600">
+                    <h3 class="text-center font-bold text-yellow-300 mb-4 text-xl"><i class="fas fa-exclamation-triangle mr-2"></i>選擇挑戰難度</h3>
+                    <div class="flex flex-col sm:flex-row justify-center gap-6">
+                        <button onclick="confirmAction('easy')" class="difficulty-btn bg-gradient-to-b from-green-600 to-green-800 hover:from-green-500 py-4 px-6 rounded-lg font-bold flex flex-col items-center flex-1 border border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)]">
+                            <span class="text-2xl mb-2">簡單任務</span>
+                            <span class="text-sm text-green-200">基本獎勵</span>
+                        </button>
+                        <button onclick="confirmAction('hard')" class="difficulty-btn bg-gradient-to-b from-red-600 to-red-900 hover:from-red-500 py-4 px-6 rounded-lg font-bold flex flex-col items-center flex-1 border border-red-400 shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                            <span class="text-2xl mb-2">困難挑戰</span>
+                            <span class="text-sm text-red-200">資源升級 + 機率獲得護盾</span>
+                        </button>
+                    </div>
+                    <button onclick="cancelAction()" class="mt-6 w-full text-sm text-gray-400 hover:text-white underline text-center">取消行動</button>
+                </div>
+
+                <!-- 解題區塊 (預設隱藏) -->
+                <div id="problem-area" class="hidden mt-6 bg-blue-900 bg-opacity-40 p-6 rounded-xl border border-blue-500/50">
+                    <div class="flex justify-between items-center mb-4 border-b border-blue-700/50 pb-2">
+                        <h3 id="problem-title" class="font-bold text-xl text-blue-300">任務通訊...</h3>
+                        <span id="problem-category" class="text-xs px-2 py-1 rounded"></span>
+                    </div>
+                    <div class="mb-6 min-h-[80px] flex items-center justify-center">
+                        <p id="problem-text" class="text-lg text-center leading-relaxed"></p>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-4">
+                        <div id="problem-inputs" class="flex gap-2">
+                            <!-- 輸入框會動態生成 -->
+                        </div>
+                        <p id="feedback-msg" class="h-6 font-bold"></p>
+                        <button id="submit-btn" onclick="checkAnswer()" class="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold py-2 px-10 rounded-full shadow-lg transition-transform hover:scale-105">
+                            確認發射
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 結束回合按鈕 (答對後顯示) -->
+                <div class="mt-6 flex justify-center hidden" id="end-turn-container">
+                    <button onclick="endTurn()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-8 rounded-full border border-gray-500 shadow-lg transition-transform hover:scale-105 flex items-center gap-2">
+                        <i class="fas fa-forward"></i> 結束回合，換人
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂訊息對話框 -->
+    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50 flex">
+        <div class="bg-gray-900 border-2 border-blue-500 rounded-xl p-6 max-w-md w-full mx-4 text-center shadow-[0_0_20px_rgba(59,130,246,0.5)] transform transition-all">
+            <h3 id="alert-title" class="text-2xl font-bold text-white mb-4">標題</h3>
+            <p id="alert-text" class="text-gray-300 mb-6 text-lg">內容</p>
+            <button onclick="closeAlert()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded-full w-full transition-colors">確認</button>
+        </div>
+    </div>
+
+    <!-- 遊戲結束對話框 -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50 flex flex-col">
+        <div class="text-center">
+            <h2 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 mb-6 animate-bounce">宇宙霸主誕生！</h2>
+            <p id="winner-text" class="text-3xl text-white mb-10 drop-shadow-md"></p>
+            <div class="flex justify-center gap-4 mb-10">
+                <i class="fas fa-star text-5xl text-yellow-400"></i>
+                <i class="fas fa-star text-6xl text-yellow-400 transform -translate-y-4"></i>
+                <i class="fas fa-star text-5xl text-yellow-400"></i>
+            </div>
+            <button onclick="location.reload()" class="bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-400 hover:to-blue-500 text-white font-bold py-4 px-12 rounded-full text-2xl shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-transform hover:scale-105 border-2 border-white">
+                再來一局
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 音效管理器 (Tone.js)
+        const SoundFX = {
+            synth: null,
+            started: false,
+            init: async function() {
+                if (this.started) return;
+                await Tone.start();
+                this.synth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 1 }
+                }).toDestination();
+                this.synth.volume.value = -8; 
+                this.started = true;
+            },
+            playSuccess: function() {
+                if(!this.started) return;
+                const now = Tone.now();
+                this.synth.triggerAttackRelease("C5", "8n", now);
+                this.synth.triggerAttackRelease("E5", "8n", now + 0.1);
+                this.synth.triggerAttackRelease("G5", "4n", now + 0.2);
+            },
+            playError: function() {
+                if(!this.started) return;
+                this.synth.triggerAttackRelease("C3", "4n");
+            },
+            playAction: function() {
+                if(!this.started) return;
+                this.synth.triggerAttackRelease("G4", "16n");
+            },
+            playDanger: function() {
+                if(!this.started) return;
+                const now = Tone.now();
+                this.synth.triggerAttackRelease("D3", "8n", now);
+                this.synth.triggerAttackRelease("D3", "2n", now + 0.2);
+            }
+        };
+
+        // 視覺特效管理器
+        const VFX = {
+            overlay: document.getElementById('fx-overlay'),
+            flash: function(color, duration = 300) {
+                this.overlay.style.backgroundColor = color;
+                this.overlay.style.opacity = '1';
+                setTimeout(() => { this.overlay.style.opacity = '0'; }, duration);
+            },
+            screenShake: function() {
+                const body = document.body;
+                body.style.transform = 'translate(5px, 5px)';
+                setTimeout(() => body.style.transform = 'translate(-5px, -5px)', 50);
+                setTimeout(() => body.style.transform = 'translate(5px, -5px)', 100);
+                setTimeout(() => body.style.transform = 'translate(-5px, 5px)', 150);
+                setTimeout(() => body.style.transform = 'translate(0, 0)', 200);
+            }
+        };
+
+        // Canvas 動態背景
+        function initCanvasBackground() {
+            const canvas = document.getElementById('space-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let stars = [];
+            let meteors = [];
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+
+            class Star {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.size = Math.random() * 2;
+                    this.speed = Math.random() * 0.5 + 0.1;
+                    this.brightness = Math.random();
+                    this.fadeSpeed = Math.random() * 0.02 + 0.005;
+                }
+                update() {
+                    this.y -= this.speed; // 星星往上飄 (飛船往前飛的感覺)
+                    if (this.y < 0) {
+                        this.reset();
+                        this.y = height;
+                    }
+                    this.brightness += this.fadeSpeed;
+                    if (this.brightness > 1 || this.brightness < 0.2) {
+                        this.fadeSpeed = -this.fadeSpeed;
+                    }
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${this.brightness})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            class Meteor {
+                constructor() { this.reset(); }
+                reset() {
+                    this.x = Math.random() * width * 1.5;
+                    this.y = -50;
+                    this.speedX = -Math.random() * 5 - 2;
+                    this.speedY = Math.random() * 5 + 2;
+                    this.active = Math.random() < 0.01; 
+                }
+                update() {
+                    if (this.active) {
+                        this.x += this.speedX;
+                        this.y += this.speedY;
+                        if (this.x < 0 || this.y > height) this.active = false;
+                    } else if (Math.random() < 0.005) {
+                        this.reset();
+                        this.active = true;
+                    }
+                }
+                draw() {
+                    if (!this.active) return;
+                    ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - this.speedX * 8, this.y - this.speedY * 8); 
+                    ctx.stroke();
+                }
+            }
+
+            function initObjects() {
+                stars = []; meteors = [];
+                for (let i = 0; i < 200; i++) stars.push(new Star());
+                for (let i = 0; i < 4; i++) meteors.push(new Meteor());
+            }
+
+            function animate() {
+                // 深藍色宇宙背景，保留一點殘影製造速度感
+                ctx.fillStyle = 'rgba(11, 16, 33, 0.3)'; 
+                ctx.fillRect(0, 0, width, height);
+
+                stars.forEach(s => { s.update(); s.draw(); });
+                meteors.forEach(m => { m.update(); m.draw(); });
+
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', () => { resize(); initObjects(); });
+            resize();
+            initObjects();
+            animate();
+        }
+
+        // 遊戲狀態與DOM參考
+        const gameState = {
+            currentPlayer: 1, 
+            players: {
+                1: { name: "指揮官", coins: 50, ore: 0, energy: 0, bases: 0, shield: 0 },
+                2: { name: "小探險家", coins: 50, ore: 0, energy: 0, bases: 0, shield: 0 }
+            },
+            targetBases: 10,
+            pendingAction: null,
+            currentAction: null,
+            currentDifficulty: null,
+            currentProblem: null
+        };
+
+        const els = {
+            actionBtnsContainer: document.getElementById('action-buttons-container'),
+            difficultySection: document.getElementById('difficulty-selection'),
+            problemArea: document.getElementById('problem-area'),
+            problemTitle: document.getElementById('problem-title'),
+            problemText: document.getElementById('problem-text'),
+            problemCategory: document.getElementById('problem-category'),
+            problemInputs: document.getElementById('problem-inputs'),
+            submitBtn: document.getElementById('submit-btn'),
+            feedbackMsg: document.getElementById('feedback-msg'),
+            endTurnContainer: document.getElementById('end-turn-container'),
+            logArea: document.getElementById('game-log')
+        };
+
+        function updateUI() {
+            for (let i = 1; i <= 2; i++) {
+                document.getElementById(`p${i}-coins`).textContent = gameState.players[i].coins;
+                document.getElementById(`p${i}-ore`).textContent = gameState.players[i].ore;
+                document.getElementById(`p${i}-energy`).textContent = gameState.players[i].energy;
+                document.getElementById(`p${i}-bases`).textContent = gameState.players[i].bases;
+                document.getElementById(`p${i}-shield`).textContent = gameState.players[i].shield;
+            }
+            // 標示當前玩家
+            document.getElementById('panel-p1').style.opacity = gameState.currentPlayer === 1 ? '1' : '0.5';
+            document.getElementById('panel-p1').style.transform = gameState.currentPlayer === 1 ? 'scale(1.02)' : 'scale(1)';
+            document.getElementById('panel-p2').style.opacity = gameState.currentPlayer === 2 ? '1' : '0.5';
+            document.getElementById('panel-p2').style.transform = gameState.currentPlayer === 2 ? 'scale(1.02)' : 'scale(1)';
+        }
+
+        function log(msg, type = 'normal') {
+            const p = document.createElement('p');
+            p.className = 'mb-1 pb-1 border-b border-gray-700/50';
+            
+            let icon = ''; let color = 'text-gray-300';
+            if(type === 'p1') { icon = '<i class="fas fa-user text-blue-400"></i> '; color = 'text-blue-300'; }
+            if(type === 'p2') { icon = '<i class="fas fa-child text-pink-400"></i> '; color = 'text-pink-300'; }
+            if(type === 'success') { icon = '<i class="fas fa-check text-green-400"></i> '; color = 'text-green-300'; }
+            if(type === 'warning') { icon = '<i class="fas fa-exclamation-triangle text-yellow-400"></i> '; color = 'text-yellow-300'; }
+            if(type === 'error') { icon = '<i class="fas fa-times text-red-400"></i> '; color = 'text-red-300'; }
+
+            p.innerHTML = `<span class="${color}">${icon}${msg}</span>`;
+            els.logArea.appendChild(p);
+            els.logArea.scrollTop = els.logArea.scrollHeight;
+        }
+
+        function showAlert(title, text) {
+            document.getElementById('alert-title').innerHTML = title;
+            document.getElementById('alert-text').innerHTML = text;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.add('hidden');
+            checkWinCondition();
+        }
+
+        function getActionName(type) {
+            const map = { 'collect': '探索收集', 'shop': '星際商店', 'build': '建造基地', 'chance': '命運機率' };
+            return map[type];
+        }
+
+        const ProblemGen = {
+            rand: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+            gcd: (a, b) => b === 0 ? a : ProblemGen.gcd(b, a % b),
+            lcm: (a, b) => (a * b) / ProblemGen.gcd(a, b),
+            
+            collect: (difficulty) => {
+                let a, b, ans, type, text;
+                if (difficulty === 'easy') {
+                    a = ProblemGen.rand(4, 12); b = ProblemGen.rand(4, 12);
+                } else {
+                    a = ProblemGen.rand(12, 36); b = ProblemGen.rand(12, 36);
+                }
+                while(a === b) b = ProblemGen.rand(a-5, a+5);
+
+                if (Math.random() > 0.5) {
+                    type = "最大公因數"; ans = ProblemGen.gcd(a, b);
+                    text = `尋找星辰共鳴！請計算 <strong>${a}</strong> 和 <strong>${b}</strong> 的<span class="text-yellow-300 font-bold">最大公因數</span>：`;
+                } else {
+                    type = "最小公倍數"; ans = ProblemGen.lcm(a, b);
+                    text = `對齊軌道！請計算 <strong>${a}</strong> 和 <strong>${b}</strong> 的<span class="text-cyan-300 font-bold">最小公倍數</span>：`;
+                }
+
+                const resource = ProblemGen.rand(0, 1) === 0 ? 'ore' : 'energy';
+                return { text, answer: ans.toString(), type: 'input', onSuccess: () => {
+                    const p = gameState.players[gameState.currentPlayer];
+                    let reward = difficulty === 'hard' ? ProblemGen.rand(2, 4) : 1;
+                    let msg = `獲得了 ${reward} 個 ${resource === 'ore' ? '礦石' : '能源'}。`;
+                    
+                    if (difficulty === 'hard' && Math.random() < 0.35) {
+                        p.shield++; msg += `<br><span class="text-cyan-400 font-bold mt-2 block"><i class="fas fa-shield-alt"></i> 獲得 1 個星際護盾！</span>`;
+                    }
+                    if (gameState.currentPlayer === 2 && Math.random() < 0.25) {
+                        reward *= 2; msg += `<br><span class="text-pink-400 font-bold mt-2 block">小探險家技能觸發！資源雙倍！</span>`;
+                    }
+                    p[resource] += reward;
+                    showAlert("採集成功", msg);
+                    log(`${p.name} 採集成功。${difficulty==='hard'?'[困難]':''}`, gameState.currentPlayer === 1 ? 'p1' : 'p2');
+                }};
+            },
+
+            shop: (difficulty) => {
+                let text, ans;
+                const isFraction = Math.random() > 0.5;
+                const rewardCoins = difficulty === 'hard' ? ProblemGen.rand(30, 50) : ProblemGen.rand(10, 20);
+
+                if (isFraction) {
+                    let a, b, c, d;
+                    b = ProblemGen.rand(3, 8); a = ProblemGen.rand(1, b-1);
+                    d = ProblemGen.rand(3, 8); c = ProblemGen.rand(1, d-1);
+                    let num = a * d, den = b * c;
+                    let com = ProblemGen.gcd(num, den);
+                    num /= com; den /= com;
+                    ans = den === 1 ? `${num}` : `${num}/${den}`;
+                    text = `星際商人謎題：<br>貨物重 <strong>${a}/${b}</strong> 噸，每 <strong>${c}/${d}</strong> 噸裝一箱，可以裝滿幾箱？<br><span class="text-sm text-gray-400">(請化為最簡分數如 3/2 或整數)</span>`;
+                } else {
+                    let divisor = difficulty === 'easy' ? (ProblemGen.rand(2, 9)/10) : (ProblemGen.rand(11, 99)/10);
+                    let result = ProblemGen.rand(2, 15);
+                    let dividend = parseFloat((divisor * result).toFixed(2));
+                    ans = result.toString();
+                    text = `星際商人謎題：<br>總價 <strong>${dividend}</strong> 萬星幣的商品，單價是 <strong>${divisor}</strong> 萬，請問有幾個？`;
+                }
+
+                return { text, answer: ans, type: 'input_text', onSuccess: () => {
+                    const p = gameState.players[gameState.currentPlayer];
+                    p.coins += rewardCoins;
+                    let msg = `商人支付了 ${rewardCoins} 星幣。`;
+                    if (difficulty === 'hard' && Math.random() < 0.35) {
+                        p.shield++; msg += `<br><span class="text-cyan-400 font-bold mt-2 block"><i class="fas fa-shield-alt"></i> 商人贈送 1 個護盾！</span>`;
+                    }
+                    showAlert("交易成功", msg);
+                    log(`${p.name} 交易獲得 ${rewardCoins} 星幣。`, gameState.currentPlayer === 1 ? 'p1' : 'p2');
+                }};
+            },
+
+            build: (difficulty) => {
+                let r = difficulty === 'easy' ? ProblemGen.rand(2, 5) : ProblemGen.rand(6, 12);
+                let isArea = Math.random() > 0.5;
+                let ans = isArea ? parseFloat((r * r * 3.14).toFixed(2)).toString() : parseFloat((r * 2 * 3.14).toFixed(2)).toString();
+                let text = isArea ? 
+                    `設計防護罩！半徑 <strong>${r}</strong>。<br>請計算<span class="text-yellow-300 font-bold">面積</span>？ (圓周率用 3.14)` : 
+                    `建設外牆！半徑 <strong>${r}</strong>。<br>請計算<span class="text-cyan-300 font-bold">圓周長</span>？ (圓周率用 3.14)`;
+
+                return { text, answer: ans, type: 'input', onSuccess: () => {
+                    const p = gameState.players[gameState.currentPlayer];
+                    let oreCost = 3, engCost = 2;
+                    if (gameState.currentPlayer === 1) { oreCost = 2; engCost = 2; } // P1減免
+                    if (p.ore >= oreCost && p.energy >= engCost) {
+                        p.ore -= oreCost; p.energy -= engCost;
+                        let buildAmount = difficulty === 'hard' ? 2 : 1;
+                        p.bases += buildAmount; p.coins += 10 * buildAmount;
+                        showAlert("建造成功！", `花費資源建立了 ${buildAmount} 座基地！`);
+                        log(`${p.name} 蓋了 ${buildAmount} 座基地。`, gameState.currentPlayer === 1 ? 'p1' : 'p2');
+                    } else {
+                        p.coins += 5;
+                        showAlert("資源不足", `需要 ${oreCost}礦石 ${engCost}能源。獲得安慰獎 5 星幣。`);
+                        log(`${p.name} 資源不足以建造基地。`, 'warning');
+                    }
+                }};
+            },
+
+            chance: (difficulty) => {
+                let a = difficulty === 'easy' ? ProblemGen.rand(2, 10) : ProblemGen.rand(15, 50);
+                let b = difficulty === 'easy' ? ProblemGen.rand(2, 10) : ProblemGen.rand(15, 50);
+                let com = ProblemGen.gcd(a, b);
+                let ans = `${a/com}:${b/com}`;
+                let text = `解密座標！訊號強度為 <strong>${a}</strong> 和 <strong>${b}</strong>。<br>請寫出它們的<span class="text-purple-300 font-bold">最簡整數比</span> (格式 A:B)：`;
+
+                return { text, answer: ans, type: 'input_text', onSuccess: () => {
+                    const p = gameState.players[gameState.currentPlayer];
+                    if (Math.random() < (difficulty === 'hard' ? 0.4 : 0.6)) {
+                        let bonus = difficulty === 'hard' ? ProblemGen.rand(30, 60) : ProblemGen.rand(15, 30);
+                        p.coins += bonus;
+                        showAlert("座標解密成功！", `發現古代遺跡，找到 ${bonus} 星幣！`);
+                        log(`${p.name} 獲得 ${bonus} 星幣。`, 'success');
+                    } else {
+                        if (p.shield > 0) {
+                            p.shield--; SoundFX.playDanger();
+                            showAlert("遭遇太空海盜！", `<span class="text-cyan-400"><i class="fas fa-shield-alt"></i> 護盾啟動！抵禦了攻擊。</span>`);
+                            log(`${p.name} 消耗護盾抵擋危險。`, 'success');
+                        } else {
+                            let loss = difficulty === 'hard' ? 2 : 1;
+                            p.energy = Math.max(0, p.energy - loss);
+                            SoundFX.playDanger(); VFX.screenShake();
+                            showAlert("遭遇隕石流！", `防護不及！損失了 ${loss} 點能源。`);
+                            log(`${p.name} 遭遇隕石，損失 ${loss} 能源。`, 'warning');
+                        }
+                    }
+                }};
+            }
+        };
+
+        async function prepareAction(actionType) {
+            await SoundFX.init();
+            SoundFX.playAction();
+            gameState.pendingAction = actionType;
+            els.actionBtnsContainer.classList.add('hidden');
+            els.difficultySection.classList.remove('hidden');
+        }
+
+        function cancelAction() {
+            gameState.pendingAction = null;
+            els.actionBtnsContainer.classList.remove('hidden');
+            els.difficultySection.classList.add('hidden');
+        }
+
+        function confirmAction(difficulty) {
+            SoundFX.playAction();
+            gameState.currentAction = gameState.pendingAction;
+            gameState.currentDifficulty = difficulty;
+            els.difficultySection.classList.add('hidden');
+            
+            triggerAction(gameState.currentAction, difficulty);
+        }
+
+        function triggerAction(actionType, difficulty) {
+            els.problemArea.classList.remove('hidden');
+            els.feedbackMsg.textContent = '';
+            els.submitBtn.classList.remove('hidden');
+
+            const diffStr = difficulty === 'hard' ? '(困難)' : '(簡單)';
+            gameState.currentProblem = ProblemGen[actionType](difficulty);
+            
+            let diffColor = difficulty === 'hard' ? 'text-red-400' : 'text-green-400';
+            els.problemTitle.innerHTML = `<i class="fas fa-satellite-dish mr-2 animate-pulse"></i> 接收到通訊... <span class="text-sm ${diffColor}">${diffStr}</span>`;
+            els.problemText.innerHTML = gameState.currentProblem.text;
+            
+            let categoryText = "", categoryColor = "";
+            if(actionType === 'collect') { categoryText = "因數與倍數"; categoryColor = "bg-purple-800 text-purple-100"; }
+            if(actionType === 'shop') { categoryText = "分數/小數除法"; categoryColor = "bg-yellow-800 text-yellow-100"; }
+            if(actionType === 'build') { categoryText = "圓周長與面積"; categoryColor = "bg-green-800 text-green-100"; }
+            if(actionType === 'chance') { categoryText = "比與比值"; categoryColor = "bg-red-800 text-red-100"; }
+            
+            els.problemCategory.className = `text-xs px-2 py-1 rounded ${categoryColor}`;
+            els.problemCategory.textContent = categoryText;
+
+            els.problemInputs.innerHTML = '';
+            if (gameState.currentProblem.type === 'input') {
+                els.problemInputs.innerHTML = `<input type="number" step="any" id="user-answer" class="text-black text-2xl font-bold w-40 p-3 rounded text-center outline-none focus:ring-4 focus:ring-blue-500" placeholder="輸入數字" autocomplete="off">`;
+            } else {
+                els.problemInputs.innerHTML = `<input type="text" id="user-answer" class="text-black text-2xl font-bold w-40 p-3 rounded text-center outline-none focus:ring-4 focus:ring-blue-500" placeholder="輸入答案" autocomplete="off">`;
+            }
+            // Auto focus
+            setTimeout(() => document.getElementById('user-answer')?.focus(), 100);
+        }
+
+        function checkAnswer() {
+            if (!gameState.currentProblem) return;
+
+            let userAnswer = document.getElementById('user-answer').value.trim();
+            userAnswer = userAnswer.replace('：', ':'); // 處理中文冒號
+
+            if (userAnswer === "") return;
+
+            els.submitBtn.classList.add('hidden'); 
+            
+            if (userAnswer === gameState.currentProblem.answer) {
+                SoundFX.playSuccess();
+                VFX.flash('rgba(0, 255, 100, 0.2)', 500);
+                els.feedbackMsg.innerHTML = `<i class="fas fa-check-circle"></i> 計算正確！`;
+                els.feedbackMsg.className = "text-xl font-bold text-green-400 animate-pulse";
+                
+                setTimeout(() => {
+                    gameState.currentProblem.onSuccess();
+                    updateUI();
+                    els.problemArea.classList.add('hidden');
+                    els.endTurnContainer.classList.remove('hidden');
+                }, 1500);
+
+            } else {
+                SoundFX.playError();
+                VFX.flash('rgba(255, 0, 0, 0.2)', 300);
+                els.feedbackMsg.innerHTML = `<i class="fas fa-times-circle"></i> 系統錯誤，請重試！ (答案: ${gameState.currentProblem.answer})`;
+                els.feedbackMsg.className = "text-lg font-bold text-red-400";
+                
+                els.submitBtn.classList.remove('hidden');
+                setTimeout(() => {
+                    const input = document.getElementById('user-answer');
+                    if(input) { input.value = ''; input.focus(); }
+                }, 1500);
+            }
+        }
+
+        function checkWinCondition() {
+            if (gameState.players[1].bases >= gameState.targetBases) {
+                showGameOver(gameState.players[1].name);
+            } else if (gameState.players[2].bases >= gameState.targetBases) {
+                showGameOver(gameState.players[2].name);
+            }
+        }
+        
+        function showGameOver(winnerName) {
+            document.getElementById('winner-text').textContent = `${winnerName} 率先完成 ${gameState.targetBases} 座基地！`;
+            document.getElementById('game-over-modal').classList.remove('hidden');
+        }
+
+        function endTurn() {
+            SoundFX.playAction();
+            gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+            
+            els.actionBtnsContainer.classList.remove('hidden');
+            els.endTurnContainer.classList.add('hidden');
+            
+            gameState.currentProblem = null;
+            gameState.pendingAction = null;
+            gameState.currentAction = null;
+            
+            updateUI();
+            log(`--- 換人行動 ---`, 'normal');
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.onload = () => {
+            initCanvasBackground();
+            document.body.addEventListener('click', async () => { await SoundFX.init(); }, { once: true });
+            
+            // 允許按 Enter 提交答案
+            document.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter' && !els.problemArea.classList.contains('hidden') && !els.submitBtn.classList.contains('hidden')) {
+                    checkAnswer();
+                }
+            });
+
+            updateUI();
+            log('遊戲初始化完成，等待下達指令。', 'success');
+        };
+
+    </script>
+</body>
+</html>
