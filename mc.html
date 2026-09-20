@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minecraft 城市規劃師 (City Builder)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Inter', sans-serif; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; }
+        
+        /* 準心 */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+
+        /* 快捷列 (Hotbar) */
+        #hotbar {
+            position: absolute;
+            bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 6px;
+            border: 2px solid #555;
+            border-radius: 8px;
+            z-index: 10;
+        }
+        .slot {
+            width: 48px; height: 48px;
+            border: 2px solid #333;
+            background-color: rgba(255, 255, 255, 0.1);
+            position: relative;
+            box-sizing: border-box;
+            transition: all 0.1s;
+        }
+        .slot.active {
+            border: 3px solid #fff;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .slot-number {
+            position: absolute; top: 2px; left: 4px;
+            color: white; font-weight: bold; font-size: 12px;
+            text-shadow: 1px 1px 0 #000;
+        }
+        .slot-icon {
+            width: 100%; height: 100%;
+            border-radius: 2px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        /* 城市數據面板 */
+        #stats-panel {
+            position: absolute;
+            top: 20px; left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            width: 250px;
+            z-index: 10;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .stat-value { font-weight: bold; }
+        .progress-bar { width: 100%; height: 8px; background: #333; border-radius: 4px; margin-top: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #4caf50; transition: width 0.3s; }
+
+        /* 顧問提示面板 */
+        #advisor-panel {
+            position: absolute;
+            top: 20px; right: 20px;
+            background: linear-gradient(135deg, rgba(30,58,138,0.8), rgba(17,24,39,0.9));
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #3b82f6;
+            width: 300px;
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: opacity 0.3s;
+        }
+        #advisor-title { font-weight: bold; color: #60a5fa; margin-bottom: 5px; display: flex; align-items: center; gap: 8px;}
+        #advisor-message { font-size: 14px; line-height: 1.5; }
+
+        /* 開始畫面 */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 20; backdrop-filter: blur(5px);
+        }
+        .btn {
+            background-color: #4caf50; color: white; padding: 12px 24px; font-size: 18px;
+            border: none; border-radius: 4px; cursor: pointer; border-bottom: 4px solid #388e3c;
+            transition: all 0.1s; font-weight: bold; margin-top: 20px;
+        }
+        .btn:active { transform: translateY(4px); border-bottom: 0px solid #388e3c; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container"></div>
+    <div id="crosshair"></div>
+
+    <div id="stats-panel">
+        <h2 class="text-lg font-bold mb-3 text-yellow-400 border-b border-gray-600 pb-1">城市規劃數據</h2>
+        <div class="stat-row">
+            <span>人口 (目標 500)</span>
+            <span class="stat-value" id="stat-pop">0</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="bar-pop" style="width: 0%; background: #3b82f6;"></div></div>
+        
+        <div class="stat-row mt-2">
+            <span>糧食供應</span>
+            <span class="stat-value" id="stat-food">充足</span>
+        </div>
+        
+        <div class="stat-row mt-2">
+            <span>醫療覆蓋率</span>
+            <span class="stat-value" id="stat-health">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="bar-health" style="width: 0%; background: #ef4444;"></div></div>
+
+        <div class="stat-row mt-2">
+            <span>教育覆蓋率</span>
+            <span class="stat-value" id="stat-edu">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="bar-edu" style="width: 0%; background: #eab308;"></div></div>
+        
+        <div class="stat-row mt-2">
+            <span>環境綠化</span>
+            <span class="stat-value" id="stat-env">0</span>
+        </div>
+    </div>
+
+    <div id="advisor-panel">
+        <div id="advisor-title">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+            城市顧問
+        </div>
+        <div id="advisor-message">歡迎來到城市規劃模擬器！請先鋪設「道路」並建造「住宅區」來吸引市民入住。</div>
+    </div>
+
+    <div id="hotbar">
+        <!-- 插槽由 JS 動態生成 -->
+    </div>
+
+    <div id="start-screen">
+        <h1 class="text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">Minecraft 城市規劃師</h1>
+        <div class="bg-gray-800 p-6 rounded-lg max-w-xl text-left border border-gray-600 shadow-xl">
+            <h3 class="text-xl font-bold text-yellow-400 mb-2">任務目標：</h3>
+            <ul class="list-disc pl-5 mb-4 text-gray-200">
+                <li>規劃一個人口達 <strong>500人</strong> 的城市（每棟住宅 10 人）。</li>
+                <li>配置 <strong>農場</strong> 提供糧食（資源管理）。</li>
+                <li>建設 <strong>醫院</strong> 與 <strong>學校</strong>，並思考其 <strong>放置位置</strong>（需覆蓋住宅區）。</li>
+                <li>鋪設 <strong>道路</strong> 連結城市，利用 <strong>公園</strong> 綠化環境。</li>
+            </ul>
+            <h3 class="text-xl font-bold text-blue-400 mb-2">操作方法：</h3>
+            <div class="grid grid-cols-2 gap-4 text-sm text-gray-300">
+                <div>🖱️ <strong>點擊畫面</strong>：開始/鎖定視角</div>
+                <div>⌨️ <strong>W, A, S, D</strong>：前後左右移動</div>
+                <div>🖱️ <strong>滑鼠左鍵</strong>：破壞方塊</div>
+                <div>🖱️ <strong>滑鼠右鍵</strong>：放置方塊</div>
+                <div>⌨️ <strong>空白鍵 / Shift</strong>：上升 / 下降</div>
+                <div>⌨️ <strong>數字 1 ~ 6</strong>：切換建築物</div>
+            </div>
+        </div>
+        <button class="btn" id="start-btn">點擊開始規劃</button>
+    </div>
+
+    <script>
+        // --- 音效系統 (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+            if (type === 'place') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'break') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+        }
+
+        // --- 程序化紋理生成 (Procedural Textures) ---
+        // 為了不依賴外部圖片，使用 Canvas 動態生成像素風格的紋理
+        function createPixelTexture(type) {
+            const size = 16; // 16x16 像素風格
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // 基礎填色與雜訊函數
+            function fillNoise(baseR, baseG, baseB, variance) {
+                for (let x = 0; x < size; x++) {
+                    for (let y = 0; y < size; y++) {
+                        const v = (Math.random() * variance * 2) - variance;
+                        ctx.fillStyle = `rgb(${baseR + v}, ${baseG + v}, ${baseB + v})`;
+                        ctx.fillRect(x, y, 1, 1);
+                    }
+                }
+            }
+
+            switch(type) {
+                case 'grass_top':
+                    fillNoise(85, 170, 85, 20); // 草地綠
+                    break;
+                case 'grass_side':
+                    fillNoise(139, 90, 43, 15); // 泥土棕
+                    ctx.fillStyle = '#55aa55'; // 頂部一點綠
+                    for(let x=0; x<size; x++) {
+                        let depth = Math.floor(Math.random() * 3) + 2;
+                        ctx.fillRect(x, 0, 1, depth);
+                    }
+                    break;
+                case 'dirt':
+                    fillNoise(139, 90, 43, 15);
+                    break;
+                case 'road':
+                    fillNoise(100, 100, 100, 10);
+                    // 柏油路白線
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(7, 2, 2, 4);
+                    ctx.fillRect(7, 10, 2, 4);
+                    break;
+                case 'house': // 木板風格
+                    fillNoise(200, 150, 100, 10);
+                    ctx.fillStyle = '#8b5a2b';
+                    for(let y=3; y<size; y+=4) ctx.fillRect(0, y, size, 1); // 木紋線條
+                    break;
+                case 'farm': // 耕地
+                    fillNoise(101, 67, 33, 10);
+                    ctx.fillStyle = '#228b22'; // 作物點綴
+                    for(let i=0; i<15; i++) {
+                        ctx.fillRect(Math.random()*size, Math.random()*size, 1, 1);
+                    }
+                    ctx.fillStyle = '#442211'; // 溝渠
+                    ctx.fillRect(0, 4, size, 1); ctx.fillRect(0, 12, size, 1);
+                    break;
+                case 'hospital': // 白色帶紅十字
+                    fillNoise(240, 240, 240, 5);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(6, 3, 4, 10); // 直
+                    ctx.fillRect(3, 6, 10, 4); // 橫
+                    break;
+                case 'school': // 紅磚風格
+                    fillNoise(178, 34, 34, 10);
+                    ctx.fillStyle = '#dcdcdc';
+                    for(let y=3; y<size; y+=4) {
+                        ctx.fillRect(0, y, size, 1); // 橫縫
+                        for(let x=0; x<size; x+=4) {
+                            let offset = (y % 8 === 3) ? 2 : 0;
+                            ctx.fillRect(x + offset, y-3, 1, 3); // 直縫
+                        }
+                    }
+                    // 學校標誌 (簡單藍色時鐘或書本)
+                    ctx.fillStyle = '#ffd700';
+                    ctx.fillRect(6, 6, 4, 4);
+                    break;
+                case 'park': // 樹葉
+                    fillNoise(34, 139, 34, 30); // 深綠雜訊
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)'; // 增加立體感
+                    for(let i=0; i<20; i++) ctx.fillRect(Math.random()*size, Math.random()*size, 2, 2);
+                    break;
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.NearestFilter; // Minecraft 的像素感
+            texture.minFilter = THREE.NearestFilter;
+            return texture;
+        }
+
+        // --- 定義方塊類型 (Block Types) ---
+        const BLOCKS = {
+            ROAD: { id: 1, name: '道路', color: '#666', mats: [createPixelTexture('road')] },
+            HOUSE: { id: 2, name: '住宅', color: '#c89666', mats: [createPixelTexture('house')], pop: 10 },
+            FARM: { id: 3, name: '農場', color: '#654321', mats: [createPixelTexture('farm')], food: 20 },
+            HOSPITAL: { id: 4, name: '醫院', color: '#fff', mats: [createPixelTexture('hospital')] },
+            SCHOOL: { id: 5, name: '學校', color: '#b22222', mats: [createPixelTexture('school')] },
+            PARK: { id: 6, name: '公園', color: '#228b22', mats: [createPixelTexture('park')] },
+            // 環境方塊 (不在快捷列)
+            GRASS: { id: 7, mats: [
+                createPixelTexture('grass_side'), createPixelTexture('grass_side'),
+                createPixelTexture('grass_top'), createPixelTexture('dirt'),
+                createPixelTexture('grass_side'), createPixelTexture('grass_side')
+            ]},
+            DIRT: { id: 8, mats: [createPixelTexture('dirt')] }
+        };
+
+        const HOTBAR_ITEMS = [BLOCKS.ROAD, BLOCKS.HOUSE, BLOCKS.FARM, BLOCKS.HOSPITAL, BLOCKS.SCHOOL, BLOCKS.PARK];
+        let currentBlockIndex = 0;
+
+        // 生成快捷列 UI
+        const hotbarEl = document.getElementById('hotbar');
+        HOTBAR_ITEMS.forEach((item, index) => {
+            const slot = document.createElement('div');
+            slot.className = `slot ${index === 0 ? 'active' : ''}`;
+            slot.id = `slot-${index}`;
+            slot.innerHTML = `
+                <div class="slot-number">${index + 1}</div>
+                <div class="slot-icon" style="background-color: ${item.color};"></div>
+            `;
+            hotbarEl.appendChild(slot);
+        });
+
+        function selectSlot(index) {
+            if (index < 0 || index >= HOTBAR_ITEMS.length) return;
+            document.querySelectorAll('.slot').forEach(el => el.classList.remove('active'));
+            document.getElementById(`slot-${index}`).classList.add('active');
+            currentBlockIndex = index;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key >= '1' && e.key <= '6') {
+                selectSlot(parseInt(e.key) - 1);
+            }
+        });
+
+        // --- STREAMING_CHUNK: Three.js 核心初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB); // 天空藍
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 60);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('game-container').appendChild(renderer.domElement);
+
+        // 燈光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        dirLight.position.set(20, 50, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 100;
+        dirLight.shadow.camera.left = -30;
+        dirLight.shadow.camera.right = 30;
+        dirLight.shadow.camera.top = 30;
+        dirLight.shadow.camera.bottom = -30;
+        scene.add(dirLight);
+
+        // 材質快取 (提升效能)
+        const materialsCache = {};
+        function getMaterial(blockType) {
+            if (materialsCache[blockType.id]) return materialsCache[blockType.id];
+            
+            let mat;
+            if (blockType.mats.length === 1) {
+                mat = new THREE.MeshLambertMaterial({ map: blockType.mats[0] });
+            } else {
+                mat = blockType.mats.map(tex => new THREE.MeshLambertMaterial({ map: tex }));
+            }
+            materialsCache[blockType.id] = mat;
+            return mat;
+        }
+
+        const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+        const worldBlocks = new Map(); // 儲存所有放置的方塊 mesh
+        const blockData = new Map();   // 儲存方塊的邏輯數據 {x, y, z, type}
+
+        function getBlockKey(x, y, z) { return `${Math.round(x)},${Math.round(y)},${Math.round(z)}`; }
+
+        function placeBlock(x, y, z, blockType, isTerrain = false) {
+            const key = getBlockKey(x, y, z);
+            if (worldBlocks.has(key)) return;
+
+            const mesh = new THREE.Mesh(boxGeo, getMaterial(blockType));
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            
+            worldBlocks.set(key, mesh);
+            blockData.set(key, { x, y, z, type: blockType });
+
+            if (!isTerrain) {
+                playSound('place');
+                updateCityLogic();
+            }
+        }
+
+        function removeBlock(x, y, z) {
+            const key = getBlockKey(x, y, z);
+            if (worldBlocks.has(key)) {
+                // 不允許破壞最底層 (y=0)
+                if (y <= 0) return; 
+                
+                const mesh = worldBlocks.get(key);
+                scene.remove(mesh);
+                // 釋放記憶體 (Geometry 是共用的，只需處理 Mesh)
+                worldBlocks.delete(key);
+                blockData.delete(key);
+                playSound('break');
+                updateCityLogic();
+            }
+        }
+
+        // --- STREAMING_CHUNK: 世界生成與地形 ---
+        const WORLD_SIZE = 30; // 30x30 的平地
+        function generateWorld() {
+            for (let x = -WORLD_SIZE/2; x < WORLD_SIZE/2; x++) {
+                for (let z = -WORLD_SIZE/2; z < WORLD_SIZE/2; z++) {
+                    placeBlock(x, 0, z, BLOCKS.GRASS, true);
+                    placeBlock(x, -1, z, BLOCKS.DIRT, true);
+                }
+            }
+            // 預設一條小路
+            for (let z = -5; z <= 5; z++) {
+                placeBlock(0, 1, z, BLOCKS.ROAD, true);
+            }
+        }
+        generateWorld();
+
+        // --- STREAMING_CHUNK: 玩家控制與互動 ---
+        const player = {
+            velocity: new THREE.Vector3(),
+            direction: new THREE.Vector3(),
+            speed: 10,
+            isLocked: false
+        };
+
+        // 初始位置
+        camera.position.set(0, 5, 5);
+        camera.lookAt(0, 0, 0);
+
+        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'w') keys.w = true;
+            if (key === 'a') keys.a = true;
+            if (key === 's') keys.s = true;
+            if (key === 'd') keys.d = true;
+            if (key === ' ') keys.space = true;
+            if (key === 'shift') keys.shift = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'w') keys.w = false;
+            if (key === 'a') keys.a = false;
+            if (key === 's') keys.s = false;
+            if (key === 'd') keys.d = false;
+            if (key === ' ') keys.space = false;
+            if (key === 'shift') keys.shift = false;
+        });
+
+        // 滑鼠視角控制
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        const PI_2 = Math.PI / 2;
+
+        document.addEventListener('mousemove', (event) => {
+            if (!player.isLocked) return;
+            const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+            const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+            euler.setFromQuaternion(camera.quaternion);
+            euler.y -= movementX * 0.002;
+            euler.x -= movementY * 0.002;
+            euler.x = Math.max(-PI_2, Math.min(PI_2, euler.x)); // 限制俯仰角
+            camera.quaternion.setFromEuler(euler);
+        });
+
+        // 鎖定游標邏輯
+        const startBtn = document.getElementById('start-btn');
+        const startScreen = document.getElementById('start-screen');
+        
+        function lockPointer() {
+            document.body.requestPointerLock();
+        }
+
+        startBtn.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            lockPointer();
+            audioCtx.resume(); // 確保音效解鎖
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                player.isLocked = true;
+                startScreen.style.display = 'none';
+            } else {
+                player.isLocked = false;
+                startScreen.style.display = 'flex';
+                startBtn.innerText = "回到遊戲";
+            }
+        });
+
+        // 點擊遊戲畫面也可以鎖定
+        document.getElementById('game-container').addEventListener('click', () => {
+            if (!player.isLocked && startScreen.style.display === 'none') {
+                lockPointer();
+            }
+        });
+
+        // --- STREAMING_CHUNK: 射線檢測 (方塊放置與破壞) ---
+        const raycaster = new THREE.Raycaster();
+        const center = new THREE.Vector2(0, 0);
+
+        // 建立預覽方塊 (Wireframe)
+        const previewGeo = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+        const previewMat = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true, transparent: true, opacity: 0.5 });
+        const previewMesh = new THREE.Mesh(previewGeo, previewMat);
+        scene.add(previewMesh);
+        previewMesh.visible = false;
+
+        let targetIntersect = null; // 目前準心對準的交點
+
+        document.addEventListener('mousedown', (e) => {
+            if (!player.isLocked) return;
+            if (e.button !== 0 && e.button !== 2) return; // 只處理左鍵(0)和右鍵(2)
+
+            if (targetIntersect) {
+                const pos = targetIntersect.object.position;
+                if (e.button === 0) {
+                    // 左鍵：破壞
+                    removeBlock(pos.x, pos.y, pos.z);
+                } else if (e.button === 2) {
+                    // 右鍵：放置
+                    const normal = targetIntersect.face.normal;
+                    const placeX = pos.x + normal.x;
+                    const placeY = pos.y + normal.y;
+                    const placeZ = pos.z + normal.z;
+                    
+                    // 防止玩家把自己卡在方塊裡 (簡單的邊界檢查)
+                    const distToPlayer = Math.hypot(placeX - camera.position.x, placeY - camera.position.y, placeZ - camera.position.z);
+                    if (distToPlayer > 1.5) {
+                        placeBlock(placeX, Math.round(placeY), placeZ, HOTBAR_ITEMS[currentBlockIndex]);
+                    }
+                }
+            }
+        });
+
+        // 禁用右鍵選單
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // --- STREAMING_CHUNK: 城市規劃邏輯與顧問系統 ---
+        const advisorMessage = document.getElementById('advisor-message');
+        
+        function setAdvisor(text, isWarning = false) {
+            advisorMessage.innerHTML = text;
+            if (isWarning) {
+                document.getElementById('advisor-panel').style.borderColor = '#ef4444'; // 紅色警告
+                document.getElementById('advisor-title').style.color = '#ef4444';
+            } else {
+                document.getElementById('advisor-panel').style.borderColor = '#3b82f6'; // 藍色一般
+                document.getElementById('advisor-title').style.color = '#60a5fa';
+            }
+        }
+
+        function calculateDistance(b1, b2) {
+            return Math.abs(b1.x - b2.x) + Math.abs(b1.y - b2.y) + Math.abs(b1.z - b2.z); // 曼哈頓距離
+        }
+
+        function updateCityLogic() {
+            let population = 0;
+            let foodSupply = 0;
+            let parks = 0;
+            
+            const houses = [];
+            const hospitals = [];
+            const schools = [];
+            const roads = [];
+
+            // 統計所有方塊
+            blockData.forEach((data) => {
+                const type = data.type;
+                if (type === BLOCKS.HOUSE) { population += type.pop; houses.push(data); }
+                else if (type === BLOCKS.FARM) { foodSupply += type.food; }
+                else if (type === BLOCKS.HOSPITAL) hospitals.push(data);
+                else if (type === BLOCKS.SCHOOL) schools.push(data);
+                else if (type === BLOCKS.PARK) parks++;
+                else if (type === BLOCKS.ROAD) roads.push(data);
+            });
+
+            // 限制人口上限顯示為 500+
+            const displayPop = Math.min(population, 500);
+            
+            // 醫療覆蓋率計算：醫院有效半徑 (例如 10 格)
+            const HOSPITAL_RADIUS = 15;
+            let coveredByHospital = 0;
+            houses.forEach(house => {
+                let isCovered = false;
+                for (let h of hospitals) {
+                    if (calculateDistance(house, h) <= HOSPITAL_RADIUS) { isCovered = true; break; }
+                }
+                if (isCovered) coveredByHospital++;
+            });
+            const healthCoverage = houses.length > 0 ? (coveredByHospital / houses.length) * 100 : 0;
+
+            // 教育覆蓋率計算：學校有效半徑
+            const SCHOOL_RADIUS = 20;
+            let coveredBySchool = 0;
+            houses.forEach(house => {
+                let isCovered = false;
+                for (let s of schools) {
+                    if (calculateDistance(house, s) <= SCHOOL_RADIUS) { isCovered = true; break; }
+                }
+                if (isCovered) coveredBySchool++;
+            });
+            const eduCoverage = houses.length > 0 ? (coveredBySchool / houses.length) * 100 : 0;
+
+            // 道路連接檢查 (簡單概念：住宅是否相鄰道路)
+            let roadConnected = 0;
+            houses.forEach(house => {
+                let hasRoad = false;
+                for(let r of roads) {
+                    if(calculateDistance(house, r) <= 2) { hasRoad = true; break; }
+                }
+                if(hasRoad) roadConnected++;
+            });
+
+            // 更新 UI
+            document.getElementById('stat-pop').innerText = `${displayPop} / 500`;
+            document.getElementById('bar-pop').style.width = `${(displayPop/500)*100}%`;
+            
+            const isFoodSufficient = foodSupply >= population && population > 0;
+            document.getElementById('stat-food').innerText = population === 0 ? '-' : (isFoodSufficient ? '充足' : '短缺');
+            document.getElementById('stat-food').style.color = isFoodSufficient || population === 0 ? 'white' : '#ef4444';
+
+            document.getElementById('stat-health').innerText = `${Math.round(healthCoverage)}%`;
+            document.getElementById('bar-health').style.width = `${healthCoverage}%`;
+
+            document.getElementById('stat-edu').innerText = `${Math.round(eduCoverage)}%`;
+            document.getElementById('bar-edu').style.width = `${eduCoverage}%`;
+
+            document.getElementById('stat-env').innerText = parks * 5;
+
+            // --- 顧問邏輯 (引導玩家思考) ---
+            if (population === 0) {
+                setAdvisor("城市空無一人。請先鋪設<strong>道路</strong>並建造<strong>住宅</strong>。");
+            } else if (population >= 500 && healthCoverage > 80 && eduCoverage > 80 && isFoodSufficient) {
+                setAdvisor("🎉 恭喜！您成功建立了一個繁榮且規劃完善的城市！", false);
+            } else if (!isFoodSufficient) {
+                setAdvisor("⚠️ <strong>糧食短缺！</strong> 人口增長需要更多食物，請在郊區規劃更多<strong>農場</strong>。", true);
+            } else if (hospitals.length === 0 && population > 30) {
+                setAdvisor("⚠️ 市民生病了卻無處求醫！請規劃<strong>醫院</strong>。<br><small>提示：醫院應放置在住宅區附近以縮短救援距離。</small>", true);
+            } else if (hospitals.length > 0 && healthCoverage < 100) {
+                setAdvisor("⚠️ 部分住宅距離醫院太遠！<br>醫療資源無法涵蓋邊緣地區，請考慮在另一側<strong>增設醫院</strong>或調整住宅位置。", true);
+            } else if (schools.length === 0 && population > 50) {
+                setAdvisor("孩子們需要教育！教育能提升城市發展，請找一塊合適的空地建設<strong>學校</strong>。");
+            } else if (schools.length > 0 && eduCoverage < 100) {
+                setAdvisor("部分住宅區超出了學校的學區範圍。空間規劃時要注意設施的<strong>輻射範圍比例</strong>。");
+            } else if (roadConnected < houses.length) {
+                setAdvisor("有些住宅沒有連接到<strong>道路</strong>！這樣交通會很不方便，請確保建築都有鋪設聯外道路。");
+            } else if (parks < population / 50) {
+                setAdvisor("城市發展不錯，但稍微缺乏綠意。試著在住宅區周圍放置一些<strong>公園</strong>來提升環境品質吧！");
+            } else {
+                setAdvisor("城市穩定發展中！繼續擴張人口，目標是達到 500 人。");
+            }
+        }
+
+
+        // --- STREAMING_CHUNK: 主渲染迴圈 ---
+        let prevTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if (player.isLocked) {
+                // 運動邏輯
+                player.velocity.x -= player.velocity.x * 10.0 * delta; // 摩擦力
+                player.velocity.z -= player.velocity.z * 10.0 * delta;
+                player.velocity.y -= player.velocity.y * 10.0 * delta;
+
+                player.direction.z = Number(keys.w) - Number(keys.s);
+                player.direction.x = Number(keys.d) - Number(keys.a);
+                player.direction.normalize(); // 保證斜角移動速度一致
+
+                if (keys.w || keys.s) player.velocity.z -= player.direction.z * 40.0 * delta;
+                if (keys.a || keys.d) player.velocity.x -= player.direction.x * 40.0 * delta;
+                if (keys.space) player.velocity.y += 40.0 * delta;
+                if (keys.shift) player.velocity.y -= 40.0 * delta;
+
+                // 套用旋轉到速度向量
+                camera.translateX(-player.velocity.x * delta);
+                camera.translateY(player.velocity.y * delta);
+                camera.translateZ(player.velocity.z * delta);
+
+                // 簡單的地面碰撞 (不讓玩家穿透地表以下)
+                if (camera.position.y < 1) {
+                    camera.position.y = 1;
+                    player.velocity.y = 0;
+                }
+
+                // 更新射線檢測 (準心預覽)
+                raycaster.setFromCamera(center, camera);
+                // 只檢測方塊，不檢測預覽框
+                const objectsToIntersect = Array.from(worldBlocks.values());
+                const intersects = raycaster.intersectObjects(objectsToIntersect);
+
+                if (intersects.length > 0) {
+                    const intersect = intersects[0];
+                    // 距離太遠不顯示 (Minecraft 預設觸及距離約 5 格)
+                    if (intersect.distance < 6) {
+                        targetIntersect = intersect;
+                        previewMesh.position.copy(intersect.object.position);
+                        previewMesh.visible = true;
+                    } else {
+                        targetIntersect = null;
+                        previewMesh.visible = false;
+                    }
+                } else {
+                    targetIntersect = null;
+                    previewMesh.visible = false;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // 處理視窗大小改變
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 啟動迴圈
+        animate();
+
+    </script>
+</body>
+</html>
