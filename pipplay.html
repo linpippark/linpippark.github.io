@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>美台職棒大聯盟模擬系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 慶祝動畫 */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            z-index: 50;
+            animation: confetti-fall linear forwards;
+        }
+
+        @keyframes pulse-win {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 20px 10px rgba(234, 179, 8, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        }
+
+        .winner-card {
+            animation: pulse-win 2s infinite;
+            border: 4px solid #eab308;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+        }
+        
+        .winner-text {
+            background: linear-gradient(to right, #facc15, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #2d3748; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096; 
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .team-select-btn.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #60a5fa;
+        }
+
+        /* 模擬球場背景 */
+        .field-bg {
+            background: radial-gradient(circle at 50% 100%, #166534 0%, #14532d 40%, #1a202c 80%);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col field-bg pb-20">
+
+    <header class="glass-panel sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <h1 class="text-xl sm:text-2xl font-black text-center text-white tracking-wider">
+            <i class="fa-solid fa-baseball text-blue-400 mr-2"></i>美台職棒模擬系統
+        </h1>
+    </header>
+
+    <main class="flex-grow flex flex-col items-center w-full max-w-md mx-auto px-4 py-6 space-y-6">
+
+        <section id="setup-section" class="w-full space-y-6 animate-fade-in">
+            <!-- 賽制選擇 -->
+            <div class="glass-panel rounded-2xl p-4 shadow-xl">
+                <h2 class="text-lg font-bold mb-3 flex items-center text-blue-300">
+                    <i class="fa-solid fa-trophy mr-2"></i> 選擇賽制
+                </h2>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="series-btn bg-gray-700 hover:bg-gray-600 text-sm py-2 px-1 rounded-xl transition font-bold" data-series="3">三戰兩勝</button>
+                    <button class="series-btn bg-gray-700 hover:bg-gray-600 text-sm py-2 px-1 rounded-xl transition font-bold" data-series="5">五戰三勝</button>
+                    <button class="series-btn bg-blue-600 text-white shadow-lg text-sm py-2 px-1 rounded-xl transition font-bold selected" data-series="7">七戰四勝</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-2 text-center" id="series-desc">先取得 4 勝的隊伍獲得總冠軍</p>
+            </div>
+
+            <!-- 球隊選擇 -->
+            <div class="glass-panel rounded-2xl p-4 shadow-xl flex flex-col max-h-[50vh]">
+                <div class="flex justify-between items-end mb-3">
+                    <h2 class="text-lg font-bold flex items-center text-blue-300">
+                        <i class="fa-solid fa-users mr-2"></i> 選擇兩支隊伍
+                    </h2>
+                    <span id="team-count-badge" class="text-xs bg-gray-700 px-2 py-1 rounded-full">已選 0/2</span>
+                </div>
+                
+                <div class="overflow-y-auto flex-grow pr-1 space-y-4 pb-2" id="team-list-container">
+                    <!-- 台灣球隊 -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 mb-2 border-b border-gray-600 pb-1">CPBL 台灣職棒</h3>
+                        <div class="grid grid-cols-2 gap-2" id="tw-teams">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+                    <!-- 美國球隊 -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-400 mb-2 border-b border-gray-600 pb-1">MLB 美國職棒</h3>
+                        <div class="grid grid-cols-2 gap-2" id="us-teams">
+                            <!-- JS 動態生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制按鈕區塊 -->
+            <div class="space-y-3">
+                <!-- 隨機對戰按鈕 -->
+                <button id="random-match-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl text-lg shadow-lg transition-all duration-300 flex items-center justify-center">
+                    <i class="fa-solid fa-dice mr-2"></i> 隨機產生對戰組合
+                </button>
+                
+                <!-- 開始按鈕 -->
+                <button id="start-btn" disabled class="w-full bg-gray-600 text-gray-300 font-black py-4 rounded-2xl text-xl shadow-lg transition-all duration-300 opacity-50 cursor-not-allowed">
+                    請選擇兩支隊伍
+                </button>
+            </div>
+        </section>
+
+        <section id="match-section" class="w-full hidden space-y-4">
+            
+            <!-- 比分板 -->
+            <div class="glass-panel rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-red-500 to-blue-500"></div>
+                
+                <div class="text-center mb-4">
+                    <h2 class="text-sm font-bold text-gray-400 tracking-widest" id="match-series-title">七戰四勝制 總冠軍賽</h2>
+                    <div class="text-xs mt-1 text-blue-300">Game <span id="current-game-number" class="font-bold text-lg">1</span></div>
+                </div>
+
+                <div class="flex justify-between items-center relative">
+                    <!-- 客隊 -->
+                    <div class="flex flex-col items-center w-[40%] z-10" id="team1-display">
+                        <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center border-2 border-gray-600 shadow-inner mb-2 text-2xl font-black team-logo-text"></div>
+                        <span class="text-sm sm:text-base font-bold text-center leading-tight h-10 flex items-center team-name"></span>
+                        <span class="text-4xl font-black mt-2 text-white drop-shadow-md score-display">0</span>
+                    </div>
+
+                    <!-- VS -->
+                    <div class="w-[20%] flex flex-col items-center justify-center z-10">
+                        <span class="text-sm font-bold text-gray-500 mb-2">VS</span>
+                        <div class="w-px h-12 bg-gradient-to-b from-transparent via-gray-500 to-transparent"></div>
+                    </div>
+
+                    <!-- 主隊 -->
+                    <div class="flex flex-col items-center w-[40%] z-10" id="team2-display">
+                        <div class="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center border-2 border-gray-600 shadow-inner mb-2 text-2xl font-black team-logo-text"></div>
+                        <span class="text-sm sm:text-base font-bold text-center leading-tight h-10 flex items-center team-name"></span>
+                        <span class="text-4xl font-black mt-2 text-white drop-shadow-md score-display">0</span>
+                    </div>
+                </div>
+
+                <!-- 戰況歷史 -->
+                <div class="mt-6 border-t border-gray-700 pt-4">
+                    <h3 class="text-xs text-gray-400 mb-2 text-center">系列賽戰況</h3>
+                    <div class="flex justify-center space-x-1" id="series-history">
+                        <!-- 燈號動態生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div id="control-panel" class="grid gap-3">
+                <button id="sim-game-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-4 rounded-2xl text-lg shadow-[0_0_15px_rgba(59,130,246,0.5)] transition transform active:scale-95 flex items-center justify-center">
+                    <i class="fa-solid fa-play mr-2"></i> 模擬單場比賽
+                </button>
+                <button id="reset-btn-match" class="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-3 rounded-2xl text-sm transition">
+                    <i class="fa-solid fa-rotate-left mr-2"></i> 重新選擇隊伍
+                </button>
+            </div>
+        </section>
+
+        <section id="winner-section" class="w-full hidden relative z-20">
+            <div class="winner-card rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden">
+                <!-- 裝飾背景 -->
+                <div class="absolute -top-10 -left-10 w-40 h-40 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                
+                <i class="fa-solid fa-crown text-5xl text-yellow-400 mb-4 drop-shadow-lg"></i>
+                <h2 class="text-xl font-bold text-gray-300 mb-1">總冠軍 (WORLD SERIES CHAMPION)</h2>
+                
+                <div id="winner-info" class="my-6">
+                    <div class="w-24 h-24 mx-auto rounded-full bg-white/10 flex items-center justify-center border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)] mb-4 text-4xl font-black text-white" id="winner-logo"></div>
+                    <h1 class="text-3xl sm:text-4xl font-black winner-text leading-tight" id="winner-name">隊伍名稱</h1>
+                </div>
+
+                <div class="text-lg font-bold text-blue-200 mb-6 bg-black/30 py-2 rounded-xl border border-white/10">
+                    系列賽結果：<span id="final-series-score" class="text-white mx-1">4 - 2</span>
+                </div>
+
+                <button id="restart-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-4 rounded-2xl text-lg shadow-lg transition transform active:scale-95 flex items-center justify-center mt-4">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> 舉辦新賽季
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- 1. 資料定義 ---
+        const teams = [
+            // 台灣球隊
+            { id: 'T-X', name: '中信兄弟', short: '兄弟', code: 'X', region: 'TW', color: '#fbbf24' },
+            { id: 'T-T', name: '味全龍', short: '龍', code: 'T', region: 'TW', color: '#ef4444' },
+            { id: 'T-A', name: '統一獅', short: '獅', code: 'A', region: 'TW', color: '#f97316' },
+            
+            // 美國球隊
+            { id: 'U-G', name: '舊金山巨人', short: '巨人', code: 'G', region: 'US', color: '#f97316' },
+            { id: 'U-MO', name: '邁阿密馬林魚', short: '馬林魚', code: 'MO', region: 'US', color: '#0ea5e9' },
+            { id: 'U-AY', name: '亞利桑那響尾蛇', short: '響尾蛇', code: 'AY', region: 'US', color: '#b91c1c' },
+            { id: 'U-AM', name: '亞特蘭大勇士', short: '勇士', code: 'AM', region: 'US', color: '#1d4ed8' },
+            { id: 'U-C', name: '科羅拉多洛磯', short: '洛磯', code: 'C', region: 'US', color: '#a855f7' },
+            { id: 'U-MI', name: '密爾瓦基釀酒人', short: '釀酒人', code: 'MI', region: 'US', color: '#eab308' },
+            { id: 'U-MK', name: '紐約大都會', short: '大都會', code: 'MK', region: 'US', color: '#f97316' },
+            { id: 'U-AR', name: '奧克蘭運動家', short: '運動家', code: 'AR', region: 'US', color: '#22c55e' },
+            { id: 'U-YU', name: '匹茲堡海盜', short: '海盜', code: 'YU', region: 'US', color: '#fbbf24' },
+            { id: 'U-ML', name: '明尼蘇達雙城', short: '雙城', code: 'ML', region: 'US', color: '#dc2626' },
+            { id: 'U-AL', name: '洛杉磯天使', short: '天使', code: 'AL', region: 'US', color: '#dc2626' },
+            { id: 'U-MIN', name: '芝加哥小熊', short: '小熊', code: 'MIN', region: 'US', color: '#2563eb' },
+            { id: 'U-PE', name: '芝加哥白襪', short: '白襪', code: 'PE', region: 'US', color: '#9ca3af' },
+            { id: 'U-MY', name: '洛杉磯道奇', short: '道奇', code: 'MY', region: 'US', color: '#3b82f6' },
+            { id: 'U-HO', name: '休士頓太空人', short: '太空人', code: 'HO', region: 'US', color: '#ea580c' },
+            { id: 'U-LY', name: '西雅圖水手', short: '水手', code: 'LY', region: 'US', color: '#0d9488' },
+            { id: 'U-WY', name: '聖地牙哥教士', short: '教士', code: 'WY', region: 'US', color: '#b45309' },
+            { id: 'U-WS', name: '費城費城人', short: '費城人', code: 'WS', region: 'US', color: '#ef4444' },
+            { id: 'U-HS', name: '多倫多藍鳥', short: '藍鳥', code: 'HS', region: 'US', color: '#3b82f6' },
+            { id: 'U-HU', name: '波士頓紅襪', short: '紅襪', code: 'HU', region: 'US', color: '#dc2626' },
+            { id: 'U-KO', name: '堪薩斯皇家', short: '皇家', code: 'KO', region: 'US', color: '#3b82f6' },
+            { id: 'U-CH', name: '巴爾的摩金鶯', short: '金鶯', code: 'CH', region: 'US', color: '#ea580c' },
+            { id: 'U-YO', name: '坦帕灣光芒', short: '光芒', code: 'YO', region: 'US', color: '#0ea5e9' },
+            { id: 'U-KS', name: '聖路易紅雀', short: '紅雀', code: 'KS', region: 'US', color: '#dc2626' },
+            { id: 'U-AM_TEX', name: '德州遊騎兵', short: '遊騎兵', code: 'AM', region: 'US', color: '#2563eb' },
+            { id: 'U-JU', name: '紐約洋基', short: '洋基', code: 'JU', region: 'US', color: '#1e293b' }
+        ];
+
+        // --- 2. 狀態管理 ---
+        const State = {
+            selectedTeams: [],
+            seriesType: 7, // 預設7戰4勝
+            winsNeeded: 4,
+            currentScores: [0, 0], // [team1Score, team2Score]
+            gameHistory: [], // 記錄每場獲勝方 index: 0 or 1
+            currentGame: 1,
+            isGameOver: false
+        };
+
+        // --- 3. DOM 元素 ---
+        const DOM = {
+            setupSection: document.getElementById('setup-section'),
+            matchSection: document.getElementById('match-section'),
+            winnerSection: document.getElementById('winner-section'),
+            
+            twTeamsContainer: document.getElementById('tw-teams'),
+            usTeamsContainer: document.getElementById('us-teams'),
+            teamCountBadge: document.getElementById('team-count-badge'),
+            randomBtn: document.getElementById('random-match-btn'),
+            startBtn: document.getElementById('start-btn'),
+            seriesBtns: document.querySelectorAll('.series-btn'),
+            seriesDesc: document.getElementById('series-desc'),
+            
+            matchSeriesTitle: document.getElementById('match-series-title'),
+            gameNumberSpan: document.getElementById('current-game-number'),
+            teamDisplays: [
+                {
+                    container: document.getElementById('team1-display'),
+                    logo: document.querySelector('#team1-display .team-logo-text'),
+                    name: document.querySelector('#team1-display .team-name'),
+                    score: document.querySelector('#team1-display .score-display')
+                },
+                {
+                    container: document.getElementById('team2-display'),
+                    logo: document.querySelector('#team2-display .team-logo-text'),
+                    name: document.querySelector('#team2-display .team-name'),
+                    score: document.querySelector('#team2-display .score-display')
+                }
+            ],
+            seriesHistory: document.getElementById('series-history'),
+            simBtn: document.getElementById('sim-game-btn'),
+            resetBtnMatch: document.getElementById('reset-btn-match'),
+            
+            winnerLogo: document.getElementById('winner-logo'),
+            winnerName: document.getElementById('winner-name'),
+            finalScore: document.getElementById('final-series-score'),
+            restartBtn: document.getElementById('restart-btn')
+        };
+
+        function init() {
+            renderTeams();
+            setupEventListeners();
+        }
+
+        function renderTeams() {
+            DOM.twTeamsContainer.innerHTML = '';
+            DOM.usTeamsContainer.innerHTML = '';
+
+            teams.forEach(team => {
+                const btn = document.createElement('button');
+                btn.className = 'team-select-btn bg-gray-800 border border-gray-600 hover:border-blue-400 rounded-lg p-2 text-left flex items-center transition relative overflow-hidden group';
+                btn.dataset.id = team.id;
+                
+                // 左側顏色條
+                const colorBar = document.createElement('div');
+                colorBar.className = 'absolute left-0 top-0 bottom-0 w-1 opacity-50 group-hover:opacity-100 transition';
+                colorBar.style.backgroundColor = team.color;
+                
+                btn.innerHTML = `
+                    <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold mr-2 text-white shrink-0 shadow-inner">
+                        ${team.code}
+                    </div>
+                    <div class="truncate text-sm font-medium pr-1 text-gray-300 group-hover:text-white transition">${team.name}</div>
+                `;
+                btn.appendChild(colorBar);
+
+                btn.addEventListener('click', () => toggleTeamSelection(team.id, btn));
+
+                if (team.region === 'TW') {
+                    DOM.twTeamsContainer.appendChild(btn);
+                } else {
+                    DOM.usTeamsContainer.appendChild(btn);
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            // 賽制選擇
+            DOM.seriesBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    DOM.seriesBtns.forEach(b => {
+                        b.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'selected');
+                        b.classList.add('bg-gray-700', 'text-gray-300');
+                    });
+                    const target = e.target;
+                    target.classList.remove('bg-gray-700', 'text-gray-300');
+                    target.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'selected');
+                    
+                    State.seriesType = parseInt(target.dataset.series);
+                    State.winsNeeded = Math.ceil(State.seriesType / 2);
+                    DOM.seriesDesc.textContent = `先取得 ${State.winsNeeded} 勝的隊伍獲得總冠軍`;
+                });
+            });
+
+            // 開始按鈕
+            DOM.startBtn.addEventListener('click', startMatch);
+
+            // 隨機對戰按鈕
+            DOM.randomBtn.addEventListener('click', generateRandomMatchup);
+
+            // 模擬按鈕
+            DOM.simBtn.addEventListener('click', simulateGame);
+
+            // 重新選擇/重置按鈕
+            DOM.resetBtnMatch.addEventListener('click', resetToSetup);
+            DOM.restartBtn.addEventListener('click', resetToSetup);
+        }
+
+        function toggleTeamSelection(teamId, btnElement) {
+            const index = State.selectedTeams.findIndex(t => t.id === teamId);
+            
+            if (index > -1) {
+                // 取消選擇
+                State.selectedTeams.splice(index, 1);
+                btnElement.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
+                btnElement.classList.add('bg-gray-800', 'border-gray-600');
+            } else {
+                // 新增選擇
+                if (State.selectedTeams.length >= 2) {
+                    // 已滿2隊，替換第一個
+                    const firstTeamId = State.selectedTeams[0].id;
+                    const firstBtn = document.querySelector(`.team-select-btn[data-id="${firstTeamId}"]`);
+                    if(firstBtn){
+                        firstBtn.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
+                        firstBtn.classList.add('bg-gray-800', 'border-gray-600');
+                    }
+                    State.selectedTeams.shift();
+                }
+                const teamData = teams.find(t => t.id === teamId);
+                State.selectedTeams.push(teamData);
+                btnElement.classList.add('selected', 'bg-blue-900/50', 'border-blue-500');
+                btnElement.classList.remove('bg-gray-800', 'border-gray-600');
+            }
+
+            updateSetupUI();
+        }
+
+        function updateSetupUI() {
+            const count = State.selectedTeams.length;
+            DOM.teamCountBadge.textContent = `已選 ${count}/2`;
+            
+            if (count === 2) {
+                DOM.startBtn.disabled = false;
+                DOM.startBtn.classList.remove('bg-gray-600', 'text-gray-300', 'opacity-50', 'cursor-not-allowed');
+                DOM.startBtn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:from-blue-500', 'hover:to-indigo-500', 'cursor-pointer');
+                DOM.startBtn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> 進入球場';
+            } else {
+                DOM.startBtn.disabled = true;
+                DOM.startBtn.classList.add('bg-gray-600', 'text-gray-300', 'opacity-50', 'cursor-not-allowed');
+                DOM.startBtn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:from-blue-500', 'hover:to-indigo-500', 'cursor-pointer');
+                DOM.startBtn.textContent = '請選擇兩支隊伍';
+            }
+        }
+
+        function generateRandomMatchup() {
+            // 清空當前選擇
+            State.selectedTeams = [];
+            document.querySelectorAll('.team-select-btn').forEach(btn => {
+                btn.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
+                btn.classList.add('bg-gray-800', 'border-gray-600');
+            });
+
+            // 隨機選兩支不同的球隊
+            let idx1 = Math.floor(Math.random() * teams.length);
+            let idx2 = Math.floor(Math.random() * teams.length);
+            while (idx1 === idx2) {
+                idx2 = Math.floor(Math.random() * teams.length);
+            }
+
+            const team1 = teams[idx1];
+            const team2 = teams[idx2];
+
+            // 取得對應的按鈕元素並模擬選擇
+            const btn1 = document.querySelector(`.team-select-btn[data-id="${team1.id}"]`);
+            const btn2 = document.querySelector(`.team-select-btn[data-id="${team2.id}"]`);
+
+            toggleTeamSelection(team1.id, btn1);
+            toggleTeamSelection(team2.id, btn2);
+
+            // 如果有卷軸，稍微將畫面往下拉讓使用者看到開始按鈕
+            DOM.startBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function startMatch() {
+            if (State.selectedTeams.length !== 2) return;
+
+            // 初始化比賽狀態
+            State.currentScores = [0, 0];
+            State.gameHistory = [];
+            State.currentGame = 1;
+            State.isGameOver = false;
+
+            // 更新賽制標題
+            const seriesNames = { 3: "三戰兩勝制", 5: "五戰三勝制", 7: "七戰四勝制" };
+            DOM.matchSeriesTitle.textContent = `${seriesNames[State.seriesType]} 總冠軍賽`;
+            updateMatchUI();
+
+            // 設定隊伍顯示
+            for (let i = 0; i < 2; i++) {
+                const team = State.selectedTeams[i];
+                const display = DOM.teamDisplays[i];
+                
+                display.logo.textContent = team.code;
+                display.logo.style.color = team.color;
+                display.logo.style.borderColor = team.color;
+                
+                // 處理隊名過長的問題，允許換行
+                display.name.innerHTML = team.name.replace(/(.{4})/g, "$1<br>");
+                display.score.textContent = '0';
+            }
+
+            // 初始化戰況燈號格數
+            DOM.seriesHistory.innerHTML = '';
+            for(let i=0; i<State.seriesType; i++) {
+                const slot = document.createElement('div');
+                slot.className = 'w-6 h-6 rounded bg-gray-800 border border-gray-600 flex items-center justify-center text-[10px] font-bold text-gray-500';
+                slot.textContent = i+1;
+                DOM.seriesHistory.appendChild(slot);
+            }
+
+            // 切換畫面
+            DOM.setupSection.classList.add('hidden');
+            DOM.matchSection.classList.remove('hidden');
+            
+            // 重置按鈕狀態
+            DOM.simBtn.disabled = false;
+            DOM.simBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            DOM.simBtn.innerHTML = '<i class="fa-solid fa-play mr-2"></i> 模擬單場比賽';
+        }
+
+        function simulateGame() {
+            if (State.isGameOver) return;
+
+            // 簡單機率模擬，50/50
+            const winnerIndex = Math.random() < 0.5 ? 0 : 1;
+            
+            // 更新狀態
+            State.currentScores[winnerIndex]++;
+            State.gameHistory.push(winnerIndex);
+            
+            // 動畫效果：閃爍贏家分數
+            const winnerScoreEl = DOM.teamDisplays[winnerIndex].score;
+            winnerScoreEl.classList.add('text-yellow-400', 'scale-125');
+            setTimeout(() => {
+                winnerScoreEl.classList.remove('text-yellow-400', 'scale-125');
+            }, 500);
+
+            updateMatchUI();
+
+            // 檢查是否結束
+            if (State.currentScores[0] === State.winsNeeded || State.currentScores[1] === State.winsNeeded) {
+                State.isGameOver = true;
+                DOM.simBtn.disabled = true;
+                DOM.simBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                DOM.simBtn.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i> 系列賽結束';
+                
+                setTimeout(showWinner, 1000);
+            } else {
+                State.currentGame++;
+                DOM.gameNumberSpan.textContent = State.currentGame;
+            }
+        }
+
+        function updateMatchUI() {
+            // 更新分數
+            DOM.teamDisplays[0].score.textContent = State.currentScores[0];
+            DOM.teamDisplays[1].score.textContent = State.currentScores[1];
+
+            // 更新歷史燈號
+            const slots = DOM.seriesHistory.children;
+            for (let i = 0; i < State.gameHistory.length; i++) {
+                const winnerIdx = State.gameHistory[i];
+                const team = State.selectedTeams[winnerIdx];
+                
+                slots[i].textContent = team.code;
+                slots[i].style.backgroundColor = team.color;
+                slots[i].style.borderColor = team.color;
+                slots[i].classList.remove('text-gray-500', 'bg-gray-800');
+                slots[i].classList.add('text-white', 'shadow-sm');
+                // 增加一點透明度讓字體更清楚
+                slots[i].style.backgroundColor = team.color + 'dd';
+            }
+        }
+
+        function showWinner() {
+            const winnerIndex = State.currentScores[0] === State.winsNeeded ? 0 : 1;
+            const loserIndex = winnerIndex === 0 ? 1 : 0;
+            const winner = State.selectedTeams[winnerIndex];
+
+            // 隱藏比賽區，顯示贏家區
+            DOM.matchSection.classList.add('hidden');
+            DOM.winnerSection.classList.remove('hidden');
+
+            // 設置贏家資訊
+            DOM.winnerLogo.textContent = winner.code;
+            DOM.winnerLogo.style.color = winner.color;
+            DOM.winnerName.textContent = winner.name;
+            DOM.finalScore.textContent = `${State.currentScores[winnerIndex]} - ${State.currentScores[loserIndex]}`;
+
+            // 觸發慶祝紙屑
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#facc15', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#ffffff'];
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                // 隨機屬性
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                
+                // 隨機形狀
+                if (Math.random() > 0.5) confetti.style.borderRadius = '50%';
+                
+                document.body.appendChild(confetti);
+
+                // 動畫結束後移除
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000);
+            }
+        }
+
+        function resetToSetup() {
+            // 清理紙屑
+            document.querySelectorAll('.confetti').forEach(el => el.remove());
+
+            // 隱藏其他區塊，顯示設定區
+            DOM.matchSection.classList.add('hidden');
+            DOM.winnerSection.classList.add('hidden');
+            DOM.setupSection.classList.remove('hidden');
+
+            // 清空選擇
+            State.selectedTeams = [];
+            document.querySelectorAll('.team-select-btn').forEach(btn => {
+                btn.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
+                btn.classList.add('bg-gray-800', 'border-gray-600');
+            });
+            updateSetupUI();
+            
+            // 將視窗捲動到頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 啟動應用
+        window.onload = init;
+
+    </script>
+</body>
+</html>
