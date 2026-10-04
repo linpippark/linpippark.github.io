@@ -73,6 +73,15 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* 隱藏捲軸但保留滑動功能 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         .team-select-btn.selected {
             background-color: #3b82f6;
             color: white;
@@ -113,9 +122,9 @@
             <div class="glass-panel rounded-2xl p-4 shadow-xl flex flex-col max-h-[50vh]">
                 <div class="flex justify-between items-end mb-3">
                     <h2 class="text-lg font-bold flex items-center text-blue-300">
-                        <i class="fa-solid fa-users mr-2"></i> 選擇兩支隊伍
+                        <i class="fa-solid fa-users mr-2"></i> 選擇參賽隊伍
                     </h2>
-                    <span id="team-count-badge" class="text-xs bg-gray-700 px-2 py-1 rounded-full">已選 0/2</span>
+                    <span id="team-count-badge" class="text-xs bg-gray-700 px-2 py-1 rounded-full">已選 0 隊</span>
                 </div>
                 
                 <div class="overflow-y-auto flex-grow pr-1 space-y-4 pb-2" id="team-list-container">
@@ -139,19 +148,32 @@
             <!-- 控制按鈕區塊 -->
             <div class="space-y-3">
                 <!-- 隨機對戰按鈕 -->
-                <button id="random-match-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl text-lg shadow-lg transition-all duration-300 flex items-center justify-center">
-                    <i class="fa-solid fa-dice mr-2"></i> 隨機產生對戰組合
-                </button>
+                <div class="flex space-x-2">
+                    <select id="random-count" class="bg-gray-700 text-white font-bold rounded-2xl px-4 py-3 outline-none border border-gray-600 shadow-lg text-center appearance-none">
+                        <option value="2">2隊</option>
+                        <option value="4" selected>4隊</option>
+                        <option value="8">8隊</option>
+                        <option value="16">16隊</option>
+                    </select>
+                    <button id="random-match-btn" class="flex-grow bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl text-lg shadow-lg transition-all duration-300 flex items-center justify-center">
+                        <i class="fa-solid fa-dice mr-2"></i> 隨機選擇隊伍
+                    </button>
+                </div>
                 
                 <!-- 開始按鈕 -->
                 <button id="start-btn" disabled class="w-full bg-gray-600 text-gray-300 font-black py-4 rounded-2xl text-xl shadow-lg transition-all duration-300 opacity-50 cursor-not-allowed">
-                    請選擇兩支隊伍
+                    請選擇至少兩支隊伍
                 </button>
             </div>
         </section>
 
         <section id="match-section" class="w-full hidden space-y-4">
             
+            <!-- 賽事進度橫幅 -->
+            <div id="tournament-status" class="bg-indigo-900/80 text-indigo-200 text-sm font-bold text-center py-2 px-4 rounded-2xl shadow-lg border border-indigo-500/30">
+                第一輪 - 第 1 場對戰
+            </div>
+
             <!-- 比分板 -->
             <div class="glass-panel rounded-2xl p-5 shadow-2xl relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-red-500 to-blue-500"></div>
@@ -197,6 +219,9 @@
                 <button id="sim-game-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-black py-4 rounded-2xl text-lg shadow-[0_0_15px_rgba(59,130,246,0.5)] transition transform active:scale-95 flex items-center justify-center">
                     <i class="fa-solid fa-play mr-2"></i> 模擬單場比賽
                 </button>
+                <button id="next-match-btn" class="hidden w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-black py-4 rounded-2xl text-lg shadow-[0_0_15px_rgba(16,185,129,0.5)] transition transform active:scale-95 flex items-center justify-center">
+                    進入下一場對戰 <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
                 <button id="reset-btn-match" class="w-full bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold py-3 rounded-2xl text-sm transition">
                     <i class="fa-solid fa-rotate-left mr-2"></i> 重新選擇隊伍
                 </button>
@@ -219,6 +244,18 @@
 
                 <div class="text-lg font-bold text-blue-200 mb-6 bg-black/30 py-2 rounded-xl border border-white/10">
                     系列賽結果：<span id="final-series-score" class="text-white mx-1">4 - 2</span>
+                </div>
+
+                <!-- 新增：樹狀圖顯示區塊 -->
+                <div class="mt-4 mb-6 text-left w-full border-t border-gray-600 pt-4">
+                    <h3 class="text-sm font-bold text-gray-300 mb-3 flex items-center justify-center">
+                        <i class="fa-solid fa-sitemap mr-2 text-indigo-400"></i> 賽事晉級軌跡
+                    </h3>
+                    <div class="overflow-x-auto pb-2 scrollbar-hide w-full shadow-inner rounded-xl bg-black/20" style="max-width: 100vw;">
+                        <div id="bracket-container" class="flex flex-row gap-6 min-w-max p-4 justify-start items-stretch">
+                            <!-- JS 動態生成樹狀圖 -->
+                        </div>
+                    </div>
                 </div>
 
                 <button id="restart-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-4 rounded-2xl text-lg shadow-lg transition transform active:scale-95 flex items-center justify-center mt-4">
@@ -271,10 +308,19 @@
             selectedTeams: [],
             seriesType: 7, // 預設7戰4勝
             winsNeeded: 4,
-            currentScores: [0, 0], // [team1Score, team2Score]
-            gameHistory: [], // 記錄每場獲勝方 index: 0 or 1
+            currentScores: [0, 0], 
+            gameHistory: [], 
             currentGame: 1,
-            isGameOver: false
+            isGameOver: false,
+            bracketData: [], // 新增：用來記錄樹狀圖的所有回合資料
+            // 錦標賽狀態
+            tournament: {
+                roundNumber: 1,
+                matchups: [],
+                currentMatchupIndex: 0,
+                nextRoundTeams: [],
+                byeTeam: null
+            }
         };
 
         // --- 3. DOM 元素 ---
@@ -291,6 +337,7 @@
             seriesBtns: document.querySelectorAll('.series-btn'),
             seriesDesc: document.getElementById('series-desc'),
             
+            tournamentStatus: document.getElementById('tournament-status'),
             matchSeriesTitle: document.getElementById('match-series-title'),
             gameNumberSpan: document.getElementById('current-game-number'),
             teamDisplays: [
@@ -309,11 +356,13 @@
             ],
             seriesHistory: document.getElementById('series-history'),
             simBtn: document.getElementById('sim-game-btn'),
+            nextMatchBtn: document.getElementById('next-match-btn'),
             resetBtnMatch: document.getElementById('reset-btn-match'),
             
             winnerLogo: document.getElementById('winner-logo'),
             winnerName: document.getElementById('winner-name'),
             finalScore: document.getElementById('final-series-score'),
+            bracketContainer: document.getElementById('bracket-container'), // 新增：樹狀圖容器
             restartBtn: document.getElementById('restart-btn')
         };
 
@@ -368,20 +417,14 @@
                     
                     State.seriesType = parseInt(target.dataset.series);
                     State.winsNeeded = Math.ceil(State.seriesType / 2);
-                    DOM.seriesDesc.textContent = `先取得 ${State.winsNeeded} 勝的隊伍獲得總冠軍`;
+                    DOM.seriesDesc.textContent = `每場對戰先取得 ${State.winsNeeded} 勝者晉級`;
                 });
             });
 
-            // 開始按鈕
             DOM.startBtn.addEventListener('click', startMatch);
-
-            // 隨機對戰按鈕
             DOM.randomBtn.addEventListener('click', generateRandomMatchup);
-
-            // 模擬按鈕
             DOM.simBtn.addEventListener('click', simulateGame);
-
-            // 重新選擇/重置按鈕
+            DOM.nextMatchBtn.addEventListener('click', nextMatch);
             DOM.resetBtnMatch.addEventListener('click', resetToSetup);
             DOM.restartBtn.addEventListener('click', resetToSetup);
         }
@@ -395,17 +438,7 @@
                 btnElement.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
                 btnElement.classList.add('bg-gray-800', 'border-gray-600');
             } else {
-                // 新增選擇
-                if (State.selectedTeams.length >= 2) {
-                    // 已滿2隊，替換第一個
-                    const firstTeamId = State.selectedTeams[0].id;
-                    const firstBtn = document.querySelector(`.team-select-btn[data-id="${firstTeamId}"]`);
-                    if(firstBtn){
-                        firstBtn.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
-                        firstBtn.classList.add('bg-gray-800', 'border-gray-600');
-                    }
-                    State.selectedTeams.shift();
-                }
+                // 新增選擇 (不再限制2隊，只要選偶數隊即可)
                 const teamData = teams.find(t => t.id === teamId);
                 State.selectedTeams.push(teamData);
                 btnElement.classList.add('selected', 'bg-blue-900/50', 'border-blue-500');
@@ -417,18 +450,18 @@
 
         function updateSetupUI() {
             const count = State.selectedTeams.length;
-            DOM.teamCountBadge.textContent = `已選 ${count}/2`;
+            DOM.teamCountBadge.textContent = `已選 ${count} 隊`;
             
-            if (count === 2) {
+            if (count >= 2 && count % 2 === 0) {
                 DOM.startBtn.disabled = false;
                 DOM.startBtn.classList.remove('bg-gray-600', 'text-gray-300', 'opacity-50', 'cursor-not-allowed');
                 DOM.startBtn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:from-blue-500', 'hover:to-indigo-500', 'cursor-pointer');
-                DOM.startBtn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> 進入球場';
+                DOM.startBtn.innerHTML = '<i class="fa-solid fa-bolt mr-2"></i> 進入錦標賽';
             } else {
                 DOM.startBtn.disabled = true;
                 DOM.startBtn.classList.add('bg-gray-600', 'text-gray-300', 'opacity-50', 'cursor-not-allowed');
                 DOM.startBtn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'text-white', 'hover:from-blue-500', 'hover:to-indigo-500', 'cursor-pointer');
-                DOM.startBtn.textContent = '請選擇兩支隊伍';
+                DOM.startBtn.textContent = count < 2 ? '請選擇至少兩支隊伍' : '隊伍數量必須是偶數';
             }
         }
 
@@ -440,51 +473,127 @@
                 btn.classList.add('bg-gray-800', 'border-gray-600');
             });
 
-            // 隨機選兩支不同的球隊
-            let idx1 = Math.floor(Math.random() * teams.length);
-            let idx2 = Math.floor(Math.random() * teams.length);
-            while (idx1 === idx2) {
-                idx2 = Math.floor(Math.random() * teams.length);
+            let countToSelect = parseInt(document.getElementById('random-count').value);
+            
+            // 打亂球隊索引陣列
+            let indices = Array.from(Array(teams.length).keys());
+            indices.sort(() => Math.random() - 0.5);
+            
+            // 選取指定數量的球隊
+            for(let i=0; i<countToSelect; i++) {
+                let team = teams[indices[i]];
+                let btn = document.querySelector(`.team-select-btn[data-id="${team.id}"]`);
+                toggleTeamSelection(team.id, btn);
             }
 
-            const team1 = teams[idx1];
-            const team2 = teams[idx2];
-
-            // 取得對應的按鈕元素並模擬選擇
-            const btn1 = document.querySelector(`.team-select-btn[data-id="${team1.id}"]`);
-            const btn2 = document.querySelector(`.team-select-btn[data-id="${team2.id}"]`);
-
-            toggleTeamSelection(team1.id, btn1);
-            toggleTeamSelection(team2.id, btn2);
-
-            // 如果有卷軸，稍微將畫面往下拉讓使用者看到開始按鈕
+            // 平滑滾動到開始按鈕
             DOM.startBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
+        // --- 錦標賽邏輯 ---
         function startMatch() {
-            if (State.selectedTeams.length !== 2) return;
+            if (State.selectedTeams.length < 2 || State.selectedTeams.length % 2 !== 0) return;
 
-            // 初始化比賽狀態
+            // 初始化錦標賽狀態
+            State.tournament = {
+                roundNumber: 1,
+                matchups: [],
+                currentMatchupIndex: 0,
+                nextRoundTeams: [],
+                byeTeam: null
+            };
+            
+            State.bracketData = []; // 初始化樹狀圖資料
+
+            // 切換畫面
+            DOM.setupSection.classList.add('hidden');
+            DOM.matchSection.classList.remove('hidden');
+
+            // 建立第一輪賽事
+            createMatchups([...State.selectedTeams]);
+        }
+
+        function createMatchups(teamsArray) {
+            State.tournament.matchups = [];
+            State.tournament.nextRoundTeams = [];
+            let byeTeam = null;
+            let currentRoundData = []; // 暫存本輪所有賽事，用於樹狀圖
+
+            // 兩兩配對
+            for (let i = 0; i < teamsArray.length; i += 2) {
+                if (i + 1 < teamsArray.length) {
+                    State.tournament.matchups.push({
+                        team1: teamsArray[i],
+                        team2: teamsArray[i + 1]
+                    });
+                    
+                    currentRoundData.push({
+                        team1: teamsArray[i],
+                        team2: teamsArray[i + 1],
+                        score1: 0,
+                        score2: 0,
+                        winner: null,
+                        isBye: false
+                    });
+                } else {
+                    // 若有奇數剩餘隊伍則輪空 (通常在第二輪後發生)
+                    byeTeam = teamsArray[i];
+                    State.tournament.nextRoundTeams.push(byeTeam);
+                    
+                    currentRoundData.push({
+                        team1: byeTeam,
+                        team2: null,
+                        score1: 0,
+                        score2: 0,
+                        winner: byeTeam,
+                        isBye: true
+                    });
+                }
+            }
+
+            State.bracketData.push(currentRoundData); // 將本輪寫入歷史記錄
+
+            State.tournament.currentMatchupIndex = 0;
+            State.tournament.byeTeam = byeTeam;
+            
+            startCurrentMatchup();
+        }
+
+        function startCurrentMatchup() {
+            // 初始化單場賽事狀態
             State.currentScores = [0, 0];
             State.gameHistory = [];
             State.currentGame = 1;
             State.isGameOver = false;
 
-            // 更新賽制標題
-            const seriesNames = { 3: "三戰兩勝制", 5: "五戰三勝制", 7: "七戰四勝制" };
-            DOM.matchSeriesTitle.textContent = `${seriesNames[State.seriesType]} 總冠軍賽`;
-            updateMatchUI();
+            let totalMatchups = State.tournament.matchups.length;
+            let currentIdx = State.tournament.currentMatchupIndex;
+            let totalTeams = totalMatchups * 2 + (State.tournament.byeTeam ? 1 : 0);
 
-            // 設定隊伍顯示
+            // 更新錦標賽進度標題
+            let roundName = `第 ${State.tournament.roundNumber} 輪`;
+            if (totalTeams === 2) roundName = "🏆 總冠軍賽";
+            else if (totalTeams === 4) roundName = "⚔️ 四強賽";
+            else if (totalTeams === 8) roundName = "🔥 八強賽";
+
+            DOM.tournamentStatus.textContent = `${roundName} - 第 ${currentIdx + 1} 場對戰 (共 ${totalMatchups} 場)`;
+            if (State.tournament.byeTeam && currentIdx === 0) {
+                DOM.tournamentStatus.textContent += ` (本輪輪空: ${State.tournament.byeTeam.name})`;
+            }
+
+            const seriesNames = { 3: "三戰兩勝", 5: "五戰三勝", 7: "七戰四勝" };
+            DOM.matchSeriesTitle.textContent = seriesNames[State.seriesType];
+
+            // 綁定當前兩支隊伍
+            let currentMatch = State.tournament.matchups[currentIdx];
+            let teamsToPlay = [currentMatch.team1, currentMatch.team2];
+
             for (let i = 0; i < 2; i++) {
-                const team = State.selectedTeams[i];
+                const team = teamsToPlay[i];
                 const display = DOM.teamDisplays[i];
-                
                 display.logo.textContent = team.code;
                 display.logo.style.color = team.color;
                 display.logo.style.borderColor = team.color;
-                
-                // 處理隊名過長的問題，允許換行
                 display.name.innerHTML = team.name.replace(/(.{4})/g, "$1<br>");
                 display.score.textContent = '0';
             }
@@ -498,14 +607,14 @@
                 DOM.seriesHistory.appendChild(slot);
             }
 
-            // 切換畫面
-            DOM.setupSection.classList.add('hidden');
-            DOM.matchSection.classList.remove('hidden');
+            // 控制面板按鈕顯示
+            DOM.simBtn.classList.remove('hidden');
+            DOM.nextMatchBtn.classList.add('hidden');
             
-            // 重置按鈕狀態
             DOM.simBtn.disabled = false;
             DOM.simBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             DOM.simBtn.innerHTML = '<i class="fa-solid fa-play mr-2"></i> 模擬單場比賽';
+            DOM.gameNumberSpan.textContent = State.currentGame;
         }
 
         function simulateGame() {
@@ -514,7 +623,6 @@
             // 簡單機率模擬，50/50
             const winnerIndex = Math.random() < 0.5 ? 0 : 1;
             
-            // 更新狀態
             State.currentScores[winnerIndex]++;
             State.gameHistory.push(winnerIndex);
             
@@ -530,14 +638,45 @@
             // 檢查是否結束
             if (State.currentScores[0] === State.winsNeeded || State.currentScores[1] === State.winsNeeded) {
                 State.isGameOver = true;
-                DOM.simBtn.disabled = true;
-                DOM.simBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                DOM.simBtn.innerHTML = '<i class="fa-solid fa-flag-checkered mr-2"></i> 系列賽結束';
                 
-                setTimeout(showWinner, 1000);
+                let seriesWinnerIdx = State.currentScores[0] === State.winsNeeded ? 0 : 1;
+                let currentMatch = State.tournament.matchups[State.tournament.currentMatchupIndex];
+                let winnerTeam = seriesWinnerIdx === 0 ? currentMatch.team1 : currentMatch.team2;
+                
+                // 記錄分數與結果至樹狀圖資料庫
+                let roundIdx = State.tournament.roundNumber - 1;
+                let matchIdx = State.tournament.currentMatchupIndex;
+                State.bracketData[roundIdx][matchIdx].score1 = State.currentScores[0];
+                State.bracketData[roundIdx][matchIdx].score2 = State.currentScores[1];
+                State.bracketData[roundIdx][matchIdx].winner = winnerTeam;
+
+                // 將勝者加入下一輪名單
+                State.tournament.nextRoundTeams.push(winnerTeam);
+
+                DOM.simBtn.classList.add('hidden');
+                
+                // 檢查是否為錦標賽最後一場（產出總冠軍）
+                if (State.tournament.matchups.length === 1 && State.tournament.nextRoundTeams.length === 1) {
+                    setTimeout(() => showWinner(winnerTeam, State.currentScores, seriesWinnerIdx), 1000);
+                } else {
+                    DOM.nextMatchBtn.classList.remove('hidden');
+                }
             } else {
                 State.currentGame++;
                 DOM.gameNumberSpan.textContent = State.currentGame;
+            }
+        }
+
+        function nextMatch() {
+            State.tournament.currentMatchupIndex++;
+            
+            if (State.tournament.currentMatchupIndex >= State.tournament.matchups.length) {
+                // 當前輪次結束，進入下一輪
+                State.tournament.roundNumber++;
+                createMatchups([...State.tournament.nextRoundTeams]);
+            } else {
+                // 進行同輪次的下一場對戰
+                startCurrentMatchup();
             }
         }
 
@@ -547,38 +686,112 @@
             DOM.teamDisplays[1].score.textContent = State.currentScores[1];
 
             // 更新歷史燈號
+            let currentMatch = State.tournament.matchups[State.tournament.currentMatchupIndex];
+            let matchTeams = [currentMatch.team1, currentMatch.team2];
             const slots = DOM.seriesHistory.children;
+
             for (let i = 0; i < State.gameHistory.length; i++) {
                 const winnerIdx = State.gameHistory[i];
-                const team = State.selectedTeams[winnerIdx];
+                const team = matchTeams[winnerIdx];
                 
                 slots[i].textContent = team.code;
                 slots[i].style.backgroundColor = team.color;
                 slots[i].style.borderColor = team.color;
                 slots[i].classList.remove('text-gray-500', 'bg-gray-800');
                 slots[i].classList.add('text-white', 'shadow-sm');
-                // 增加一點透明度讓字體更清楚
                 slots[i].style.backgroundColor = team.color + 'dd';
             }
         }
 
-        function showWinner() {
-            const winnerIndex = State.currentScores[0] === State.winsNeeded ? 0 : 1;
-            const loserIndex = winnerIndex === 0 ? 1 : 0;
-            const winner = State.selectedTeams[winnerIndex];
+        function showWinner(winnerTeam, finalScores, winnerIdx) {
+            let loserIdx = winnerIdx === 0 ? 1 : 0;
 
             // 隱藏比賽區，顯示贏家區
             DOM.matchSection.classList.add('hidden');
             DOM.winnerSection.classList.remove('hidden');
 
             // 設置贏家資訊
-            DOM.winnerLogo.textContent = winner.code;
-            DOM.winnerLogo.style.color = winner.color;
-            DOM.winnerName.textContent = winner.name;
-            DOM.finalScore.textContent = `${State.currentScores[winnerIndex]} - ${State.currentScores[loserIndex]}`;
+            DOM.winnerLogo.textContent = winnerTeam.code;
+            DOM.winnerLogo.style.color = winnerTeam.color;
+            DOM.winnerName.textContent = winnerTeam.name;
+            DOM.finalScore.textContent = `${finalScores[winnerIdx]} - ${finalScores[loserIdx]}`;
+
+            renderBracket(); // 繪製最終樹狀圖
 
             // 觸發慶祝紙屑
             createConfetti();
+        }
+
+        // 繪製樹狀圖
+        function renderBracket() {
+            DOM.bracketContainer.innerHTML = '';
+            
+            // 繪製前面的輪次
+            State.bracketData.forEach((round, roundIndex) => {
+                const roundCol = document.createElement('div');
+                roundCol.className = 'flex flex-col justify-around gap-3 min-w-[140px] relative';
+                
+                // 輪次標題
+                const roundTitle = document.createElement('div');
+                roundTitle.className = 'text-[10px] tracking-wider text-center text-indigo-300 font-bold mb-2 uppercase';
+                roundTitle.textContent = roundIndex === State.bracketData.length - 1 ? '總冠軍賽 (Final)' : `第 ${roundIndex + 1} 輪`;
+                roundCol.appendChild(roundTitle);
+                
+                // 繪製對戰組合
+                round.forEach(match => {
+                    const matchBox = document.createElement('div');
+                    matchBox.className = 'bg-gray-800/90 backdrop-blur rounded-lg p-2 border border-gray-600 shadow text-xs';
+                    
+                    const t1Class = match.winner?.id === match.team1.id ? 'text-yellow-400 font-bold' : 'text-gray-300';
+                    const t2Class = match.winner?.id === match.team2?.id ? 'text-yellow-400 font-bold' : 'text-gray-300';
+                    
+                    const t1Score = match.isBye ? '-' : match.score1;
+                    const t2Score = match.isBye ? '-' : match.score2;
+                    const t2Name = match.isBye ? '<span class="text-gray-500 text-[10px]">輪空晉級</span>' : match.team2.short;
+
+                    matchBox.innerHTML = `
+                        <div class="flex justify-between items-center ${t1Class} mb-1">
+                            <span class="truncate w-16 flex items-center">
+                                <span class="w-2 h-2 rounded-full mr-1 inline-block shrink-0" style="background-color: ${match.team1.color}"></span>
+                                ${match.team1.short}
+                            </span>
+                            <span>${t1Score}</span>
+                        </div>
+                        <div class="border-t border-gray-700 my-1"></div>
+                        <div class="flex justify-between items-center ${t2Class} mt-1">
+                            <span class="truncate w-16 flex items-center">
+                                ${!match.isBye ? `<span class="w-2 h-2 rounded-full mr-1 inline-block shrink-0" style="background-color: ${match.team2.color}"></span>` : ''}
+                                ${t2Name}
+                            </span>
+                            <span>${t2Score}</span>
+                        </div>
+                    `;
+                    roundCol.appendChild(matchBox);
+                });
+                
+                DOM.bracketContainer.appendChild(roundCol);
+            });
+            
+            // 繪製最後的冠軍標記
+            const championCol = document.createElement('div');
+            championCol.className = 'flex flex-col justify-center gap-4 min-w-[100px] relative pl-2';
+            
+            const champTitle = document.createElement('div');
+            champTitle.className = 'text-[10px] tracking-wider text-center text-yellow-400 font-bold mb-2 uppercase';
+            champTitle.textContent = '冠軍 (CHAMP)';
+            championCol.appendChild(champTitle);
+            
+            const finalMatch = State.bracketData[State.bracketData.length - 1][0];
+            const champ = finalMatch.winner;
+            
+            const champBox = document.createElement('div');
+            champBox.className = 'bg-gradient-to-br from-yellow-900/60 to-yellow-700/40 rounded-xl p-3 border border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)] text-center animate-pulse-win flex flex-col items-center justify-center';
+            champBox.innerHTML = `
+                <i class="fa-solid fa-trophy text-yellow-400 mb-1"></i>
+                <div class="font-black text-white text-sm whitespace-nowrap">${champ.short}</div>
+            `;
+            championCol.appendChild(champBox);
+            DOM.bracketContainer.appendChild(championCol);
         }
 
         function createConfetti() {
@@ -593,28 +806,20 @@
                 confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
                 confetti.style.animationDelay = Math.random() * 2 + 's';
                 
-                // 隨機形狀
                 if (Math.random() > 0.5) confetti.style.borderRadius = '50%';
                 
                 document.body.appendChild(confetti);
-
-                // 動畫結束後移除
-                setTimeout(() => {
-                    confetti.remove();
-                }, 5000);
+                setTimeout(() => confetti.remove(), 5000);
             }
         }
 
         function resetToSetup() {
-            // 清理紙屑
             document.querySelectorAll('.confetti').forEach(el => el.remove());
 
-            // 隱藏其他區塊，顯示設定區
             DOM.matchSection.classList.add('hidden');
             DOM.winnerSection.classList.add('hidden');
             DOM.setupSection.classList.remove('hidden');
 
-            // 清空選擇
             State.selectedTeams = [];
             document.querySelectorAll('.team-select-btn').forEach(btn => {
                 btn.classList.remove('selected', 'bg-blue-900/50', 'border-blue-500');
@@ -622,11 +827,9 @@
             });
             updateSetupUI();
             
-            // 將視窗捲動到頂部
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 啟動應用
         window.onload = init;
 
     </script>
