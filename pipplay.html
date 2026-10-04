@@ -240,6 +240,7 @@
                 <div id="winner-info" class="my-6">
                     <div class="w-24 h-24 mx-auto rounded-full bg-white/10 flex items-center justify-center border-4 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.5)] mb-4 text-4xl font-black text-white" id="winner-logo"></div>
                     <h1 class="text-3xl sm:text-4xl font-black winner-text leading-tight" id="winner-name">隊伍名稱</h1>
+                    <div class="text-sm text-yellow-200 mt-2 font-bold opacity-90 tracking-wider" id="winner-manager"><i class="fa-solid fa-user-tie mr-1"></i>經理名稱</div>
                 </div>
 
                 <div class="text-lg font-bold text-blue-200 mb-6 bg-black/30 py-2 rounded-xl border border-white/10">
@@ -270,37 +271,37 @@
         // --- 1. 資料定義 ---
         const teams = [
             // 台灣球隊
-            { id: 'T-X', name: '中信兄弟', short: '兄弟', code: 'X', region: 'TW', color: '#fbbf24' },
-            { id: 'T-T', name: '味全龍', short: '龍', code: 'T', region: 'TW', color: '#ef4444' },
-            { id: 'T-A', name: '統一獅', short: '獅', code: 'A', region: 'TW', color: '#f97316' },
+            { id: 'T-X', name: '中信兄弟', short: '兄弟', code: 'X', region: 'TW', color: '#fbbf24', manager: 'Tritte Alla' },
+            { id: 'T-T', name: '味全龍', short: '龍', code: 'T', region: 'TW', color: '#ef4444', manager: 'Titok Alla' },
+            { id: 'T-A', name: '統一獅', short: '獅', code: 'A', region: 'TW', color: '#f97316', manager: 'Avjvchrome Alla' },
             
             // 美國球隊
-            { id: 'U-G', name: '舊金山巨人', short: '巨人', code: 'G', region: 'US', color: '#f97316' },
-            { id: 'U-MO', name: '邁阿密馬林魚', short: '馬林魚', code: 'MO', region: 'US', color: '#0ea5e9' },
-            { id: 'U-AY', name: '亞利桑那響尾蛇', short: '響尾蛇', code: 'AY', region: 'US', color: '#b91c1c' },
-            { id: 'U-AM', name: '亞特蘭大勇士', short: '勇士', code: 'AM', region: 'US', color: '#1d4ed8' },
-            { id: 'U-C', name: '科羅拉多洛磯', short: '洛磯', code: 'C', region: 'US', color: '#a855f7' },
-            { id: 'U-MI', name: '密爾瓦基釀酒人', short: '釀酒人', code: 'MI', region: 'US', color: '#eab308' },
-            { id: 'U-MK', name: '紐約大都會', short: '大都會', code: 'MK', region: 'US', color: '#f97316' },
-            { id: 'U-AR', name: '奧克蘭運動家', short: '運動家', code: 'AR', region: 'US', color: '#22c55e' },
-            { id: 'U-YU', name: '匹茲堡海盜', short: '海盜', code: 'YU', region: 'US', color: '#fbbf24' },
-            { id: 'U-ML', name: '明尼蘇達雙城', short: '雙城', code: 'ML', region: 'US', color: '#dc2626' },
-            { id: 'U-AL', name: '洛杉磯天使', short: '天使', code: 'AL', region: 'US', color: '#dc2626' },
-            { id: 'U-MIN', name: '芝加哥小熊', short: '小熊', code: 'MIN', region: 'US', color: '#2563eb' },
-            { id: 'U-PE', name: '芝加哥白襪', short: '白襪', code: 'PE', region: 'US', color: '#9ca3af' },
-            { id: 'U-MY', name: '洛杉磯道奇', short: '道奇', code: 'MY', region: 'US', color: '#3b82f6' },
-            { id: 'U-HO', name: '休士頓太空人', short: '太空人', code: 'HO', region: 'US', color: '#ea580c' },
-            { id: 'U-LY', name: '西雅圖水手', short: '水手', code: 'LY', region: 'US', color: '#0d9488' },
-            { id: 'U-WY', name: '聖地牙哥教士', short: '教士', code: 'WY', region: 'US', color: '#b45309' },
-            { id: 'U-WS', name: '費城費城人', short: '費城人', code: 'WS', region: 'US', color: '#ef4444' },
-            { id: 'U-HS', name: '多倫多藍鳥', short: '藍鳥', code: 'HS', region: 'US', color: '#3b82f6' },
-            { id: 'U-HU', name: '波士頓紅襪', short: '紅襪', code: 'HU', region: 'US', color: '#dc2626' },
-            { id: 'U-KO', name: '堪薩斯皇家', short: '皇家', code: 'KO', region: 'US', color: '#3b82f6' },
-            { id: 'U-CH', name: '巴爾的摩金鶯', short: '金鶯', code: 'CH', region: 'US', color: '#ea580c' },
-            { id: 'U-YO', name: '坦帕灣光芒', short: '光芒', code: 'YO', region: 'US', color: '#0ea5e9' },
-            { id: 'U-KS', name: '聖路易紅雀', short: '紅雀', code: 'KS', region: 'US', color: '#dc2626' },
-            { id: 'U-AM_TEX', name: '德州遊騎兵', short: '遊騎兵', code: 'AM', region: 'US', color: '#2563eb' },
-            { id: 'U-JU', name: '紐約洋基', short: '洋基', code: 'JU', region: 'US', color: '#1e293b' }
+            { id: 'U-G', name: '舊金山巨人', short: '巨人', code: 'G', region: 'US', color: '#f97316', manager: 'Ginan Shine' },
+            { id: 'U-MO', name: '邁阿密馬林魚', short: '馬林魚', code: 'MO', region: 'US', color: '#0ea5e9', manager: 'Micro Kao' },
+            { id: 'U-AY', name: '亞利桑那響尾蛇', short: '響尾蛇', code: 'AY', region: 'US', color: '#b91c1c', manager: 'Aly Huang' },
+            { id: 'U-AM', name: '亞特蘭大勇士', short: '勇士', code: 'AM', region: 'US', color: '#1d4ed8', manager: 'Amb Chen' },
+            { id: 'U-C', name: '科羅拉多洛磯', short: '洛磯', code: 'C', region: 'US', color: '#a855f7', manager: 'Cenny Cheang' },
+            { id: 'U-MI', name: '密爾瓦基釀酒人', short: '釀酒人', code: 'MI', region: 'US', color: '#eab308', manager: 'Minu Lin' },
+            { id: 'U-MK', name: '紐約大都會', short: '大都會', code: 'MK', region: 'US', color: '#f97316', manager: 'Milka Lee' },
+            { id: 'U-AR', name: '奧克蘭運動家', short: '運動家', code: 'AR', region: 'US', color: '#22c55e', manager: 'Areal Chen' },
+            { id: 'U-YU', name: '匹茲堡海盜', short: '海盜', code: 'YU', region: 'US', color: '#fbbf24', manager: 'Yuzin Chen' },
+            { id: 'U-ML', name: '明尼蘇達雙城', short: '雙城', code: 'ML', region: 'US', color: '#dc2626', manager: 'Mickey Lin' },
+            { id: 'U-AL', name: '洛杉磯天使', short: '天使', code: 'AL', region: 'US', color: '#dc2626', manager: 'Alva Lee' },
+            { id: 'U-MIN', name: '芝加哥小熊', short: '小熊', code: 'MIN', region: 'US', color: '#2563eb', manager: 'Minshung Lee' },
+            { id: 'U-PE', name: '芝加哥白襪', short: '白襪', code: 'PE', region: 'US', color: '#9ca3af', manager: 'PPP Lee' },
+            { id: 'U-MY', name: '洛杉磯道奇', short: '道奇', code: 'MY', region: 'US', color: '#3b82f6', manager: 'Mymy Lau' },
+            { id: 'U-HO', name: '休士頓太空人', short: '太空人', code: 'HO', region: 'US', color: '#ea580c', manager: 'Moonwow Ho' },
+            { id: 'U-LY', name: '西雅圖水手', short: '水手', code: 'LY', region: 'US', color: '#0d9488', manager: 'Lily Chang' },
+            { id: 'U-WY', name: '聖地牙哥教士', short: '教士', code: 'WY', region: 'US', color: '#b45309', manager: 'Yusu Wu' },
+            { id: 'U-WS', name: '費城費城人', short: '費城人', code: 'WS', region: 'US', color: '#ef4444', manager: 'Shrate Wu' },
+            { id: 'U-HS', name: '多倫多藍鳥', short: '藍鳥', code: 'HS', region: 'US', color: '#3b82f6', manager: 'Jimyi Huang' },
+            { id: 'U-HU', name: '波士頓紅襪', short: '紅襪', code: 'HU', region: 'US', color: '#dc2626', manager: 'Horsina' },
+            { id: 'U-KO', name: '堪薩斯皇家', short: '皇家', code: 'KO', region: 'US', color: '#3b82f6', manager: 'Jayu Kao' },
+            { id: 'U-CH', name: '巴爾的摩金鶯', short: '金鶯', code: 'CH', region: 'US', color: '#ea580c', manager: 'Win Chen' },
+            { id: 'U-YO', name: '坦帕灣光芒', short: '光芒', code: 'YO', region: 'US', color: '#0ea5e9', manager: 'Yourina' },
+            { id: 'U-KS', name: '聖路易紅雀', short: '紅雀', code: 'NI', region: 'US', color: '#dc2626', manager: 'Hallo Nini' },
+            { id: 'U-AM_TEX', name: '德州遊騎兵', short: '遊騎兵', code: 'AM', region: 'US', color: '#2563eb', manager: 'Asisama Lin' },
+            { id: 'U-JU', name: '紐約洋基', short: '洋基', code: 'JU', region: 'US', color: '#1e293b', manager: 'July Liu' }
         ];
 
         // --- 2. 狀態管理 ---
@@ -361,6 +362,7 @@
             
             winnerLogo: document.getElementById('winner-logo'),
             winnerName: document.getElementById('winner-name'),
+            winnerManager: document.getElementById('winner-manager'),
             finalScore: document.getElementById('final-series-score'),
             bracketContainer: document.getElementById('bracket-container'), // 新增：樹狀圖容器
             restartBtn: document.getElementById('restart-btn')
@@ -389,7 +391,10 @@
                     <div class="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold mr-2 text-white shrink-0 shadow-inner">
                         ${team.code}
                     </div>
-                    <div class="truncate text-sm font-medium pr-1 text-gray-300 group-hover:text-white transition">${team.name}</div>
+                    <div class="flex flex-col flex-grow truncate pr-1 text-left">
+                        <div class="truncate text-sm font-medium text-gray-300 group-hover:text-white transition">${team.name}</div>
+                        <div class="truncate text-[10px] text-gray-500 group-hover:text-gray-300 transition mt-0.5"><i class="fa-solid fa-user-tie mr-1"></i>${team.manager}</div>
+                    </div>
                 `;
                 btn.appendChild(colorBar);
 
@@ -594,7 +599,7 @@
                 display.logo.textContent = team.code;
                 display.logo.style.color = team.color;
                 display.logo.style.borderColor = team.color;
-                display.name.innerHTML = team.name.replace(/(.{4})/g, "$1<br>");
+                display.name.innerHTML = `<div class="flex flex-col items-center justify-center leading-tight"><span>${team.name}</span><span class="text-[10px] text-gray-400 font-normal mt-1 whitespace-nowrap"><i class="fa-solid fa-user-tie mr-1"></i>${team.manager}</span></div>`;
                 display.score.textContent = '0';
             }
 
@@ -714,6 +719,7 @@
             DOM.winnerLogo.textContent = winnerTeam.code;
             DOM.winnerLogo.style.color = winnerTeam.color;
             DOM.winnerName.textContent = winnerTeam.name;
+            DOM.winnerManager.innerHTML = `<i class="fa-solid fa-user-tie mr-1"></i>Manager: ${winnerTeam.manager}`;
             DOM.finalScore.textContent = `${finalScores[winnerIdx]} - ${finalScores[loserIdx]}`;
 
             renderBracket(); // 繪製最終樹狀圖
