@@ -71,7 +71,7 @@
         <button class="tab-btn active px-8 py-4 font-bold bg-accentYellow text-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab1')">TextShower</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab2')">TextTear</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">TextPrompt</button>
-        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">Tool 04</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">BatchProcessor</button>
     </nav>
 
     <!-- 內容區域 -->
@@ -214,11 +214,38 @@
             </div>
         </div>
 
-        <!-- =================== TAB 4: Placeholder =================== -->
-        <div id="tab4" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col justify-center items-center gap-6 border-t-8 border-primaryBlue min-h-[500px]">
-            <i class="fas fa-cogs text-6xl text-secondaryBlue opacity-50 mb-4"></i>
-            <h2 class="text-3xl font-bold text-secondaryBlue opacity-70 tracking-widest">TOOL 04 準備中</h2>
-            <p class="text-gray-400">未來擴充功能將在此實裝</p>
+        <!-- =================== TAB 4: BatchProcessor =================== -->
+        <div id="tab4" class="tab-content w-full bg-white p-8 rounded-2xl shadow-xl flex-col gap-6 border-t-8 border-primaryBlue">
+            <h2 class="text-2xl font-bold text-primaryBlue flex items-end gap-2 border-b-2 border-lightBeige pb-2">
+                專利網址批次處理器 2.0
+                <span class="text-sm font-normal text-secondaryBlue mb-1">Patent URL Batch Processor</span>
+            </h2>
+            
+            <div class="flex flex-col gap-4 mt-2">
+                <div>
+                    <label for="batchInput" class="block text-sm font-bold text-primaryBlue mb-2">請輸入多個網址 (每行一個):</label>
+                    <textarea id="batchInput" class="w-full h-48 bg-lightBeige bg-opacity-30 border border-secondaryBlue text-gray-800 p-5 rounded-xl text-lg focus:outline-none focus:ring-4 focus:ring-accentYellow resize-none shadow-inner transition-all leading-relaxed custom-scrollbar" placeholder="請輸入多個網址，每行一個，例如：&#10;https://patents.google.com/patent/US2017228735A1/en&#10;https://patents.google.com/patent/US6715672B1/en&#10;https://patents.google.com/patent/CN107369272A/en"></textarea>
+                </div>
+                
+                <div class="flex justify-center md:justify-start">
+                    <button id="batch-process-btn" onclick="processBatch()" class="w-full md:w-auto bg-accentYellow text-primaryBlue font-bold py-3 px-12 rounded-xl shadow-md hover:bg-yellow-400 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
+                        批次處理
+                    </button>
+                </div>
+                
+                <div id="batchResult" class="hidden flex-col gap-2 mt-2 transition-all duration-500 opacity-0">
+                    <div class="flex justify-between items-end border-b border-lightBeige pb-2 mb-2">
+                        <h3 class="text-lg font-bold text-primaryBlue">批次處理結果:</h3>
+                        <button id="batch-copy-btn" onclick="copyResults()" class="text-sm bg-primaryBlue hover:bg-secondaryBlue text-lightBeige font-bold py-1.5 px-4 rounded-lg shadow transition-colors flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            複製結果
+                        </button>
+                    </div>
+                    <textarea id="batchOutput" readonly class="w-full h-64 bg-gray-50 border border-secondaryBlue text-gray-800 p-5 rounded-xl focus:outline-none resize-none shadow-inner text-lg leading-relaxed transition-all custom-scrollbar"></textarea>
+                </div>
+            </div>
         </div>
 
     </main>
@@ -593,6 +620,136 @@ c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」
             }
             window.getSelection().removeAllRanges();
         });
+
+        // ==========================================
+        // TAB 4: Patent URL Batch Processor 邏輯
+        // ==========================================
+        function extractPatentIdFromUrl(url) {
+            try {
+                var match = url.match(/\/patent\/([^\/]+)/);
+                return match ? match[1].replace('/en', '') : '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function processPatentUrl(patentId, sourceUrl) {
+            try {
+                if (patentId.substring(0, 2) === "US") {
+                    var baseUrl = "https://patents.google.com/patent/";
+                    var afterUS = patentId.substring(2);
+                    // 新制公開公告號格式判斷
+                    var newFormatMatch = afterUS.match(/^((?:19|20)\d{2})(\d+)([A-Z]\d+)$/);
+                    if (newFormatMatch) {
+                        var yearPart = newFormatMatch[1];
+                        var serialPart = newFormatMatch[2];
+                        var kindCodePart = newFormatMatch[3];
+                        serialPart = serialPart.padStart(7, '0');
+                        return { url: baseUrl + "US" + yearPart + serialPart + kindCodePart };
+                    } else {
+                        return { url: sourceUrl.replace(/\/en$/, "") };
+                    }
+                } else if (patentId.substring(0, 2) === "WO") {
+                    if (patentId.substring(2, 3) === "2") {
+                        return { url: sourceUrl.replace(/\/en$/, "") };
+                    } else {
+                        var baseUrl = "https://patents.google.com/patent/";
+                        var woPrefix = "WO";
+                        var twoDigitYear = patentId.substring(2, 4); 
+                        var afterYear = patentId.substring(4); 
+                        var kindCodeMatch = afterYear.match(/[A-Z]\d*$/);
+                        var kindCode = kindCodeMatch ? kindCodeMatch[0] : "";
+                        var serialNumber = kindCode ? afterYear.replace(kindCode, "") : afterYear;
+                        var fullYear = "20" + twoDigitYear;
+                        
+                        if (serialNumber.length === 5) {
+                            return { url: baseUrl + woPrefix + fullYear + "0" + afterYear };
+                        } else if (serialNumber.length === 6) {
+                            return { url: baseUrl + woPrefix + fullYear + afterYear };
+                        } else {
+                            return { url: baseUrl + woPrefix + fullYear + "0" + afterYear };
+                        }
+                    }
+                } else {
+                    return { url: sourceUrl.replace(/\/en$/, "") };
+                }
+            } catch (e) {
+                return { url: sourceUrl };
+            }
+        }
+
+        function processBatch() {
+            var inputElement = document.getElementById('batchInput');
+            var processBtn = document.getElementById('batch-process-btn');
+            
+            if (!inputElement || !inputElement.value.trim()) {
+                const origText = processBtn.innerText;
+                processBtn.innerText = '請先輸入網址！';
+                processBtn.classList.replace('text-primaryBlue', 'text-red-500');
+                setTimeout(() => {
+                    processBtn.innerText = origText;
+                    processBtn.classList.replace('text-red-500', 'text-primaryBlue');
+                }, 2000);
+                return;
+            }
+
+            var input = inputElement.value.trim();
+            var urls = input.split('\n');
+            var results = [];
+
+            for (var i = 0; i < urls.length; i++) {
+                var url = urls[i].trim();
+                if (url) {
+                    var patentId = extractPatentIdFromUrl(url);
+                    if (patentId) {
+                        var result = processPatentUrl(patentId, url);
+                        results.push(result.url);
+                    } else {
+                        results.push(url);
+                    }
+                }
+            }
+
+            var outputElement = document.getElementById('batchOutput');
+            outputElement.value = results.join('\n');
+            
+            var resultElement = document.getElementById('batchResult');
+            resultElement.classList.remove('hidden');
+            setTimeout(() => {
+                resultElement.classList.remove('opacity-0');
+                resultElement.classList.add('opacity-100');
+            }, 10);
+        }
+
+        function copyResults() {
+            var output = document.getElementById('batchOutput');
+            if (!output || !output.value) return;
+            
+            output.select();
+            output.setSelectionRange(0, 99999);
+            
+            try {
+                document.execCommand('copy');
+                var btn = document.getElementById('batch-copy-btn');
+                var originalHtml = btn.innerHTML;
+                
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    已複製!
+                `;
+                btn.classList.replace('bg-primaryBlue', 'bg-green-500');
+                
+                setTimeout(function() {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.replace('bg-green-500', 'bg-primaryBlue');
+                }, 2000);
+            } catch (e) {
+                console.error('複製失敗', e);
+            }
+            window.getSelection().removeAllRanges();
+        }
     </script>
     <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
