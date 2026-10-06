@@ -213,7 +213,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/09/01各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/09/29各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -260,12 +260,12 @@
                                 <div><strong class="text-red-600">行政單位持續警戒：</strong>「行一」近期出現離職狀況，離職率攀升至 55.6%，與「行二」(61.5%) 同樣面臨超過半數的高流動風險。兩大行政單位歷史離職人數皆已超越現行編制。強烈建議深入檢視基層行政體系的薪資結構、業務範疇與發展性，並考慮重新調整工作配置。</div>
                             </li>
                             <li class="flex items-start">
-                                <i class="fas fa-search text-orange-400 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-orange-600">一組暫解警報：</strong>受惠於新進人員報到，「一組」離職率微幅回降至 24.0%，脫離了「需注意」的門檻。建議 HR 協助新進人員融入，並持續關懷該單位的專案壓力，以穩固團隊戰力。</div>
+                                <i class="fas fa-search text-green-500 mt-1 mr-2 flex-shrink-0"></i>
+                                <div><strong class="text-green-600">一組持續回穩：</strong>受惠於新進人員陸續報到，「一組」離職率進一步降至 23.1%，穩定度持續提升。建議 HR 協助新進人員融入，並持續關懷該單位的專案壓力，以穩固團隊戰力。</div>
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-users-cog text-blue-500 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>隨著「一組」與「二組」(23.8%) 均有新血加入，加上「三組」(25.0%)，三大核心單位整體流動率目前約維持在四分之一左右。適度流動與新血注入有助新陳代謝，但仍需落實核心技術與知識的傳承與留存機制。</div>
+                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>隨著「一組」(23.1%) 與「二組」(23.8%) 均有新血加入，加上「三組」(25.0%)，三大核心單位整體流動率目前維持在四分之一以下。適度流動與新血注入有助新陳代謝，但仍需落實核心技術與知識的傳承與留存機制。</div>
                             </li>
                         </ul>
                     </div>
@@ -376,7 +376,7 @@
             data() {
                 return {
                     currentDate: '', // 今日日期
-                    lastUpdated: '2026/09/01 09:14:28', // 鎖定更新時間，重新整理不會變更
+                    lastUpdated: '2026/09/29 10:30:38', // 鎖定更新時間，重新整理不會變更
 
                     isNameMasked: true, // 姓名遮罩狀態
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
@@ -392,9 +392,9 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/09/01資料)
+                    // 單位現職人數參考資料(2026/09/29資料)
                     currentEmployees: {
-                        '一組': 19,
+                        '一組': 20,
                         '二組': 32,
                         '三組': 18,
                         '行一': 4,
@@ -440,7 +440,8 @@
                         { id: 65, date: '2026-08-03', originalName: '黃麗香', dept: '行二', remark: '會計' },
                         { id: 68, date: '2026-08-17', originalName: '謝智勛', dept: '二組' },
                         { id: 69, date: '2026-08-17', originalName: '徐佳琨', dept: '一組' },
-                        { id: 70, date: '2026-08-24', originalName: '郭婉蓉', dept: '行二' }
+                        { id: 70, date: '2026-08-24', originalName: '郭婉蓉', dept: '行二' },
+                        { id: 72, date: '2026-09-29', originalName: '劉書丞', dept: '一組' }
                     ],
 
                     // 離職資料
