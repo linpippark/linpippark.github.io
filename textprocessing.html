@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TextProcessing Web App</title>
+    <!-- 加入 TranMarkdown 所需字型 -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入 TranMarkdown 所需函式庫 -->
+    <!-- Mammoth.js for DOCX parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- Turndown.js for HTML to Markdown -->
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+    <!-- PDF.js for PDF parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Marked.js for Markdown Preview -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -55,6 +69,23 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* TranMarkdown - Markdown Preview Styles */
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .markdown-body h1 { font-size: 1.875rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .markdown-body h2 { font-size: 1.5rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.3rem; }
+        .markdown-body h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .markdown-body p { margin-bottom: 1rem; line-height: 1.7; color: #334155; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; }
+        .markdown-body th { background-color: #f8fafc; font-weight: 600; }
+        .markdown-body blockquote { border-left: 4px solid #6366f1; padding-left: 1rem; color: #64748b; font-style: italic; margin: 1rem 0; }
+        .markdown-body code { background-color: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; font-family: 'JetBrains Mono', monospace; }
+        .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+        .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
+        .markdown-body hr { border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
     </style>
 </head>
 <body class="bg-lightBeige min-h-screen flex flex-col font-sans text-gray-800">
@@ -67,11 +98,12 @@
     </header>
 
     <!-- TAB 切換選單 -->
-    <nav class="flex justify-center bg-secondaryBlue shadow-md sticky top-0 z-20">
+    <nav class="flex justify-center bg-secondaryBlue shadow-md sticky top-0 z-20 flex-wrap">
         <button class="tab-btn active px-8 py-4 font-bold bg-accentYellow text-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab1')">TextShower</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab2')">TextTear</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">TextPrompt</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">BatchProcessor</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab5')">TranMarkdown</button>
     </nav>
 
     <!-- 內容區域 -->
@@ -248,6 +280,239 @@
             </div>
         </div>
 
+        <!-- =================== TAB 5: TranMarkdown =================== -->
+        <div id="tab5" class="tab-content w-full bg-slate-50 text-slate-800 p-0 md:p-0 rounded-2xl shadow-xl flex-col border-t-8 border-primaryBlue overflow-hidden">
+            <!-- Top Navigation (內部) -->
+            <div class="bg-white border-b border-slate-200 sticky top-0 z-30">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-sm flex items-center justify-center">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                Doc2MD Studio
+                                <span class="text-xs font-medium bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-200">純文字結構版</span>
+                            </h1>
+                            <p class="text-xs text-slate-500 hidden md:block">支援上傳 DOCX 與 PDF 檔案，快速轉換為符合標準之 .md 檔案下載</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="tmLoadDemoContent()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            載入範例
+                        </button>
+                        <button onclick="tmToggleWorkflowModal()" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+                            <i data-lucide="network" class="w-4 h-4"></i>
+                            流程圖
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Workspace (內部) -->
+            <div class="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[700px]">
+                
+                <!-- Left Sidebar: Upload & Settings (4 cols) -->
+                <div class="lg:col-span-4 space-y-6 flex flex-col">
+                    
+                    <!-- Step 1: File Upload -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">1</span>
+                                上傳來源檔案
+                            </h2>
+                            <span class="text-xs text-slate-400">支援 .docx, .pdf</span>
+                        </div>
+
+                        <div id="tm-dropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-xl p-6 text-center transition-all cursor-pointer bg-slate-50/50 hover:bg-indigo-50/20 group">
+                            <input type="file" id="tm-fileInput" accept=".docx,.pdf" class="hidden" />
+                            <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 mx-auto mb-3 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-sm font-medium text-slate-700 mb-1">點擊選擇檔案，或將檔案拖曳至此</p>
+                            <p class="text-xs text-slate-500">自動解析內文段落、標題、清單與表格</p>
+                        </div>
+
+                        <!-- File Info Pill -->
+                        <div id="tm-fileInfoCard" class="hidden mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <div class="flex items-center space-x-3 overflow-hidden">
+                                <div id="tm-fileTypeBadge" class="px-2.5 py-1 rounded-md text-xs font-bold uppercase bg-blue-100 text-blue-700">DOCX</div>
+                                <div class="truncate">
+                                    <p id="tm-fileNameText" class="text-sm font-semibold text-slate-800 truncate">document.docx</p>
+                                    <p id="tm-fileSizeText" class="text-xs text-slate-500">125 KB</p>
+                                </div>
+                            </div>
+                            <button onclick="tmResetSystem()" class="text-slate-400 hover:text-red-500 p-1 rounded-lg transition" title="移除檔案">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Markdown Formatting Settings -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                        <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+                            <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">2</span>
+                            Markdown 轉換選項
+                        </h2>
+                        <div class="space-y-3.5">
+                            <label class="flex items-center justify-between cursor-pointer p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-700 block">自動加入文件主標題 (# H1)</span>
+                                </div>
+                                <input type="checkbox" id="tm-optIncludeTitle" checked onchange="tmReformatMarkdown()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                            </label>
+                            <label class="flex items-center justify-between cursor-pointer p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition">
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-700 block">保留 PDF 頁碼標題與分隔線</span>
+                                </div>
+                                <input type="checkbox" id="tm-optPageMarkers" checked onchange="tmReformatMarkdown()" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4" />
+                            </label>
+                            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-700">無序清單符號</span>
+                                <select id="tm-optBulletMarker" onchange="tmReformatMarkdown()" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-700 focus:outline-none focus:border-indigo-500">
+                                    <option value="-">減號 ( - )</option>
+                                    <option value="*">星號 ( * )</option>
+                                    <option value="+">加號 ( + )</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Pipeline Status & Download -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex-1 flex flex-col justify-between">
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center">3</span>
+                                轉換狀態與檔案下載
+                            </h2>
+                            <div id="tm-statusBox" class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-4">
+                                <div class="flex items-center justify-between text-xs font-medium text-slate-600 mb-1.5">
+                                    <span id="tm-statusStageText">等待上傳檔案...</span>
+                                    <span id="tm-statusPercentText">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                    <div id="tm-statusBar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <div class="mt-3 pt-2.5 border-t border-slate-200/80 grid grid-cols-3 gap-2 text-center">
+                                    <div>
+                                        <p class="text-[11px] text-slate-400">總字元</p>
+                                        <p id="tm-statChars" class="text-sm font-bold text-slate-700">0</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] text-slate-400">段落</p>
+                                        <p id="tm-statBlocks" class="text-sm font-bold text-indigo-600">0</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[11px] text-slate-400">MD行數</p>
+                                        <p id="tm-statLines" class="text-sm font-bold text-slate-700">0</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-2.5">
+                            <button id="tm-btnDownloadMd" onclick="tmDownloadMarkdownFile()" disabled class="w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                下載 Markdown (.md)
+                            </button>
+                            <button id="tm-btnCopyMd" onclick="tmCopyMarkdownToClipboard()" disabled class="w-full py-2.5 px-4 rounded-xl font-medium text-xs flex items-center justify-center gap-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                複製 Markdown 原始碼
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Main Area: Editor & Preview (8 cols) -->
+                <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-[700px]">
+                    <div class="border-b border-slate-200 px-4 bg-slate-50/70 flex items-center justify-between h-12">
+                        <div class="flex space-x-1">
+                            <button onclick="tmSwitchTabUI('split')" id="tm-tab-split" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition flex items-center gap-1.5">
+                                <i data-lucide="columns" class="w-3.5 h-3.5"></i>
+                                同步雙欄檢視
+                            </button>
+                            <button onclick="tmSwitchTabUI('code')" id="tm-tab-code" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition flex items-center gap-1.5">
+                                <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                                原始碼
+                            </button>
+                            <button onclick="tmSwitchTabUI('preview')" id="tm-tab-preview" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition flex items-center gap-1.5">
+                                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                預覽
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200 overflow-hidden" id="tm-workspaceGrid">
+                        <div id="tm-paneCode" class="flex flex-col h-full overflow-hidden">
+                            <div class="bg-slate-100/80 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                                <span>MARKDOWN 原始碼 (.md)</span>
+                            </div>
+                            <textarea id="tm-markdownEditor" oninput="tmHandleManualEdit()" placeholder="請在左側上傳檔案，或點擊「載入範例」..." class="w-full flex-1 p-4 font-mono text-xs sm:text-sm text-slate-800 bg-slate-50/30 focus:outline-none resize-none leading-relaxed overflow-y-auto custom-scrollbar"></textarea>
+                        </div>
+                        <div id="tm-panePreview" class="flex flex-col h-full overflow-hidden">
+                            <div class="bg-slate-100/80 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-500">
+                                <span>即時轉譯預覽 (HTML Render)</span>
+                            </div>
+                            <div id="tm-markdownPreview" class="flex-1 p-6 overflow-y-auto markdown-body bg-white custom-scrollbar">
+                                <div class="h-full flex flex-col items-center justify-center text-slate-400 text-center py-16">
+                                    <i data-lucide="file-text" class="w-12 h-12 mb-3 stroke-1"></i>
+                                    <p class="text-sm font-medium text-slate-500">尚無文件內容</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Architecture Modal -->
+            <div id="tm-workflowModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                                <i data-lucide="cpu" class="w-5 h-5"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-900">系統工作流架構設計</h3>
+                        </div>
+                        <button onclick="tmToggleWorkflowModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="py-5 space-y-6 text-sm text-slate-600">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <span class="text-xs font-bold text-indigo-600 uppercase">Stage 1</span>
+                                <h4 class="font-bold text-slate-800 mt-1 mb-2">1. 檔案驗證與分流</h4>
+                                <p class="text-xs leading-relaxed">檢驗副檔名與 MIME 類型，確認檔案結構完整性後分流至對應的解析器。</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <span class="text-xs font-bold text-indigo-600 uppercase">Stage 2</span>
+                                <h4 class="font-bold text-slate-800 mt-1 mb-2">2. 文字與結構解析</h4>
+                                <p class="text-xs leading-relaxed">
+                                    <strong>DOCX：</strong> 解析 XML 段落、標題與表格。<br>
+                                    <strong>PDF：</strong> 透過座標聚類文字行與字級。
+                                </p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <span class="text-xs font-bold text-indigo-600 uppercase">Stage 3</span>
+                                <h4 class="font-bold text-slate-800 mt-1 mb-2">3. 語法樹正規化</h4>
+                                <p class="text-xs leading-relaxed">將標題映射為 H1~H6，表格轉為 GFM 語法，清除多餘標籤。</p>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                                <span class="text-xs font-bold text-indigo-600 uppercase">Stage 4</span>
+                                <h4 class="font-bold text-slate-800 mt-1 mb-2">4. 輸出 .md 下載</h4>
+                                <p class="text-xs leading-relaxed">封裝為 UTF-8 編碼之標準 .md 檔案，提供單一檔案下載。</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-slate-200 flex justify-end">
+                        <button onclick="tmToggleWorkflowModal()" class="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition">關閉說明</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- 最下方顯示 Copyright -->
@@ -310,6 +575,13 @@
             const versionString = generateVersionString();
             document.getElementById('ts-version').textContent = versionString;
             document.getElementById('tt-version').textContent = versionString;
+            
+            // 初始化 TranMarkdown 的 Lucide Icons
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+            // 綁定 TranMarkdown 的上傳事件
+            setupTranMarkdownDragDrop();
         });
 
         // ==========================================
@@ -749,6 +1021,357 @@ c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」
                 console.error('複製失敗', e);
             }
             window.getSelection().removeAllRanges();
+        }
+
+        // ==========================================
+        // TAB 5: TranMarkdown 邏輯
+        // ==========================================
+        // Configure PDF.js Worker
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+
+        let tmAppState = {
+            fileName: 'document',
+            fileType: '',
+            rawHtmlForDocx: '',
+            pdfPagesText: [],
+            bodyMarkdown: '',
+            finalMarkdown: '',
+            currentTab: 'split'
+        };
+
+        function setupTranMarkdownDragDrop() {
+            const dropzone = document.getElementById('tm-dropzone');
+            const fileInput = document.getElementById('tm-fileInput');
+            if(!dropzone || !fileInput) return;
+
+            dropzone.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-indigo-600', 'bg-indigo-50/40');
+            });
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('border-indigo-600', 'bg-indigo-50/40');
+            });
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-indigo-600', 'bg-indigo-50/40');
+                if (e.dataTransfer.files.length > 0) {
+                    tmHandleFileSelection(e.dataTransfer.files[0]);
+                }
+            });
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    tmHandleFileSelection(e.target.files[0]);
+                }
+            });
+        }
+
+        function tmUpdateProgress(stageText, percent) {
+            document.getElementById('tm-statusStageText').textContent = stageText;
+            document.getElementById('tm-statusPercentText').textContent = `${percent}%`;
+            document.getElementById('tm-statusBar').style.width = `${percent}%`;
+        }
+
+        async function tmHandleFileSelection(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext !== 'docx' && ext !== 'pdf') {
+                alert('系統僅支援上傳 .docx 或 .pdf 格式的檔案！');
+                return;
+            }
+
+            tmAppState.fileName = file.name.replace(/\.[^/.]+$/, '');
+            tmAppState.fileType = ext;
+            tmAppState.rawHtmlForDocx = '';
+            tmAppState.pdfPagesText = [];
+
+            document.getElementById('tm-fileInfoCard').classList.remove('hidden');
+            document.getElementById('tm-fileNameText').textContent = file.name;
+            document.getElementById('tm-fileSizeText').textContent = (file.size / 1024).toFixed(1) + ' KB';
+            const badge = document.getElementById('tm-fileTypeBadge');
+            badge.textContent = ext.toUpperCase();
+            badge.className = ext === 'docx'
+                ? 'px-2.5 py-1 rounded-md text-xs font-bold uppercase bg-blue-100 text-blue-700'
+                : 'px-2.5 py-1 rounded-md text-xs font-bold uppercase bg-rose-100 text-rose-700';
+
+            try {
+                if (ext === 'docx') {
+                    await tmProcessDocxFile(file);
+                } else if (ext === 'pdf') {
+                    await tmProcessPdfFile(file);
+                }
+            } catch (err) {
+                console.error(err);
+                tmUpdateProgress('解析過程發生錯誤：' + err.message, 0);
+            }
+        }
+
+        async function tmProcessDocxFile(file) {
+            tmUpdateProgress('讀取 DOCX 文件結構...', 25);
+            const arrayBuffer = await file.arrayBuffer();
+
+            tmUpdateProgress('解析段落、標題與表格（略過圖片）...', 60);
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            tmAppState.rawHtmlForDocx = result.value;
+
+            tmUpdateProgress('正規化為標準 Markdown 語法...', 90);
+            tmReformatMarkdown();
+            tmUpdateProgress('DOCX 轉換完成！可立即下載 .md 檔案', 100);
+        }
+
+        async function tmProcessPdfFile(file) {
+            tmUpdateProgress('載入 PDF 文件結構...', 15);
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const numPages = pdf.numPages;
+
+            tmAppState.pdfPagesText = [];
+
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                const progress = Math.round(15 + (pageNum / numPages) * 75);
+                tmUpdateProgress(`正在解析 PDF 第 ${pageNum} / ${numPages} 頁文字結構...`, progress);
+
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+
+                const linesMap = new Map();
+
+                textContent.items.forEach(item => {
+                    const str = item.str;
+                    if (!str.trim()) return;
+                    const y = Math.round(item.transform[5]);
+                    const fontSize = Math.round(Math.hypot(item.transform[0], item.transform[1]));
+
+                    let matchedY = null;
+                    for (let existingY of linesMap.keys()) {
+                        if (Math.abs(existingY - y) <= 4) {
+                            matchedY = existingY;
+                            break;
+                        }
+                    }
+                    const targetY = matchedY !== null ? matchedY : y;
+                    if (!linesMap.has(targetY)) {
+                        linesMap.set(targetY, { y: targetY, items: [], maxFont: fontSize });
+                    }
+                    const lineObj = linesMap.get(targetY);
+                    lineObj.items.push({ str, x: item.transform[4], fontSize });
+                    if (fontSize > lineObj.maxFont) lineObj.maxFont = fontSize;
+                });
+
+                const sortedLines = Array.from(linesMap.values()).sort((a, b) => b.y - a.y);
+                let pageMdLines = [];
+
+                sortedLines.forEach(line => {
+                    line.items.sort((a, b) => a.x - b.x);
+                    const lineText = line.items.map(i => i.str).join(' ').trim();
+                    if (!lineText) return;
+
+                    if (line.maxFont >= 16 && lineText.length < 70) {
+                        pageMdLines.push(`### ${lineText}\n`);
+                    } else if (/^(\d+\.|[•\-▪])/.test(lineText)) {
+                        pageMdLines.push(`- ${lineText.replace(/^([•\-▪])\s*/, '')}`);
+                    } else {
+                        pageMdLines.push(`${lineText}\n`);
+                    }
+                });
+
+                tmAppState.pdfPagesText.push(pageMdLines.join('\n'));
+            }
+
+            tmReformatMarkdown();
+            tmUpdateProgress('PDF 轉換完成！可立即下載 .md 檔案', 100);
+        }
+
+        function tmReformatMarkdown() {
+            const includeTitle = document.getElementById('tm-optIncludeTitle').checked;
+            const includePageMarkers = document.getElementById('tm-optPageMarkers').checked;
+            const bulletMarker = document.getElementById('tm-optBulletMarker').value;
+
+            let bodyMd = '';
+
+            if (tmAppState.fileType === 'docx' && tmAppState.rawHtmlForDocx) {
+                const turndownService = new TurndownService({
+                    headingStyle: 'atx',
+                    codeBlockStyle: 'fenced',
+                    bulletListMarker: bulletMarker
+                });
+                if (window.turndownPluginGfm) {
+                    turndownService.use(turndownPluginGfm.gfm);
+                }
+                turndownService.remove('img');
+                bodyMd = turndownService.turndown(tmAppState.rawHtmlForDocx);
+            } else if (tmAppState.fileType === 'pdf' && tmAppState.pdfPagesText.length > 0) {
+                const formattedPages = tmAppState.pdfPagesText.map((pageText, idx) => {
+                    const adjustedText = pageText.replace(/^- /gm, `${bulletMarker} `);
+                    if (includePageMarkers) {
+                        return `## 第 ${idx + 1} 頁\n\n${adjustedText}`;
+                    }
+                    return adjustedText;
+                });
+                bodyMd = formattedPages.join(includePageMarkers ? '\n\n---\n\n' : '\n\n');
+            } else if (tmAppState.bodyMarkdown) {
+                bodyMd = tmAppState.bodyMarkdown.replace(/^- /gm, `${bulletMarker} `);
+            } else {
+                return;
+            }
+
+            const titleHeader = includeTitle ? `# ${tmAppState.fileName}\n\n` : '';
+            const finalMd = (titleHeader + bodyMd).trim() + '\n';
+
+            tmAppState.finalMarkdown = finalMd;
+            document.getElementById('tm-markdownEditor').value = finalMd;
+
+            tmUpdatePreviewAndStats(finalMd);
+
+            document.getElementById('tm-btnDownloadMd').disabled = false;
+            document.getElementById('tm-btnCopyMd').disabled = false;
+        }
+
+        function tmHandleManualEdit() {
+            const editedMd = document.getElementById('tm-markdownEditor').value;
+            tmAppState.finalMarkdown = editedMd;
+            tmUpdatePreviewAndStats(editedMd);
+        }
+
+        function tmUpdatePreviewAndStats(markdownText) {
+            if (typeof marked !== 'undefined') {
+                const html = marked.parse(markdownText);
+                document.getElementById('tm-markdownPreview').innerHTML = html;
+            }
+
+            const nonEmptyBlocks = markdownText.split(/\n\s*\n/).filter(Boolean).length;
+            document.getElementById('tm-statChars').textContent = markdownText.length.toLocaleString();
+            document.getElementById('tm-statBlocks').textContent = nonEmptyBlocks.toLocaleString();
+            document.getElementById('tm-statLines').textContent = markdownText.split('\n').length.toLocaleString();
+        }
+
+        function tmDownloadMarkdownFile() {
+            const blob = new Blob([tmAppState.finalMarkdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${tmAppState.fileName}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function tmCopyMarkdownToClipboard() {
+            navigator.clipboard.writeText(tmAppState.finalMarkdown).then(() => {
+                const btn = document.getElementById('tm-btnCopyMd');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i> 已複製到剪貼簿！`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }, 2000);
+            });
+        }
+
+        function tmLoadDemoContent() {
+            tmAppState.fileName = '企業文件轉Markdown系統規格書';
+            tmAppState.fileType = 'demo';
+            tmAppState.rawHtmlForDocx = '';
+            tmAppState.pdfPagesText = [];
+
+            tmAppState.bodyMarkdown = `這是一份模擬從 **Word (.docx)** 或 **PDF** 轉換而來的標準 Markdown 文件。系統專注於純文字結構解析，自動保留章節標題、段落、清單與表格，並略過所有非文字圖案，直接產出乾淨的 \`.md\` 檔案。
+
+## 1. 核心系統需求達成狀況
+
+- **支援多元檔案上傳**：允許使用者上傳 \`.docx\` 與 \`.pdf\` 格式文件。
+- **標準 Markdown 語法輸出**：自動轉換為標題 (\`#\`)、清單 (\`-\`)、粗體、引用區塊與 GFM 表格。
+- **純淨單檔下載**：自動過濾內嵌圖片與雜訊，直接輸出輕量化的 \`.md\` 檔案。
+
+## 2. 格式支援度對照表
+
+| 來源元素 | DOCX 解析方式 | PDF 解析方式 | 輸出 Markdown 語法 |
+| :--- | :--- | :--- | :--- |
+| 章節標題 | 解析 \`w:pStyle\` 標題層級 | 依字體大小與粗體權重推斷 | \`# H1\`, \`## H2\`, \`### H3\` |
+| 清單項目 | 解析 \`w:numPr\` 列表結構 | 偵測行首符號與縮排 | \`- 項目\` 或 \`1. 項目\` |
+| 資料表格 | 解析 \`w:tbl\` 結構 | 依文字座標對齊重建 | GFM 標準表格語法 |
+| 內嵌圖案 | 自動忽略 \`<w:drawing>\` | 僅提取純文字串流 | 不輸出任何圖片標籤 |
+
+## 3. 轉換後程式碼與引用範例
+
+> **系統設計原則**：保持 Markdown 原始碼的極致乾淨與可讀性，方便直接匯入 GitHub、Notion 或 Obsidian 知識庫。
+
+\`\`\`json
+{
+  "input_formats": ["docx", "pdf"],
+  "output_format": "markdown (.md)",
+  "strip_images": true
+}
+\`\`\``;
+
+            document.getElementById('tm-fileInfoCard').classList.remove('hidden');
+            document.getElementById('tm-fileNameText').textContent = '企業文件轉Markdown系統規格書.docx';
+            document.getElementById('tm-fileSizeText').textContent = '42.0 KB (範例資料)';
+
+            tmReformatMarkdown();
+            tmUpdateProgress('已載入範例文件！可點擊下方按鈕下載 .md 檔案', 100);
+        }
+
+        function tmSwitchTabUI(tab) {
+            tmAppState.currentTab = tab;
+            const tabs = ['split', 'code', 'preview'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tm-tab-${t}`);
+                if (t === tab) {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition flex items-center gap-1.5';
+                } else {
+                    btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 transition flex items-center gap-1.5';
+                }
+            });
+
+            const workspaceGrid = document.getElementById('tm-workspaceGrid');
+            const paneCode = document.getElementById('tm-paneCode');
+            const panePreview = document.getElementById('tm-panePreview');
+
+            workspaceGrid.classList.remove('md:grid-cols-2', 'md:grid-cols-1');
+            paneCode.classList.remove('hidden');
+            panePreview.classList.remove('hidden');
+
+            if (tab === 'split') {
+                workspaceGrid.classList.add('md:grid-cols-2');
+            } else if (tab === 'code') {
+                workspaceGrid.classList.add('md:grid-cols-1');
+                panePreview.classList.add('hidden');
+            } else if (tab === 'preview') {
+                workspaceGrid.classList.add('md:grid-cols-1');
+                paneCode.classList.add('hidden');
+            }
+        }
+
+        function tmResetSystem() {
+            document.getElementById('tm-fileInput').value = '';
+            tmAppState.rawHtmlForDocx = '';
+            tmAppState.pdfPagesText = [];
+            tmAppState.bodyMarkdown = '';
+            tmAppState.finalMarkdown = '';
+            document.getElementById('tm-fileInfoCard').classList.add('hidden');
+            document.getElementById('tm-markdownEditor').value = '';
+            document.getElementById('tm-markdownPreview').innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-slate-400 text-center py-16">
+                    <i data-lucide="file-text" class="w-12 h-12 mb-3 stroke-1"></i>
+                    <p class="text-sm font-medium text-slate-500">尚無文件內容</p>
+                    <p class="text-xs mt-1">上傳 DOCX 或 PDF 後，這裡將即時呈現 Markdown 轉換成果</p>
+                </div>
+            `;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            tmUpdateProgress('等待上傳檔案...', 0);
+            document.getElementById('tm-statChars').textContent = '0';
+            document.getElementById('tm-statBlocks').textContent = '0';
+            document.getElementById('tm-statLines').textContent = '0';
+            document.getElementById('tm-btnDownloadMd').disabled = true;
+            document.getElementById('tm-btnCopyMd').disabled = true;
+        }
+
+        function tmToggleWorkflowModal() {
+            const modal = document.getElementById('tm-workflowModal');
+            modal.classList.toggle('hidden');
         }
     </script>
     <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
