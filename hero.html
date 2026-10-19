@@ -213,7 +213,7 @@
                     </div>
                     <div>
                         <h2 class="text-xl font-bold text-gray-800">單位離職率與留才分析</h2>
-                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/10/13各單位現職人數統計</p>
+                        <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-info-circle mr-1"></i>基於2026/10/19各單位現職人數統計</p>
                     </div>
                 </div>
                 
@@ -265,7 +265,7 @@
                             </li>
                             <li class="flex items-start">
                                 <i class="fas fa-users-cog text-blue-500 mt-1 mr-2 flex-shrink-0"></i>
-                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>隨著「一組」(23.1%) 與「二組」(23.8%) 均有新血加入，加上「三組」(25.0%)，三大核心單位整體流動率目前維持在四分之一以下。適度流動與新血注入有助新陳代謝，但仍需落實核心技術與知識的傳承與留存機制。</div>
+                                <div><strong class="text-blue-600">核心業務單位整體微溫：</strong>隨著「一組」(23.1%) 與「二組」(23.3%) 持續有新血加入，加上「三組」(25.0%)，三大核心單位整體流動率目前維持在四分之一左右的穩定區間。適度注入新進戰力有助於活化團隊與分擔專案負荷，建議持續落實核心技術傳承與新人輔導機制。</div>
                             </li>
                         </ul>
                     </div>
@@ -376,7 +376,7 @@
             data() {
                 return {
                     currentDate: '', // 今日日期
-                    lastUpdated: '2026/10/13 10:25:59', // 鎖定更新時間，重新整理不會變更
+                    lastUpdated: '2026/10/19 10:06:54', // 鎖定更新時間，重新整理不會變更
 
                     isNameMasked: true, // 姓名遮罩狀態
                     showCharts: false, // 新增：控制圖表區塊的顯示與隱藏
@@ -392,10 +392,10 @@
                     onboardChartInstance: null,
                     offboardChartInstance: null,
 
-                    // 單位現職人數參考資料(2026/10/13資料)
+                    // 單位現職人數參考資料(2026/10/19資料)
                     currentEmployees: {
                         '一組': 20,
-                        '二組': 32,
+                        '二組': 33,
                         '三組': 18,
                         '行一': 4,
                         '行二': 5
@@ -442,7 +442,8 @@
                         { id: 69, date: '2026-08-17', originalName: '徐佳琨', dept: '一組' },
                         { id: 70, date: '2026-08-24', originalName: '郭婉蓉', dept: '行二' },
                         { id: 72, date: '2026-09-29', originalName: '劉書丞', dept: '一組' },
-                        { id: 73, date: '2026-10-12', originalName: '費彥誠', dept: '行一', remark: 'IT' }
+                        { id: 73, date: '2026-10-12', originalName: '費彥誠', dept: '行一', remark: 'IT' },
+                        { id: 75, date: '2026-10-19', originalName: '鄭凱旭', dept: '二組' }
                     ],
 
                     // 離職資料
