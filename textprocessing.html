@@ -14,6 +14,8 @@
     <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
     <!-- PDF.js for PDF parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- PDF-Lib 庫 (用於 PDF Annotation Remover) -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <!-- Marked.js for Markdown Preview -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Lucide Icons -->
@@ -29,7 +31,13 @@
                         lightBeige: '#FFE8BE', // 淺米底色
                         accentYellow: '#F7DD7D', // 強調黃色
                         primaryBlue: '#406AAF', // 主色藍
-                        secondaryBlue: '#427AB5' // 次色藍
+                        secondaryBlue: '#427AB5', // 次色藍
+                        theme: {
+                            black: '#000000',
+                            cyan: '#00A3E0',
+                            red: '#EF3340',
+                            teal: '#41748D',
+                        }
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -86,6 +94,12 @@
         .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
         .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
         .markdown-body hr { border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+
+        /* PDF Annotation Remover Styles */
+        .pdf-drag-active {
+            border-color: #00A3E0;
+            background-color: rgba(0, 163, 224, 0.1); 
+        }
     </style>
 </head>
 <body class="bg-lightBeige min-h-screen flex flex-col font-sans text-gray-800">
@@ -104,6 +118,7 @@
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab3')">TextPrompt</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">BatchProcessor</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab5')">TranMarkdown</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab6')">PDF Remover</button>
     </nav>
 
     <!-- 內容區域 -->
@@ -513,6 +528,114 @@
             </div>
         </div>
 
+        <!-- =================== TAB 6: PDF Annotation Remover =================== -->
+        <div id="tab6" class="tab-content w-full bg-white p-0 rounded-2xl shadow-xl flex-col border-t-8 border-primaryBlue overflow-hidden">
+            <!-- 標頭 -->
+            <div class="bg-theme-cyan px-8 py-6 text-white">
+                <div class="flex items-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div>
+                        <h1 class="text-2xl font-bold">PDF Annotation Remover</h1>
+                        <p class="text-white/90 text-sm mt-1">100% Client-side processing. Removes highlights and ink annotations <span class="text-white font-semibold">while perfectly preserving original text and layout.</span></p>
+                        <p class="text-white text-xs mt-2 bg-theme-teal inline-block px-2 py-1 rounded">⚠️ Aggressive Mode: Removes all overlay annotations and shapes, except for hyperlinks and form fields.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-8">
+                <!-- 步驟 1: 上傳區塊 -->
+                <div id="pdf-uploadArea" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center transition-colors cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center gap-4">
+                    <input type="file" id="pdf-fileInput" accept="application/pdf" class="hidden">
+                    <div class="bg-theme-cyan/10 p-4 rounded-full text-theme-cyan mb-2 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-lg font-semibold text-theme-black pointer-events-none">Click to select or drag and drop a PDF here</p>
+                        <p class="text-sm text-theme-teal mt-1 pointer-events-none">Supports .pdf format only</p>
+                    </div>
+                </div>
+
+                <!-- 檔案資訊區塊 (隱藏) -->
+                <div id="pdf-fileInfoArea" class="hidden mt-6 bg-gray-50 border border-gray-200 rounded-xl p-5 flex items-center justify-between">
+                    <div class="flex items-center gap-4 truncate">
+                        <div class="bg-theme-red/10 text-theme-red p-3 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <div class="truncate">
+                            <p id="pdf-fileName" class="font-medium text-theme-black truncate"></p>
+                            <p id="pdf-fileSize" class="text-sm text-theme-teal"></p>
+                        </div>
+                    </div>
+                    <button id="pdf-reselectBtn" class="text-sm text-theme-cyan hover:text-theme-teal font-medium px-3 py-1 rounded-md hover:bg-theme-cyan/10 transition-colors">Reselect</button>
+                </div>
+
+                <!-- 控制按鈕區塊 -->
+                <div id="pdf-actionArea" class="hidden mt-6 flex flex-col items-center">
+                    <button id="pdf-processBtn" class="w-full sm:w-auto px-8 py-3 bg-theme-cyan hover:bg-theme-teal text-white font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                        Start Removing Annotations
+                    </button>
+                    <div id="pdf-loadingStatus" class="hidden mt-4 text-theme-cyan flex items-center gap-2">
+                        <svg class="animate-spin h-5 w-5 text-theme-cyan" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Processing file, please wait...</span>
+                    </div>
+                </div>
+
+                <!-- 結果與下載區塊 -->
+                <div id="pdf-resultArea" class="hidden mt-8">
+                    <div class="border-t border-gray-200 pt-6">
+                        <h3 class="text-lg font-semibold text-theme-black flex items-center gap-2 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-theme-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Processing Complete!
+                        </h3>
+                        
+                        <div class="bg-theme-black rounded-xl p-4 mb-6 shadow-inner border border-theme-teal">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-white text-sm font-medium">Processing Log (Found <span id="pdf-totalRemoved" class="text-theme-cyan font-bold">0</span> annotations)</span>
+                            </div>
+                            <!-- 處理日誌列表 -->
+                            <div id="pdf-logContent" class="text-theme-cyan font-mono text-sm max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                                <!-- JS 動態插入 -->
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <a id="pdf-downloadBtn" href="#" class="flex-1 px-6 py-3 bg-theme-cyan hover:bg-theme-teal text-white font-semibold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download Clean PDF
+                            </a>
+                            <button id="pdf-resetBtn" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-theme-black border border-gray-300 font-medium rounded-xl transition-all">
+                                Process Another File
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 錯誤提示 -->
+                <div id="pdf-errorMsg" class="hidden mt-4 bg-theme-red/10 text-theme-red p-4 rounded-lg border border-theme-red/20 text-sm flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span id="pdf-errorText">An error occurred.</span>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- 最下方顯示 Copyright -->
@@ -582,6 +705,9 @@
             }
             // 綁定 TranMarkdown 的上傳事件
             setupTranMarkdownDragDrop();
+            
+            // 綁定 PDF Annotation Remover 的事件
+            setupPdfAnnotationRemover();
         });
 
         // ==========================================
@@ -1372,6 +1498,296 @@ c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」
         function tmToggleWorkflowModal() {
             const modal = document.getElementById('tm-workflowModal');
             modal.classList.toggle('hidden');
+        }
+
+        // ==========================================
+        // TAB 6: PDF Annotation Remover 邏輯
+        // ==========================================
+        function setupPdfAnnotationRemover() {
+            if (!window.PDFLib) {
+                console.error("Failed to load PDF library. Please check your internet connection.");
+                return;
+            }
+
+            const { PDFDocument, PDFName } = window.PDFLib;
+
+            // DOM 元素
+            const uploadArea = document.getElementById('pdf-uploadArea');
+            const fileInput = document.getElementById('pdf-fileInput');
+            const fileInfoArea = document.getElementById('pdf-fileInfoArea');
+            const fileNameEl = document.getElementById('pdf-fileName');
+            const fileSizeEl = document.getElementById('pdf-fileSize');
+            const reselectBtn = document.getElementById('pdf-reselectBtn');
+            const actionArea = document.getElementById('pdf-actionArea');
+            const processBtn = document.getElementById('pdf-processBtn');
+            const loadingStatus = document.getElementById('pdf-loadingStatus');
+            const resultArea = document.getElementById('pdf-resultArea');
+            const logContent = document.getElementById('pdf-logContent');
+            const totalRemovedEl = document.getElementById('pdf-totalRemoved');
+            const downloadBtn = document.getElementById('pdf-downloadBtn');
+            const resetBtn = document.getElementById('pdf-resetBtn');
+            const errorMsg = document.getElementById('pdf-errorMsg');
+            const errorText = document.getElementById('pdf-errorText');
+
+            let currentFile = null;
+            let currentFileBuffer = null;
+            let outputBlobUrl = null;
+
+            // --- 事件監聽 ---
+            
+            // 點擊上傳
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // 拖曳上傳
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('pdf-drag-active');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('pdf-drag-active');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('pdf-drag-active');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Input 選擇檔案
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+
+            // 重新選擇
+            reselectBtn.addEventListener('click', () => {
+                resetUI();
+                fileInput.click();
+            });
+
+            // 重置全部
+            resetBtn.addEventListener('click', () => {
+                resetUI();
+            });
+
+            // 處理按鈕
+            processBtn.addEventListener('click', () => {
+                if (!currentFileBuffer) return;
+                processPDF();
+            });
+
+            // --- 核心邏輯 ---
+
+            function handleFileSelect(file) {
+                hideError();
+                if (file.type !== 'application/pdf') {
+                    showError("Please select a valid PDF file.");
+                    return;
+                }
+
+                currentFile = file;
+                
+                // 顯示檔案資訊
+                fileNameEl.textContent = file.name;
+                fileSizeEl.textContent = formatBytes(file.size);
+                
+                // 轉換為 ArrayBuffer 供 pdf-lib 使用
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentFileBuffer = e.target.result;
+                    
+                    // 切換 UI
+                    uploadArea.classList.add('hidden');
+                    fileInfoArea.classList.remove('hidden');
+                    actionArea.classList.remove('hidden');
+                    actionArea.classList.add('flex');
+                    resultArea.classList.add('hidden');
+                    processBtn.classList.remove('hidden');
+                    loadingStatus.classList.add('hidden');
+                };
+                reader.onerror = function() {
+                    showError("Error reading file.");
+                }
+                reader.readAsArrayBuffer(file);
+            }
+
+            async function processPDF() {
+                try {
+                    // UI 載入狀態
+                    processBtn.classList.add('hidden');
+                    loadingStatus.classList.remove('hidden');
+                    loadingStatus.classList.add('flex');
+                    logContent.innerHTML = '';
+                    
+                    // 給 UI 一點時間渲染 loading 動畫
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    // 1. 讀取 PDF
+                    const pdfDoc = await PDFDocument.load(currentFileBuffer);
+                    const pages = pdfDoc.getPages();
+                    
+                    let totalRemovedCount = 0;
+                    let logs = [];
+
+                    // 我們要移除的標註類型名單
+                    const targetSubtypes = [
+                        'Highlight', 'Text', 'Ink', 'Underline', 'StrikeOut', 
+                        'Squiggly', 'FreeText', 'PolyLine', 'Polygon', 'Line', 
+                        'Square', 'Circle', 'Caret', 'Stamp'
+                    ];
+
+                    // 翻譯標註類型供顯示
+                    const typeTranslations = {
+                        'Highlight': 'Highlight',
+                        'Text': 'Text Note',
+                        'Ink': 'Ink/Drawing',
+                        'Underline': 'Underline',
+                        'StrikeOut': 'StrikeOut',
+                        'Squiggly': 'Squiggly',
+                        'FreeText': 'FreeText',
+                        'Line': 'Line',
+                        'Square': 'Square',
+                        'Circle': 'Circle',
+                        'Stamp': 'Stamp',
+                        'Polygon': 'Polygon',
+                        'PolyLine': 'PolyLine'
+                    };
+
+                    // 2. 遍歷每一頁找尋 Annotations
+                    for (let i = 0; i < pages.length; i++) {
+                        const page = pages[i];
+                        // 取得頁面中的 Annots (標註) 屬性
+                        const annots = page.node.lookup(PDFName.of('Annots'));
+                        
+                        if (annots && typeof annots.size === 'function') {
+                            const newAnnots = pdfDoc.context.obj([]);
+                            let pageRemovedCount = 0;
+                            let typesRemoved = {};
+
+                            // 檢查陣列中的每一個標註
+                            for (let j = 0; j < annots.size(); j++) {
+                                const annotRef = annots.get(j);
+                                const annot = pdfDoc.context.lookup(annotRef);
+
+                                if (!annot || typeof annot.lookup !== 'function') {
+                                    // 若無法解析則保留
+                                    newAnnots.push(annotRef);
+                                    continue;
+                                }
+
+                                const subtypeObj = annot.lookup(PDFName.of('Subtype'));
+                                const subtype = subtypeObj ? subtypeObj.name : 'Unknown';
+
+                                // 採用「白名單」激進策略：只保留超連結 (Link) 與 表單元件 (Widget)，其餘所有種類的標註一律強制移除！
+                                if (subtype === 'Link' || subtype === 'Widget') {
+                                    newAnnots.push(annotRef);
+                                } else {
+                                    pageRemovedCount++;
+                                    totalRemovedCount++;
+                                    typesRemoved[subtype] = (typesRemoved[subtype] || 0) + 1;
+                                }
+                            }
+
+                            // 更新或刪除該頁的 Annots 陣列
+                            if (pageRemovedCount > 0) {
+                                if (newAnnots.size() === 0) {
+                                    // 如果沒有任何需要保留的標註（連 Link 都沒有），直接砍掉整個 Annots 節點
+                                    page.node.delete(PDFName.of('Annots'));
+                                } else {
+                                    // 否則覆寫為只剩下 Link 的陣列
+                                    page.node.set(PDFName.of('Annots'), newAnnots);
+                                }
+                                
+                                // 準備日誌文字
+                                const details = Object.entries(typesRemoved).map(([type, count]) => {
+                                    const tName = typeTranslations[type] || type;
+                                    return `${tName} x${count}`;
+                                }).join(', ');
+                                
+                                logs.push(`> Page ${i + 1}: Forcefully removed ${pageRemovedCount} annotations [${details}]`);
+                            }
+                        }
+                    }
+
+                    // 3. 儲存處理過後的 PDF
+                    const pdfBytes = await pdfDoc.save();
+
+                    // 4. 產生下載用的 Blob 與 URL
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
+                    outputBlobUrl = URL.createObjectURL(blob);
+                    
+                    // 設定下載檔名
+                    const originalName = currentFile.name.replace(/\.pdf$/i, '');
+                    downloadBtn.href = outputBlobUrl;
+                    downloadBtn.download = `${originalName}_Cleaned.pdf`;
+
+                    // 5. 更新 UI 顯示結果
+                    actionArea.classList.add('hidden');
+                    actionArea.classList.remove('flex');
+                    resultArea.classList.remove('hidden');
+                    
+                    totalRemovedEl.textContent = totalRemovedCount;
+                    
+                    if (totalRemovedCount === 0) {
+                        logContent.innerHTML = '<div class="text-white/50 italic">No removable annotation layers detected in this file.<br><br>⚠️ Note: If highlights are still visible, they might have been "flattened" into the document background during saving. Such embedded marks cannot be removed by standard tools.</div>';
+                    } else {
+                        logs.forEach(log => {
+                            const p = document.createElement('div');
+                            p.textContent = log;
+                            logContent.appendChild(p);
+                        });
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    showError("Error processing PDF. The file may be encrypted, corrupted, or unsupported.");
+                    // 恢復按鈕狀態
+                    processBtn.classList.remove('hidden');
+                    loadingStatus.classList.add('hidden');
+                    loadingStatus.classList.remove('flex');
+                }
+            }
+
+            // --- 輔助函數 ---
+
+            function resetUI() {
+                currentFile = null;
+                currentFileBuffer = null;
+                if (outputBlobUrl) {
+                    URL.revokeObjectURL(outputBlobUrl);
+                    outputBlobUrl = null;
+                }
+                fileInput.value = '';
+                
+                uploadArea.classList.remove('hidden');
+                fileInfoArea.classList.add('hidden');
+                actionArea.classList.add('hidden');
+                actionArea.classList.remove('flex');
+                resultArea.classList.add('hidden');
+                
+                hideError();
+            }
+
+            function showError(msg) {
+                errorText.textContent = msg;
+                errorMsg.classList.remove('hidden');
+            }
+
+            function hideError() {
+                errorMsg.classList.add('hidden');
+            }
+
+            function formatBytes(bytes, decimals = 2) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            }
         }
     </script>
     <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
