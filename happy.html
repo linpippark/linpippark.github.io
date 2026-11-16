@@ -146,7 +146,7 @@
     <header class="header-gradient shadow-lg pb-16 pt-6 px-6 sm:px-10 mb-8 rounded-b-3xl">
         <div class="max-w-7xl mx-auto mb-4 flex flex-col md:flex-row justify-between items-center text-green-100 text-sm font-medium border-b border-white/20 pb-3">
             <div><i class="fa-regular fa-calendar mr-1"></i> 今日日期: <span id="current-system-date"></span></div>
-            <div class="opacity-80 mt-1 md:mt-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i> 報表最後更新: 2026-10-29 13:36:28</div>
+            <div class="opacity-80 mt-1 md:mt-0"><i class="fa-solid fa-clock-rotate-left mr-1"></i> 報表最後更新: 2026-11-16 11:48:12</div>
         </div>
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
@@ -355,7 +355,8 @@
             '07': 184, // 23 days
             '08': 168, // 21 days
             '09': 176, // 22 days
-            '10': 168  // 21 days
+            '10': 168, // 21 days
+            '11': 168  // 21 days
         };
 
         const employees = {
@@ -397,7 +398,8 @@
                     { date: '2026-09-23', hours: 4, isErrand: false },
                     { date: '2026-09-24', hours: 8, isErrand: false },
                     { date: '2026-10-02', hours: 8, isErrand: true },
-                    { date: '2026-10-29', hours: 4, isErrand: false }
+                    { date: '2026-10-29', hours: 4, isErrand: false },
+                    { date: '2026-11-13', hours: 8, isErrand: true }
                 ]
             },
             '爽人': {
@@ -461,18 +463,19 @@
                     { date: '2026-10-08', hours: 8, isErrand: false },
                     { date: '2026-10-20', hours: 8, isErrand: false },
                     { date: '2026-10-22', hours: 1, isErrand: false },
-                    { date: '2026-10-29', hours: 8, isErrand: false }
+                    { date: '2026-10-29', hours: 8, isErrand: false },
+                    { date: '2026-11-05', hours: 4, isErrand: false }
                 ]
             }
         };
 
-        const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10'];
-        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月'];
+        const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
+        const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月'];
 
         // Aggregate Data processing
         let statsData = {
-            '狼人': { leave: [0,0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0,0] },
-            '爽人': { leave: [0,0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0,0] }
+            '狼人': { leave: [0,0,0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0,0,0] },
+            '爽人': { leave: [0,0,0,0,0,0,0,0,0,0,0], errand: [0,0,0,0,0,0,0,0,0,0,0] }
         };
 
         let totalLeaveWolf = 0;
@@ -495,7 +498,7 @@
             Object.keys(employees).forEach(emp => {
                 employees[emp].records.forEach(rec => {
                     const monthIndex = parseInt(rec.date.split('-')[1]) - 1;
-                    if (monthIndex >= 0 && monthIndex <= 9) {
+                    if (monthIndex >= 0 && monthIndex <= 10) {
                         if (rec.isErrand) {
                             statsData[emp].errand[monthIndex] += rec.hours;
                         } else {
@@ -513,7 +516,7 @@
             // Calculate Days and Hours for Leave Summary
             const summaryEl = document.getElementById('leave-summary-header');
             if (summaryEl) {
-                const currentMonthIdx = 9; // October
+                const currentMonthIdx = 10; // November
                 const wolfCurrentMonthLeave = statsData['狼人'].leave[currentMonthIdx];
                 const chillCurrentMonthLeave = statsData['爽人'].leave[currentMonthIdx];
 
@@ -533,8 +536,8 @@
             }
 
             // Update Total Leave UI
-            document.getElementById('total-leave-wolf').innerText = totalLeaveWolf + 'H';
-            document.getElementById('total-leave-chill').innerText = totalLeaveChill + 'H';
+            document.getElementById('total-leave-wolf').innerText = usedLeaveWolf + 'H';
+            document.getElementById('total-leave-chill').innerText = usedLeaveChill + 'H';
         }
 
         function renderTable() {
@@ -547,13 +550,11 @@
                 
                 const wolfLeave = statsData['狼人'].leave[idx];
                 const wolfErrand = statsData['狼人'].errand[idx];
-                const wolfTotalL = wolfLeave + wolfErrand;
-                const wolfAttend = totalWork - wolfTotalL;
+                const wolfAttend = totalWork - wolfLeave;
 
                 const chillLeave = statsData['爽人'].leave[idx];
                 const chillErrand = statsData['爽人'].errand[idx];
-                const chillTotalL = chillLeave + chillErrand;
-                const chillAttend = totalWork - chillTotalL;
+                const chillAttend = totalWork - chillLeave;
 
                 const formatCell = (leave, errand) => {
                     if (leave === 0 && errand === 0) return '<span class="text-gray-400">-</span>';
@@ -579,8 +580,8 @@
             // Setup Bar Chart
             const ctxBar = document.getElementById('monthlyChart').getContext('2d');
             
-            const wolfTotalLeavePerMonth = statsData['狼人'].leave.map((l, i) => l + statsData['狼人'].errand[i]);
-            const chillTotalLeavePerMonth = statsData['爽人'].leave.map((l, i) => l + statsData['爽人'].errand[i]);
+            const wolfTotalLeavePerMonth = statsData['狼人'].leave;
+            const chillTotalLeavePerMonth = statsData['爽人'].leave;
 
             new Chart(ctxBar, {
                 type: 'bar',
@@ -630,7 +631,7 @@
                 data: {
                     labels: ['狼人', '爽人'],
                     datasets: [{
-                        data: [totalLeaveWolf, totalLeaveChill],
+                        data: [usedLeaveWolf, usedLeaveChill],
                         backgroundColor: ['#FF9D23', '#FF61F8'],
                         borderWidth: 0,
                         hoverOffset: 4
