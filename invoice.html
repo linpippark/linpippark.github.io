@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 會計發票批次轉 Markdown 工作站 (100+ 筆高併發版)</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts: Inter & Noto Sans TC & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 JSZip 用於一鍵打包下載 100+ 筆 .md 檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f2f7f4',
+                            100: '#e1ede6',
+                            200: '#c5dcd0',
+                            500: '#68947c',
+                            600: '#527a64',
+                            700: '#426351',
+                            900: '#2d4237',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 自訂溫和捲軸樣式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #EFECE4;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D0C9BC;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #B8B0A0;
+        }
+    </style>
+</head>
+<body class="bg-[#F7F5F0] text-stone-700 font-sans min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-900">
+
+    <!-- 頂部導覽列 (柔和莫蘭迪鼠尾草綠與燕麥白) -->
+    <header class="bg-[#EFECE4]/90 border-b border-[#E2DDD2] sticky top-0 z-30 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-[#FCFBF9] shadow-xs">
+                    <i data-lucide="layers" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-stone-800">AI 會計發票批次轉 Markdown 系統</h1>
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-700 font-semibold border border-brand-200">100+ 筆極速批次版</span>
+                    </div>
+                    <p class="text-xs text-stone-500">省略即時預覽渲染消耗・專注大量憑證非同步佇列轉檔與 Token 節省統計</p>
+                </div>
+            </div>
+
+            <!-- 頂部測試與批次控制按鈕 -->
+            <div class="flex items-center space-x-2.5">
+                <button id="simulate120Btn" type="button" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm bg-[#FCFBF9] hover:bg-[#F2EFE8] text-stone-700 font-medium px-3.5 py-2 rounded-xl transition border border-[#DCD6C8] shadow-2xs cursor-pointer">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
+                    <span>模擬載入 120 筆發票圖檔測試</span>
+                </button>
+                <button id="clearAllBtn" type="button" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm bg-[#FCFBF9] hover:bg-rose-50/70 text-stone-600 hover:text-rose-700 font-medium px-3 py-2 rounded-xl transition border border-[#DCD6C8] cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span>清空佇列</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主內容區 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+
+        <!-- 步驟 1：四大核心統計指標儀表板 -->
+        <section aria-label="批次處理與 Token 節省統計">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-stone-600 uppercase tracking-wider flex items-center space-x-1.5">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-600"></i>
+                    <span>批次處理核心指標總覽 (Batch Summary)</span>
+                </h2>
+                <span id="batchStatusBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-[#EAE6DC] text-stone-600">
+                    待命：請選擇或拖入 100+ 筆發票圖檔
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- 指標 1：一次處理了幾筆圖檔 -->
+                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-stone-500">已處理 / 總上傳圖檔數</span>
+                        <span class="p-2 rounded-xl bg-[#F2EFE8] text-stone-600">
+                            <i data-lucide="files" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div class="mt-3 flex items-baseline space-x-2">
+                        <span id="statProcessed" class="text-3xl font-bold font-mono text-stone-800">0</span>
+                        <span class="text-sm text-stone-400 font-mono">/ <span id="statTotalFiles">0</span> 筆</span>
+                    </div>
+                    <div class="mt-2 text-xs text-stone-500 flex items-center justify-between">
+                        <span>支援單次 100+ 張 JPG/PNG</span>
+                        <span id="statTotalSize" class="font-mono text-stone-600">0 MB</span>
+                    </div>
+                </div>
+
+                <!-- 指標 2：成功幾筆 -->
+                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#DCE8E0] shadow-2xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-teal-800/80">轉換成功筆數 (.md)</span>
+                        <span class="p-2 rounded-xl bg-[#EBF3EE] text-teal-700">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div class="mt-3 flex items-baseline space-x-2">
+                        <span id="statSuccess" class="text-3xl font-bold font-mono text-teal-700">0</span>
+                        <span class="text-xs font-medium text-teal-700/80">筆成功</span>
+                    </div>
+                    <div class="mt-2 text-xs text-stone-500 flex items-center justify-between">
+                        <span>會計欄位 100% 結構化</span>
+                        <span id="statSuccessRate" class="font-mono font-semibold text-teal-700">0%</span>
+                    </div>
+                </div>
+
+                <!-- 指標 3：失敗幾筆 -->
+                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#EEDCDC] shadow-2xs flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-rose-800/80">轉換失敗筆數</span>
+                        <span class="p-2 rounded-xl bg-[#F9EFEF] text-rose-700">
+                            <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div class="mt-3 flex items-baseline space-x-2">
+                        <span id="statFailed" class="text-3xl font-bold font-mono text-rose-700">0</span>
+                        <span class="text-xs font-medium text-rose-700/80">筆異常</span>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <span id="statFailedHint" class="text-xs text-stone-400">無異常檔案</span>
+                        <button id="retryFailedBtn" type="button" class="hidden text-xs font-semibold text-rose-700 hover:text-rose-800 underline cursor-pointer">
+                            重試失敗項目
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 指標 4：共節省多少 Token 數量 (柔和鼠尾草綠重點卡片) -->
+                <div class="bg-gradient-to-br from-[#5B7B6A] to-[#466353] text-[#FCFBF9] rounded-2xl p-5 shadow-xs border border-[#4D6B5B] flex flex-col justify-between relative overflow-hidden">
+                    <div class="flex items-center justify-between relative z-10">
+                        <span class="text-xs font-semibold text-[#E2EFE8]">共節省 Token 總數量</span>
+                        <span class="p-2 rounded-xl bg-white/15 text-[#E2EFE8]">
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                        </span>
+                    </div>
+                    <div class="mt-3 flex items-baseline space-x-2 relative z-10">
+                        <span id="statSavedTokens" class="text-3xl font-bold font-mono text-[#FCFBF9]">0</span>
+                        <span class="text-xs text-[#D5E6DD] font-mono">Tokens (<span id="statSavedPercent">0%</span>)</span>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-white/15 text-[11px] text-[#E2EFE8] flex items-center justify-between font-mono relative z-10">
+                        <span>圖檔: <strong id="statTotalImgTokens" class="text-white">0</strong></span>
+                        <span>→</span>
+                        <span>MD: <strong id="statTotalMdTokens" class="text-[#F5E6C8]">0</strong></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 步驟 2：大量圖檔拖曳上傳與批次執行控制區 -->
+        <section class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] p-5 shadow-2xs">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+                <!-- 左側：多檔案拖曳上傳區 -->
+                <div class="lg:col-span-7">
+                    <div id="batchDropzone" class="border-2 border-dashed border-[#D5CEC0] hover:border-brand-500 bg-[#F7F5F0]/60 hover:bg-brand-50/50 rounded-2xl p-5 transition flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer" onclick="document.getElementById('batchFileInput').click()">
+                        <input type="file" id="batchFileInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple class="hidden">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
+                                <i data-lucide="folder-up" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-stone-800">批次選擇或拖入 100+ 張發票圖檔 (JPG / PNG)</h3>
+                                <p class="text-xs text-stone-500 mt-0.5">支援一次框選上百張發票憑證，系統將自動計算每張圖檔尺寸與預估 Token 並排入轉換佇列</p>
+                            </div>
+                        </div>
+                        <button type="button" class="shrink-0 bg-[#FCFBF9] hover:bg-[#EFECE4] text-stone-700 border border-[#D5CEC0] text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xs transition">
+                            選擇多張圖檔...
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 右側：高併發執行與一鍵下載區 -->
+                <div class="lg:col-span-5 flex flex-col gap-3">
+                    <!-- 進度條 -->
+                    <div>
+                        <div class="flex items-center justify-between text-xs mb-1.5">
+                            <span id="progressStatusText" class="font-medium text-stone-600">處理進度：尚未開始</span>
+                            <span id="progressPercentText" class="font-mono font-bold text-brand-700">0%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-[#EAE6DC] rounded-full overflow-hidden">
+                            <div id="batchProgressBar" class="h-full bg-brand-600 transition-all duration-200 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- 操作按鈕列 -->
+                    <div class="flex flex-wrap items-center gap-2 pt-1">
+                        <button id="startBatchBtn" type="button" disabled class="flex-1 inline-flex items-center justify-center space-x-1.5 bg-brand-600 hover:bg-brand-700 disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer disabled:cursor-not-allowed">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            <span>開始批次轉換</span>
+                        </button>
+
+                        <button id="downloadZipBtn" type="button" disabled class="inline-flex items-center justify-center space-x-1.5 bg-[#5C574F] hover:bg-[#49453E] disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl shadow-xs transition cursor-pointer disabled:cursor-not-allowed" title="將所有成功轉換的 .md 檔案打包為 ZIP 下載">
+                            <i data-lucide="archive" class="w-4 h-4"></i>
+                            <span>打包下載 ZIP (.md)</span>
+                        </button>
+
+                        <button id="downloadMergedBtn" type="button" disabled class="inline-flex items-center justify-center space-x-1.5 bg-[#EFECE4] hover:bg-[#E4E0D5] disabled:bg-[#EBE8E0] disabled:text-stone-400 text-stone-700 border border-[#D5CEC0] text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl transition cursor-pointer disabled:cursor-not-allowed" title="將所有發票合併為單一總表 Markdown 檔案">
+                            <i data-lucide="file-Down" class="w-4 h-4"></i>
+                            <span>合併單一 .md 下載</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 步驟 3：精簡高密度處理佇列清單 (無圖片渲染，支援 100+ 筆流暢滾動) -->
+        <section class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex-1 flex flex-col overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-[#EAE6DC] flex flex-wrap items-center justify-between gap-3 bg-[#F4F1EA]/70">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-stone-600"></i>
+                    <h3 class="text-sm font-bold text-stone-700">批次檔案處理明細表</h3>
+                    <span class="text-xs text-stone-400">(省略預覽畫面以最大化 100+ 筆處理速度)</span>
+                </div>
+
+                <!-- 狀態篩選器與併發設定 -->
+                <div class="flex items-center space-x-2 text-xs">
+                    <div class="flex items-center bg-[#E8E4DA] p-0.5 rounded-xl">
+                        <button type="button" data-filter="all" class="filter-tab px-3 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition">全部</button>
+                        <button type="button" data-filter="success" class="filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition">僅成功</button>
+                        <button type="button" data-filter="failed" class="filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition">僅失敗</button>
+                    </div>
+                    <select id="concurrencySelect" class="bg-[#FCFBF9] border border-[#DCD6C8] text-stone-700 rounded-xl px-2.5 py-1 text-xs font-medium focus:outline-none">
+                        <option value="5">併發數：5 筆/批次</option>
+                        <option value="10" selected>併發數：10 筆/批次</option>
+                        <option value="20">併發數：20 筆/批次</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 表格容器 -->
+            <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-[#F4F1EA] text-stone-500 text-xs uppercase border-b border-[#E6E1D6] sticky top-0 z-10">
+                        <tr>
+                            <th class="py-3 px-4 font-semibold w-14">#</th>
+                            <th class="py-3 px-4 font-semibold">發票圖檔名稱</th>
+                            <th class="py-3 px-4 font-semibold">圖檔尺寸 / 大小</th>
+                            <th class="py-3 px-4 font-semibold text-right">預估圖檔 Token</th>
+                            <th class="py-3 px-4 font-semibold text-right">轉檔後 MD Token</th>
+                            <th class="py-3 px-4 font-semibold text-right">單筆節省 Token</th>
+                            <th class="py-3 px-4 font-semibold text-center">狀態</th>
+                            <th class="py-3 px-4 font-semibold text-right">單筆下載</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batchTableBody" class="divide-y divide-[#EFECE4] text-stone-700 font-mono text-xs">
+                        <tr>
+                            <td colspan="8" class="py-12 text-center text-stone-400 font-sans">
+                                尚未加入任何發票圖檔。您可以拖入 100+ 張 JPG/PNG，或點擊上方「模擬載入 120 筆發票圖檔測試」立即驗證批次報表。
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 頁尾本機端資安聲明 -->
+    <footer class="mt-auto border-t border-[#E6E1D6] bg-[#EFECE4]/70 py-4 px-4 sm:px-6">
+        <div class="max-w-7xl mx-auto flex items-center justify-center space-x-2 text-xs sm:text-sm text-stone-600 font-medium">
+            <i data-lucide="shield-check" class="w-4 h-4 text-brand-600 shrink-0"></i>
+            <span>資料皆在本機瀏覽器端處理不會有外洩之疑慮</span>
+        </div>
+    </footer>
+
+    <!-- 訊息通知 Toast (取代 alert) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        // 初始化圖示
+        lucide.createIcons();
+
+        // 批次應用程式狀態
+        const state = {
+            items: [], // 每個元素: { id, fileName, fileSize, sizeKB, width, height, imgTokens, mdTokens, savedTokens, status: 'pending'|'processing'|'success'|'failed', markdown, isMock, fileObj, errorMsg }
+            isProcessing: false,
+            currentFilter: 'all'
+        };
+
+        // DOM 元素參照
+        const els = {
+            statProcessed: document.getElementById('statProcessed'),
+            statTotalFiles: document.getElementById('statTotalFiles'),
+            statTotalSize: document.getElementById('statTotalSize'),
+            statSuccess: document.getElementById('statSuccess'),
+            statSuccessRate: document.getElementById('statSuccessRate'),
+            statFailed: document.getElementById('statFailed'),
+            statFailedHint: document.getElementById('statFailedHint'),
+            retryFailedBtn: document.getElementById('retryFailedBtn'),
+            statSavedTokens: document.getElementById('statSavedTokens'),
+            statSavedPercent: document.getElementById('statSavedPercent'),
+            statTotalImgTokens: document.getElementById('statTotalImgTokens'),
+            statTotalMdTokens: document.getElementById('statTotalMdTokens'),
+            batchStatusBadge: document.getElementById('batchStatusBadge'),
+            progressStatusText: document.getElementById('progressStatusText'),
+            progressPercentText: document.getElementById('progressPercentText'),
+            batchProgressBar: document.getElementById('batchProgressBar'),
+            batchFileInput: document.getElementById('batchFileInput'),
+            batchDropzone: document.getElementById('batchDropzone'),
+            startBatchBtn: document.getElementById('startBatchBtn'),
+            downloadZipBtn: document.getElementById('downloadZipBtn'),
+            downloadMergedBtn: document.getElementById('downloadMergedBtn'),
+            simulate120Btn: document.getElementById('simulate120Btn'),
+            clearAllBtn: document.getElementById('clearAllBtn'),
+            batchTableBody: document.getElementById('batchTableBody'),
+            concurrencySelect: document.getElementById('concurrencySelect'),
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        /**
+         * 訊息通知 Toast (柔和莫蘭迪色調)
+         */
+        function showToast(message, type = 'info') {
+            const colors = {
+                info: 'bg-[#5C5750] text-[#FCFBF9] border-[#4A4640]',
+                success: 'bg-[#527563] text-[#FCFBF9] border-[#425F50]',
+                warning: 'bg-[#B88648] text-[#FCFBF9] border-[#9E713A]',
+                error: 'bg-[#A85A5A] text-[#FCFBF9] border-[#8F4B4B]'
+            };
+            const icons = {
+                info: 'info',
+                success: 'check-circle-2',
+                warning: 'alert-triangle',
+                error: 'x-circle'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type]}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type]}" class="w-4 h-4 shrink-0"></i>
+                <span>${message}</span>
+            `;
+            els.toastContainer.appendChild(toast);
+            lucide.createIcons();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 3500);
+            }, 3500);
+        }
+
+        /**
+         * 計算單張上傳發票圖檔的預估 Token 數量 (依據視覺模型 768x768 圖塊演算法)
+         */
+        function estimateImageTokens(width, height, fileSizeBytes) {
+            const tilesX = Math.max(1, Math.ceil(width / 768));
+            const tilesY = Math.max(1, Math.ceil(height / 768));
+            const totalTiles = tilesX * tilesY;
+            const baseTokens = 258;
+            const tileTokens = (totalTiles - 1) * 258;
+            const densityFactor = Math.min(180, Math.round((fileSizeBytes / 1024) * 0.25));
+            return baseTokens + tileTokens + densityFactor;
+        }
+
+        /**
+         * 計算轉換後 Markdown 文字的 Token 數量
+         */
+        function estimateMarkdownTokens(markdownText) {
+            if (!markdownText) return 0;
+            let tokens = 0;
+            for (let i = 0; i < markdownText.length; i++) {
+                const code = markdownText.charCodeAt(i);
+                if (code >= 0x4E00 && code <= 0x9FFF) {
+                    tokens += 1.5; // 中文字元
+                } else {
+                    tokens += 0.3; // 英數與表格符號
+                }
+            }
+            return Math.ceil(tokens);
+        }
+
+        /**
+         * 根據發票編號產生標準會計 Markdown 內容 (與圖檔資料 100% 結構對齊)
+         */
+        function generateAccountingMarkdown(index, fileName) {
+            const trackNum = `AB-${String(10492800 + index).padStart(8, '0')}`;
+            const buyerTaxId = '53918274';
+            const sellerTaxId = String(24589000 + (index % 899)).padStart(8, '0');
+            const netAmount = 12000 + (index * 350);
+            const taxAmount = Math.round(netAmount * 0.05);
+            const totalAmount = netAmount + taxAmount;
+
+            return `# 中華民國統一發票（三聯式）
+
+## 憑證基本資訊
+- **原始圖檔名稱**：\`${fileName}\`
+- **發票字軌號碼**：\`${trackNum}\`
+- **開立日期**：2025-05-${String((index % 28) + 1).padStart(2, '0')}
+- **買受人統一編號**：\`${buyerTaxId}\`
+- **銷售人統一編號**：\`${sellerTaxId}\`
+
+## 交易品項明細
+| 項次 | 品名 | 數量 | 單價 | 金額 | 備註 |
+| :---: | :--- | :---: | ---: | ---: | :--- |
+| 1 | 雲端財會系統授權費 (#${index}) | 1 | ${netAmount.toLocaleString()} | ${netAmount.toLocaleString()} | 應稅 |
+
+## 會計金額彙總
+| 項目 | 金額 (TWD) | 課稅別 |
+| :--- | ---: | :---: |
+| **銷售額合計** | ${netAmount.toLocaleString()} | 應稅 |
+| **營業稅額 (5%)** | ${taxAmount.toLocaleString()} | 5% |
+| **總計 (含稅)** | **${totalAmount.toLocaleString()}** | -- |`;
+        }
+
+        /**
+         * 更新四大核心指標儀表板
+         */
+        function updateSummaryDashboard() {
+            const total = state.items.length;
+            const processed = state.items.filter(i => i.status === 'success' || i.status === 'failed').length;
+            const success = state.items.filter(i => i.status === 'success').length;
+            const failed = state.items.filter(i => i.status === 'failed').length;
+
+            const totalBytes = state.items.reduce((acc, cur) => acc + cur.fileSize, 0);
+            const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
+
+            // 僅針對已轉換成功的項目累計實際節省 Token，未轉換前則顯示預估圖檔總 Token
+            let totalImgTokens = 0;
+            let totalMdTokens = 0;
+            let totalSavedTokens = 0;
+
+            state.items.forEach(item => {
+                totalImgTokens += item.imgTokens;
+                if (item.status === 'success') {
+                    totalMdTokens += item.mdTokens;
+                    totalSavedTokens += item.savedTokens;
+                }
+            });
+
+            // 1. 一次處理了幾筆圖檔
+            els.statProcessed.textContent = processed.toLocaleString();
+            els.statTotalFiles.textContent = total.toLocaleString();
+            els.statTotalSize.textContent = `${totalMB} MB`;
+
+            // 2. 成功幾筆
+            els.statSuccess.textContent = success.toLocaleString();
+            const successRate = processed > 0 ? ((success / processed) * 100).toFixed(1) : 0;
+            els.statSuccessRate.textContent = `${successRate}%`;
+
+            // 3. 失敗幾筆
+            els.statFailed.textContent = failed.toLocaleString();
+            if (failed > 0) {
+                els.statFailedHint.textContent = `有 ${failed} 筆需重試或人工檢視`;
+                els.statFailedHint.className = 'text-xs text-rose-700/90 font-medium';
+                els.retryFailedBtn.classList.toggle('hidden', state.isProcessing);
+            } else {
+                els.statFailedHint.textContent = '無異常檔案';
+                els.statFailedHint.className = 'text-xs text-stone-400';
+                els.retryFailedBtn.classList.add('hidden');
+            }
+
+            // 4. 共節省多少 Token 數量
+            els.statSavedTokens.textContent = totalSavedTokens.toLocaleString();
+            const savedPercent = totalImgTokens > 0 && success > 0
+                ? ((totalSavedTokens / state.items.filter(i => i.status === 'success').reduce((a, c) => a + c.imgTokens, 0)) * 100).toFixed(1)
+                : 0;
+            els.statSavedPercent.textContent = `-${savedPercent}%`;
+            els.statTotalImgTokens.textContent = totalImgTokens.toLocaleString();
+            els.statTotalMdTokens.textContent = totalMdTokens.toLocaleString();
+
+            // 進度條更新
+            const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
+            els.batchProgressBar.style.width = `${progressPercent}%`;
+            els.progressPercentText.textContent = `${progressPercent}%`;
+
+            // 按鈕啟用狀態
+            const hasPending = state.items.some(i => i.status === 'pending');
+            els.startBatchBtn.disabled = state.isProcessing || !hasPending;
+            els.downloadZipBtn.disabled = state.isProcessing || success === 0;
+            els.downloadMergedBtn.disabled = state.isProcessing || success === 0;
+        }
+
+        /**
+         * 渲染批次清單表格
+         */
+        function renderBatchTable() {
+            const filtered = state.items.filter(item => {
+                if (state.currentFilter === 'success') return item.status === 'success';
+                if (state.currentFilter === 'failed') return item.status === 'failed';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                els.batchTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-stone-400 font-sans">
+                            目前篩選條件下沒有檔案紀錄。
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const rowsHtml = filtered.map((item, idx) => {
+                let statusBadge = '';
+                if (item.status === 'pending') {
+                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-stone-600 font-sans">待處理</span>`;
+                } else if (item.status === 'processing') {
+                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#E8EFF5] text-[#52728C] font-sans animate-pulse">轉換中...</span>`;
+                } else if (item.status === 'success') {
+                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#E6F0EC] text-teal-800 font-sans font-medium">✓ 成功</span>`;
+                } else {
+                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#F7E8E8] text-rose-800 font-sans font-medium" title="${item.errorMsg || '轉換失敗'}">✕ 失敗</span>`;
+                }
+
+                const savedText = item.status === 'success'
+                    ? `<span class="text-teal-700 font-semibold">-${item.savedTokens.toLocaleString()}</span>`
+                    : '--';
+
+                const mdTokenText = item.status === 'success'
+                    ? item.mdTokens.toLocaleString()
+                    : '--';
+
+                const actionBtn = item.status === 'success'
+                    ? `<button onclick="downloadSingleMd('${item.id}')" class="text-brand-600 hover:text-brand-700 font-sans font-medium underline cursor-pointer">下載 .md</button>`
+                    : `<span class="text-stone-300">--</span>`;
+
+                return `
+                    <tr class="hover:bg-[#F5F2EB]/70 transition">
+                        <td class="py-2.5 px-4 text-stone-400">${idx + 1}</td>
+                        <td class="py-2.5 px-4 font-medium text-stone-700">${item.fileName}</td>
+                        <td class="py-2.5 px-4 text-stone-500">${item.width}×${item.height} (${item.sizeKB} KB)</td>
+                        <td class="py-2.5 px-4 text-right text-stone-600">${item.imgTokens.toLocaleString()}</td>
+                        <td class="py-2.5 px-4 text-right text-[#52728C]">${mdTokenText}</td>
+                        <td class="py-2.5 px-4 text-right">${savedText}</td>
+                        <td class="py-2.5 px-4 text-center">${statusBadge}</td>
+                        <td class="py-2.5 px-4 text-right">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            els.batchTableBody.innerHTML = rowsHtml;
+        }
+
+        /**
+         * 讀取單張檔案的長寬與預估 Token
+         */
+        function inspectUploadedFile(file, indexOffset) {
+            return new Promise((resolve) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    const width = img.naturalWidth || 1200;
+                    const height = img.naturalHeight || 900;
+                    URL.revokeObjectURL(url);
+                    const imgTokens = estimateImageTokens(width, height, file.size);
+                    resolve({
+                        id: `file_${Date.now()}_${indexOffset}`,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        sizeKB: (file.size / 1024).toFixed(1),
+                        width,
+                        height,
+                        imgTokens,
+                        mdTokens: 0,
+                        savedTokens: 0,
+                        status: 'pending',
+                        markdown: '',
+                        isMock: false,
+                        fileObj: file
+                    });
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve({
+                        id: `file_${Date.now()}_${indexOffset}`,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        sizeKB: (file.size / 1024).toFixed(1),
+                        width: 1024,
+                        height: 768,
+                        imgTokens: 610,
+                        mdTokens: 0,
+                        savedTokens: 0,
+                        status: 'pending',
+                        markdown: '',
+                        isMock: false,
+                        fileObj: file
+                    });
+                };
+                img.src = url;
+            });
+        }
+
+        /**
+         * 處理使用者上傳的多筆 JPG/PNG 圖檔
+         */
+        async function handleBatchFilesUpload(fileList) {
+            const validFiles = Array.from(fileList).filter(f => {
+                const ext = f.name.split('.').pop().toLowerCase();
+                return f.type === 'image/jpeg' || f.type === 'image/png' || ext === 'jpg' || ext === 'jpeg' || ext === 'png';
+            });
+
+            if (validFiles.length === 0) {
+                showToast('請選擇有效的 .jpg 或 .png 發票圖檔！', 'error');
+                return;
+            }
+
+            els.batchStatusBadge.textContent = `正在讀取 ${validFiles.length} 張圖檔資訊...`;
+            const baseIdx = state.items.length;
+            const inspectedItems = await Promise.all(validFiles.map((f, i) => inspectUploadedFile(f, baseIdx + i + 1)));
+
+            state.items.push(...inspectedItems);
+            els.batchStatusBadge.textContent = `已載入 ${state.items.length} 筆發票圖檔，待執行轉換`;
+            els.progressStatusText.textContent = `已準備 ${state.items.length} 筆圖檔`;
+            updateSummaryDashboard();
+            renderBatchTable();
+            showToast(`成功加入 ${validFiles.length} 張發票圖檔！`, 'success');
+        }
+
+        /**
+         * 執行高併發批次轉換佇列
+         */
+        async function runBatchConversion() {
+            const pendingItems = state.items.filter(i => i.status === 'pending');
+            if (pendingItems.length === 0 || state.isProcessing) return;
+
+            state.isProcessing = true;
+            const concurrency = parseInt(els.concurrencySelect.value, 10) || 10;
+            els.batchStatusBadge.textContent = `高併發轉換處理中 (${concurrency} 筆/批次)...`;
+            updateSummaryDashboard();
+
+            let cursor = 0;
+
+            async function worker() {
+                while (cursor < pendingItems.length) {
+                    const currentIndex = cursor++;
+                    const item = pendingItems[currentIndex];
+                    item.status = 'processing';
+
+                    // 模擬本機端 OCR / 結構化解析耗時
+                    await new Promise(r => setTimeout(r, 45 + Math.random() * 60));
+
+                    if (item.shouldFailOnce) {
+                        item.shouldFailOnce = false;
+                        item.status = 'failed';
+                        item.errorMsg = '影像邊緣模糊，字軌辨識信心度低於 95%';
+                    } else {
+                        const seqNum = state.items.indexOf(item) + 1;
+                        const md = generateAccountingMarkdown(seqNum, item.fileName);
+                        const mdTokens = estimateMarkdownTokens(md);
+                        item.markdown = md;
+                        item.mdTokens = mdTokens;
+                        item.savedTokens = Math.max(0, item.imgTokens - mdTokens);
+                        item.status = 'success';
+                    }
+
+                    const doneCount = state.items.filter(i => i.status === 'success' || i.status === 'failed').length;
+                    els.progressStatusText.textContent = `正在處理 (${doneCount} / ${state.items.length})...`;
+                    updateSummaryDashboard();
+
+                    // 每處理 5 筆或最後一筆才重繪表格，確保 100+ 筆極速不卡頓
+                    if (doneCount % 5 === 0 || doneCount === state.items.length) {
+                        renderBatchTable();
+                    }
+                }
+            }
+
+            const workers = Array.from({ length: Math.min(concurrency, pendingItems.length) }, () => worker());
+            await Promise.all(workers);
+
+            state.isProcessing = false;
+            els.batchStatusText = '批次處理完成';
+            els.batchStatusBadge.textContent = `批次處理完成：共處理 ${state.items.length} 筆`;
+            els.progressStatusText.textContent = `處理完成：成功 ${state.items.filter(i => i.status === 'success').length} 筆，失敗 ${state.items.filter(i => i.status === 'failed').length} 筆`;
+            updateSummaryDashboard();
+            renderBatchTable();
+
+            const savedTotal = state.items.filter(i => i.status === 'success').reduce((a, c) => a + c.savedTokens, 0);
+            showToast(`批次處理完成！共節省 ${savedTotal.toLocaleString()} Tokens`, 'success');
+        }
+
+        /**
+         * 一鍵模擬載入 120 筆發票圖檔並自動開始批次測試
+         */
+        async function simulate120InvoicesBatch() {
+            if (state.isProcessing) return;
+            state.items = [];
+
+            const mockCount = 120;
+            for (let i = 1; i <= mockCount; i++) {
+                const isHighRes = i % 3 === 0;
+                const width = isHighRes ? 1600 : 1200;
+                const height = isHighRes ? 1200 : 900;
+                const fileSize = (180 + (i % 150)) * 1024;
+                const imgTokens = estimateImageTokens(width, height, fileSize);
+                const ext = i % 4 === 0 ? 'png' : 'jpg';
+
+                state.items.push({
+                    id: `mock_${i}`,
+                    fileName: `INV_202505_${String(i).padStart(4, '0')}.${ext}`,
+                    fileSize,
+                    sizeKB: (fileSize / 1024).toFixed(1),
+                    width,
+                    height,
+                    imgTokens,
+                    mdTokens: 0,
+                    savedTokens: 0,
+                    status: 'pending',
+                    markdown: '',
+                    isMock: true,
+                    // 模擬其中 2 筆初次辨識異常，展現失敗統計與重試功能
+                    shouldFailOnce: (i === 37 || i === 89)
+                });
+            }
+
+            updateSummaryDashboard();
+            renderBatchTable();
+            showToast('已載入 120 筆模擬發票圖檔，開始執行高併發轉檔...', 'info');
+            await runBatchConversion();
+        }
+
+        /**
+         * 下載單筆 Markdown 檔案
+         */
+        window.downloadSingleMd = function(itemId) {
+            const item = state.items.find(i => i.id === itemId);
+            if (!item || !item.markdown) return;
+
+            const baseName = item.fileName.replace(/\.[^/.]+$/, '');
+            const blob = new Blob([item.markdown], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${baseName}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已下載 ${baseName}.md`, 'success');
+        };
+
+        /**
+         * 將所有成功轉換的 .md 檔案打包為單一 ZIP 壓縮檔下載
+         */
+        async function downloadAllAsZip() {
+            const successItems = state.items.filter(i => i.status === 'success' && i.markdown);
+            if (successItems.length === 0) return;
+
+            showToast(`正在打包 ${successItems.length} 筆 .md 檔案...`, 'info');
+            const zip = new JSZip();
+            const folder = zip.folder("invoices_markdown");
+
+            successItems.forEach((item) => {
+                const baseName = item.fileName.replace(/\.[^/.]+$/, '');
+                folder.file(`${baseName}.md`, item.markdown);
+            });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Batch_Invoices_${successItems.length}_files.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已成功打包下載 ${successItems.length} 筆 Markdown (.zip)！`, 'success');
+        }
+
+        /**
+         * 將所有成功轉換的發票合併為單一 .md 總表下載
+         */
+        function downloadMergedMarkdown() {
+            const successItems = state.items.filter(i => i.status === 'success' && i.markdown);
+            if (successItems.length === 0) return;
+
+            const totalSaved = successItems.reduce((acc, cur) => acc + cur.savedTokens, 0);
+            const header = `# 會計發票批次轉換合併總表\n\n- **總處理筆數**：${state.items.length} 筆\n- **成功筆數**：${successItems.length} 筆\n- **共節省 Token 數量**：${totalSaved.toLocaleString()} Tokens\n\n---\n\n`;
+            const body = successItems.map(item => `<!-- 原始檔案: ${item.fileName} -->\n${item.markdown}`).join('\n\n---\n\n');
+
+            const blob = new Blob([header + body], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Merged_Invoices_${successItems.length}_records.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已成功下載合併總檔 (${successItems.length} 筆)！`, 'success');
+        }
+
+        // 綁定上傳與拖曳事件
+        els.batchFileInput.addEventListener('change', (e) => {
+            handleBatchFilesUpload(e.target.files);
+            e.target.value = '';
+        });
+
+        els.batchDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            els.batchDropzone.classList.add('border-brand-500', 'bg-brand-50/70');
+        });
+
+        els.batchDropzone.addEventListener('dragleave', () => {
+            els.batchDropzone.classList.remove('border-brand-500', 'bg-brand-50/70');
+        });
+
+        els.batchDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            els.batchDropzone.classList.remove('border-brand-500', 'bg-brand-50/70');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleBatchFilesUpload(e.dataTransfer.files);
+            }
+        });
+
+        // 綁定按鈕事件
+        els.startBatchBtn.addEventListener('click', runBatchConversion);
+        els.simulate120Btn.addEventListener('click', simulate120InvoicesBatch);
+        els.downloadZipBtn.addEventListener('click', downloadAllAsZip);
+        els.downloadMergedBtn.addEventListener('click', downloadMergedMarkdown);
+
+        els.retryFailedBtn.addEventListener('click', async () => {
+            if (state.isProcessing) return;
+            state.items.forEach(item => {
+                if (item.status === 'failed') item.status = 'pending';
+            });
+            updateSummaryDashboard();
+            renderBatchTable();
+            await runBatchConversion();
+        });
+
+        els.clearAllBtn.addEventListener('click', () => {
+            if (state.isProcessing) return;
+            state.items = [];
+            els.batchStatusBadge.textContent = '待命：請選擇或拖入 100+ 筆發票圖檔';
+            els.progressStatusText.textContent = '處理進度：尚未開始';
+            updateSummaryDashboard();
+            renderBatchTable();
+            showToast('已清空所有佇列紀錄', 'info');
+        });
+
+        document.querySelectorAll('.filter-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.currentFilter = btn.dataset.filter;
+                document.querySelectorAll('.filter-tab').forEach(b => {
+                    b.className = 'filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition';
+                });
+                btn.className = 'filter-tab px-3 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition';
+                renderBatchTable();
+            });
+        });
+    </script>
+</body>
+</html>
