@@ -1,2131 +1,958 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V1117.0956AI 會計發票批次轉 Markdown 工作站 (100+ 筆高併發版)</title>
-    <!-- 引入 Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Google Fonts: Inter & Noto Sans TC & JetBrains Mono -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 引入 Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- 引入 JSZip 用於一鍵打包下載 100+ 筆 .md 檔案 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- 引入 Marked.js 用於即時將 Markdown 渲染為會計表格供視覺核對 -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- 引入 Tesseract.js 本機端光學字元與數字精準辨識引擎 (不外傳資料，確保金額與圖檔一致) -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>發票轉 Markdown</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{
+  /* Layout: a verification desk. Header with view tabs, a token meter across the top,
+     then the source image and the Markdown side by side so every figure is checked against the original. */
+  --bg:#f3f5f4; --surface:#ffffff; --surface-2:#e8edeb; --fg:#16201c; --muted:#556259; --line:#d2dad6;
+  --accent:#1d6a56; --accent-fg:#ffffff; --accent-soft:#d8ede5;
+  --ok:#17703f; --ok-bg:#dcf1e4; --warn:#855400; --warn-bg:#fbedcf; --bad:#a8261e; --bad-bg:#fadfdc;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1512; --surface:#151e1a; --surface-2:#1c2822; --fg:#e4ece8; --muted:#97a79e; --line:#2a3832;
+    --accent:#5cc4a1; --accent-fg:#06231a; --accent-soft:#1a372d;
+    --ok:#62d18f; --ok-bg:#16351f; --warn:#e8b75f; --warn-bg:#382c10; --bad:#ff8b81; --bad-bg:#3b1a17;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --surface:#151e1a; --surface-2:#1c2822; --fg:#e4ece8; --muted:#97a79e; --line:#2a3832;
+  --accent:#5cc4a1; --accent-fg:#06231a; --accent-soft:#1a372d;
+  --ok:#62d18f; --ok-bg:#16351f; --warn:#e8b75f; --warn-bg:#382c10; --bad:#ff8b81; --bad-bg:#3b1a17;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:15px; line-height:1.6;
+  padding-block:20px 56px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1280px;margin:0 auto}
+h1,h2,h3,p{margin:0}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+button,select,textarea,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f2f7f4',
-                            100: '#e1ede6',
-                            200: '#c5dcd0',
-                            500: '#68947c',
-                            600: '#527a64',
-                            700: '#426351',
-                            900: '#2d4237',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+.top{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.top h1{font-size:26px;font-weight:700;letter-spacing:.01em;text-wrap:balance}
+.lede{color:var(--muted);margin-top:4px;max-width:46em}
+.tabs{display:inline-flex;border:1px solid var(--line);border-radius:6px;background:var(--surface);overflow:hidden}
+.tabs button{border:0;background:transparent;padding:9px 18px;cursor:pointer;font-weight:500}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
 
-    <style>
-        /* 自訂溫和捲軸樣式 */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #EFECE4;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #D0C9BC;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #B8B0A0;
-        }
-        /* Markdown 渲染預覽區的會計表格專屬樣式 */
-        .md-preview h1 { font-size: 1.25rem; font-weight: 700; color: #292524; margin-bottom: 0.75rem; border-bottom: 2px solid #E6E1D6; padding-bottom: 0.5rem; }
-        .md-preview h2 { font-size: 0.95rem; font-weight: 700; color: #426351; margin-top: 1rem; margin-bottom: 0.5rem; }
-        .md-preview ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; font-size: 0.85rem; }
-        .md-preview li { margin-bottom: 0.25rem; }
-        .md-preview code { font-family: 'JetBrains Mono', monospace; background: #EFECE4; padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.8rem; color: #2d4237; }
-        .md-preview table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 1rem; font-size: 0.8rem; }
-        .md-preview th { background-color: #EFECE4; color: #44403c; font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #DCD6C8; }
-        .md-preview td { padding: 0.5rem 0.75rem; border: 1px solid #E6E1D6; color: #292524; background-color: #FCFBF9; }
-    </style>
-</head>
-<body class="bg-[#F7F5F0] text-stone-700 font-sans min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-900">
+.settings{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:16px}
+.settings label{display:inline-flex;gap:8px;align-items:center}
+.settings select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--fg)}
+.note{font-size:13px;color:var(--muted)}
+.note.warn{color:var(--warn)}
 
-    <!-- 頂部導覽列 (柔和莫蘭迪鼠尾草綠與燕麥白) -->
-    <header class="bg-[#EFECE4]/90 border-b border-[#E2DDD2] sticky top-0 z-30 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-[#FCFBF9] shadow-xs">
-                    <i data-lucide="layers" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <div class="flex items-center space-x-2">
-                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-stone-800">AI 會計發票轉 Markdown 系統</h1>
-                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-700 font-semibold border border-brand-200">批次 + 即時對照雙模式</span>
-                    </div>
-                    <p class="text-xs text-stone-500">支援 100+ 筆極速佇列處理，以及單筆即時上傳左圖右文對照驗算</p>
-                </div>
-            </div>
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.small{padding:4px 10px;font-size:13px}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
 
-            <!-- 雙工作模式切換器 (批次模式 vs 單筆即時對照模式) -->
-            <div class="flex items-center bg-[#E4DFD3] p-1 rounded-xl border border-[#D5CEC0]">
-                <button id="modeBatchBtn" type="button" onclick="switchWorkMode('batch')" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer">
-                    <i data-lucide="layers" class="w-4 h-4"></i>
-                    <span>100+ 筆批次轉檔模式</span>
-                </button>
-                <button id="modeSingleBtn" type="button" onclick="switchWorkMode('single')" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer">
-                    <i data-lucide="split-square-horizontal" class="w-4 h-4"></i>
-                    <span>單筆即時對照驗算</span>
-                </button>
-            </div>
+.drop{display:block;border:1.5px dashed var(--line);border-radius:6px;background:var(--surface);padding:30px 16px;text-align:center;cursor:pointer}
+.drop:hover,.drop.over,.drop:focus-within{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{display:block;font-size:16px}
+.drop span{color:var(--muted);font-size:13px}
+.drop.compact{padding:12px 16px}
+
+.meter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-block:16px}
+.meter .cell{background:var(--surface);padding:12px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.lab{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.val{font-family:var(--font-mono);font-size:28px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sub{font-size:12px;color:var(--muted)}
+.cell.hero .val{color:var(--accent)}
+.bars{grid-column:1/-1;background:var(--surface);padding:10px 16px;display:grid;gap:6px}
+.bar{display:grid;grid-template-columns:44px 1fr;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.bar div{height:8px;background:var(--surface-2);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.bar.img i{background:var(--muted)}
+
+.status{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:6px;background:var(--surface);border:1px solid var(--line);margin-bottom:16px;font-size:14px}
+.status.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.status.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.status.err{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.bar i{transition:none}}
+
+.compare{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.pane{background:var(--surface);border:1px solid var(--line);border-radius:6px;min-width:0;overflow:hidden}
+.pane-head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line)}
+.pane-head h2{font-size:14px;font-weight:700}
+.pane-foot{padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.pane-foot.actions{padding:10px 12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:4px 10px;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.img-box{background:var(--surface-2);padding:8px;max-height:640px;overflow:auto}
+.img-box img{display:block;margin:0 auto;max-width:100%;height:auto}
+.img-box.orig img{max-width:none}
+#s-md{display:block;width:100%;height:560px;border:0;background:var(--surface);padding:12px 14px;font-family:var(--font-mono);font-size:13px;line-height:1.6;resize:vertical;min-height:240px}
+.preview,.check{padding:12px 16px;max-height:560px;overflow:auto}
+.preview h1{font-size:20px;margin-bottom:8px}
+.preview h2{font-size:15px;margin-block:16px 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.preview ul{margin:6px 0;padding-left:1.3em}
+.preview blockquote{margin:12px 0;padding:8px 12px;background:var(--warn-bg);color:var(--warn);border-radius:4px}
+.preview blockquote p{margin:0}
+.preview hr{border:0;border-top:1px solid var(--line)}
+.tw{overflow-x:auto;margin-block:6px}
+table{border-collapse:collapse;font-size:14px}
+th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
+th{background:var(--surface-2)}
+td.r,th.r{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+.key{border:1px solid var(--line);border-radius:6px;padding:8px 12px;min-width:0}
+.key .v{font-family:var(--font-mono);font-size:18px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.key .v.none{color:var(--muted);font-size:14px;font-family:var(--font-body)}
+.key.bad{border-color:var(--bad)}
+.badge{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;margin-left:6px;font-family:var(--font-body)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.bad{background:var(--bad-bg);color:var(--bad)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.chk-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px}
+.chk-list li{display:flex;gap:8px;font-size:14px}
+.chk-list .mark{font-weight:700;flex:none;width:1.2em}
+.chk-list .ok .mark{color:var(--ok)}
+.chk-list .bad .mark{color:var(--bad)}
+.calc{margin-bottom:16px}
+.calc h3{font-size:13px;margin-bottom:6px}
+.calc td,.calc th{text-align:center;font-family:var(--font-mono);padding:4px 8px}
+.calc th{font-family:var(--font-body);font-weight:500;background:var(--surface-2)}
+.calc p{font-size:13px;color:var(--muted);margin-top:6px}
+
+.issues{margin-top:16px}
+.issues ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.issues li{display:flex;gap:10px;align-items:baseline;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 12px;font-size:14px}
+.pill{flex:none;font-size:12px;padding:1px 8px;border-radius:10px}
+.pill.error{background:var(--bad-bg);color:var(--bad)}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+
+.sel{margin-top:16px;display:grid;gap:10px}
+.kv b{font-family:var(--font-mono);font-weight:500}
+.prog{height:10px;background:var(--surface-2);border-radius:5px;overflow:hidden;margin-block:8px}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-block:12px 16px}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 16px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.metric.ok .val{color:var(--ok)}
+.metric.bad .val{color:var(--bad)}
+.metric.warn .val{color:var(--warn)}
+.metric.hero{grid-column:span 2;border-color:var(--accent)}
+.metric.hero .val{color:var(--accent);font-size:34px}
+details{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 14px}
+details summary{cursor:pointer;font-weight:500}
+details ul{margin:8px 0 4px;padding-left:1.2em;font-size:14px}
+details li{margin-bottom:4px;overflow-wrap:anywhere}
+#view-batch h2.sec{font-size:18px;margin-top:24px}
+
+@media (max-width:860px){
+  .compare{grid-template-columns:minmax(0,1fr)}
+  .meter{grid-template-columns:minmax(0,1fr)}
+  .metric.hero{grid-column:auto}
+  #s-md{height:420px}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>發票轉 Markdown</h1>
+      <p class="lede">上傳發票圖檔，轉成可直接交給 AI 處理的 Markdown，並檢核統一編號與金額是否合理。</p>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="功能">
+      <button role="tab" id="tab-single" aria-selected="true" aria-controls="view-single" data-view="single">單張即時轉換</button>
+      <button role="tab" id="tab-batch" aria-selected="false" aria-controls="view-batch" data-view="batch" tabindex="-1">批次處理</button>
+    </nav>
+  </header>
+
+  <section class="settings" aria-label="辨識設定">
+    <label>辨識精度
+      <select id="tier">
+        <option value="default">標準</option>
+        <option value="complex">高精度（較慢、用量較多）</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="auto2" checked> 檢核不符時自動二次辨識（分區放大）</label>
+    <span class="note" id="capNote" role="status"></span>
+  </section>
+
+  <main>
+    <!-- 單張即時轉換 -->
+    <section id="view-single" role="tabpanel" aria-labelledby="tab-single">
+      <label class="drop" id="s-drop" for="s-file">
+        <input class="sr" type="file" id="s-file" accept="image/jpeg,image/png">
+        <strong>拖曳發票圖檔到這裡，或按此選擇</strong>
+        <span>支援 JPG、PNG，一次一張。也可以直接貼上截圖。</span>
+      </label>
+
+      <div id="s-desk" hidden>
+        <div class="meter" aria-live="polite">
+          <div class="cell"><span class="lab">圖檔（預估）</span><span class="val" id="s-imgtok">—</span><span class="sub">tokens</span></div>
+          <div class="cell"><span class="lab">Markdown（預估）</span><span class="val" id="s-mdtok">—</span><span class="sub">tokens</span></div>
+          <div class="cell hero"><span class="lab">節省</span><span class="val" id="s-save">—</span><span class="sub" id="s-pct">&nbsp;</span></div>
+          <div class="bars" aria-hidden="true">
+            <div class="bar img"><span>圖檔</span><div><i id="s-bar-img"></i></div></div>
+            <div class="bar"><span>MD</span><div><i id="s-bar-md"></i></div></div>
+          </div>
         </div>
-    </header>
 
-    <!-- 主內容區 -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+        <div class="status" id="s-status" role="status" hidden></div>
 
-        <!-- ==================== 模式 A：100+ 筆批次處理畫面 ==================== -->
-        <div id="batchModeView" class="flex flex-col gap-6">
-            <!-- 批次快捷測試工具列 -->
-            <div class="flex flex-wrap items-center justify-between gap-2 bg-[#EFECE4]/60 px-4 py-2.5 rounded-2xl border border-[#E2DDD2]">
-                <span class="text-xs text-stone-600 flex items-center space-x-1.5">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
-                    <span>大量發票結帳專區：無須逐張預覽，完成後亦可點擊明細表任一筆「對照查看」抽查正確性</span>
-                </span>
-                <div class="flex items-center space-x-2">
-                    <button id="simulate120Btn" type="button" class="inline-flex items-center space-x-1.5 text-xs bg-[#FCFBF9] hover:bg-[#F2EFE8] text-stone-700 font-medium px-3 py-1.5 rounded-xl transition border border-[#DCD6C8] shadow-2xs cursor-pointer">
-                        <i data-lucide="play-circle" class="w-3.5 h-3.5 text-amber-600"></i>
-                        <span>模擬載入 120 筆發票圖檔測試</span>
-                    </button>
-                    <button id="clearAllBtn" type="button" class="inline-flex items-center space-x-1.5 text-xs bg-[#FCFBF9] hover:bg-rose-50/70 text-stone-600 hover:text-rose-700 font-medium px-3 py-1.5 rounded-xl transition border border-[#DCD6C8] cursor-pointer">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                        <span>清空佇列</span>
-                    </button>
-                </div>
+        <div class="compare">
+          <section class="pane" aria-label="原始圖檔">
+            <div class="pane-head">
+              <h2>原始圖檔</h2>
+              <div class="seg">
+                <button type="button" id="s-fit" aria-pressed="true">符合寬度</button>
+                <button type="button" id="s-orig" aria-pressed="false">原始大小</button>
+              </div>
             </div>
+            <div class="img-box" id="s-imgbox"><img id="s-img" alt="上傳的發票圖檔"></div>
+            <div class="pane-foot" id="s-fileinfo"></div>
+          </section>
 
-        <!-- 步驟 1：四大核心統計指標儀表板 -->
-        <section aria-label="批次處理與 Token 節省統計">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-bold text-stone-600 uppercase tracking-wider flex items-center space-x-1.5">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-600"></i>
-                    <span>批次處理核心指標總覽 (Batch Summary)</span>
-                </h2>
-                <span id="batchStatusBadge" class="text-xs font-medium px-2.5 py-1 rounded-full bg-[#EAE6DC] text-stone-600">
-                    待命：請選擇或拖入 100+ 筆發票圖檔
-                </span>
+          <section class="pane" aria-label="轉換後的 Markdown">
+            <div class="pane-head">
+              <h2>Markdown</h2>
+              <div class="seg" id="s-mdtabs">
+                <button type="button" data-md="src" aria-pressed="true">原始碼</button>
+                <button type="button" data-md="prev" aria-pressed="false">預覽</button>
+                <button type="button" data-md="check" aria-pressed="false">欄位核對</button>
+              </div>
             </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- 指標 1：一次處理了幾筆圖檔 -->
-                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#E6E1D6] shadow-2xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-stone-500">已處理 / 總上傳圖檔數</span>
-                        <span class="p-2 rounded-xl bg-[#F2EFE8] text-stone-600">
-                            <i data-lucide="files" class="w-4 h-4"></i>
-                        </span>
-                    </div>
-                    <div class="mt-3 flex items-baseline space-x-2">
-                        <span id="statProcessed" class="text-3xl font-bold font-mono text-stone-800">0</span>
-                        <span class="text-sm text-stone-400 font-mono">/ <span id="statTotalFiles">0</span> 筆</span>
-                    </div>
-                    <div class="mt-2 text-xs text-stone-500 flex items-center justify-between">
-                        <span>支援單次 100+ 張 JPG/PNG</span>
-                        <span id="statTotalSize" class="font-mono text-stone-600">0 MB</span>
-                    </div>
-                </div>
-
-                <!-- 指標 2：成功幾筆 -->
-                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#DCE8E0] shadow-2xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-teal-800/80">轉換成功筆數 (.md)</span>
-                        <span class="p-2 rounded-xl bg-[#EBF3EE] text-teal-700">
-                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                        </span>
-                    </div>
-                    <div class="mt-3 flex items-baseline space-x-2">
-                        <span id="statSuccess" class="text-3xl font-bold font-mono text-teal-700">0</span>
-                        <span class="text-xs font-medium text-teal-700/80">筆成功</span>
-                    </div>
-                    <div class="mt-2 text-xs text-stone-500 flex items-center justify-between">
-                        <span>會計欄位 100% 結構化</span>
-                        <span id="statSuccessRate" class="font-mono font-semibold text-teal-700">0%</span>
-                    </div>
-                </div>
-
-                <!-- 指標 3：失敗幾筆 -->
-                <div class="bg-[#FCFBF9] rounded-2xl p-5 border border-[#EEDCDC] shadow-2xs flex flex-col justify-between">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold text-rose-800/80">轉換失敗筆數</span>
-                        <span class="p-2 rounded-xl bg-[#F9EFEF] text-rose-700">
-                            <i data-lucide="alert-octagon" class="w-4 h-4"></i>
-                        </span>
-                    </div>
-                    <div class="mt-3 flex items-baseline space-x-2">
-                        <span id="statFailed" class="text-3xl font-bold font-mono text-rose-700">0</span>
-                        <span class="text-xs font-medium text-rose-700/80">筆異常</span>
-                    </div>
-                    <div class="mt-2 flex items-center justify-between">
-                        <span id="statFailedHint" class="text-xs text-stone-400">無異常檔案</span>
-                        <button id="retryFailedBtn" type="button" class="hidden text-xs font-semibold text-rose-700 hover:text-rose-800 underline cursor-pointer">
-                            重試失敗項目
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 指標 4：共節省多少 Token 數量 (柔和鼠尾草綠重點卡片) -->
-                <div class="bg-gradient-to-br from-[#5B7B6A] to-[#466353] text-[#FCFBF9] rounded-2xl p-5 shadow-xs border border-[#4D6B5B] flex flex-col justify-between relative overflow-hidden">
-                    <div class="flex items-center justify-between relative z-10">
-                        <span class="text-xs font-semibold text-[#E2EFE8]">共節省 Token 總數量</span>
-                        <span class="p-2 rounded-xl bg-white/15 text-[#E2EFE8]">
-                            <i data-lucide="zap" class="w-4 h-4"></i>
-                        </span>
-                    </div>
-                    <div class="mt-3 flex items-baseline space-x-2 relative z-10">
-                        <span id="statSavedTokens" class="text-3xl font-bold font-mono text-[#FCFBF9]">0</span>
-                        <span class="text-xs text-[#D5E6DD] font-mono">Tokens (<span id="statSavedPercent">0%</span>)</span>
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-white/15 text-[11px] text-[#E2EFE8] flex items-center justify-between font-mono relative z-10">
-                        <span>圖檔: <strong id="statTotalImgTokens" class="text-white">0</strong></span>
-                        <span>→</span>
-                        <span>MD: <strong id="statTotalMdTokens" class="text-[#F5E6C8]">0</strong></span>
-                    </div>
-                </div>
+            <div id="s-md-src"><textarea id="s-md" spellcheck="false" aria-label="Markdown 原始碼，可直接修改" placeholder="辨識完成後，Markdown 會顯示在這裡。"></textarea></div>
+            <div class="preview" id="s-md-prev" hidden></div>
+            <div class="check" id="s-md-check" hidden></div>
+            <div class="pane-foot actions">
+              <button class="btn primary" type="button" id="s-dl" disabled>下載 .md</button>
+              <button class="btn" type="button" id="s-copy" disabled>複製</button>
+              <button class="btn" type="button" id="s-redo" disabled>用高精度重新辨識</button>
+              <button class="btn" type="button" id="s-stop" hidden>停止</button>
             </div>
-        </section>
-
-        <!-- 步驟 2：大量圖檔拖曳上傳與批次執行控制區 -->
-        <section class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] p-5 shadow-2xs">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-                <!-- 左側：多檔案拖曳上傳區 -->
-                <div class="lg:col-span-7">
-                    <div id="batchDropzone" class="border-2 border-dashed border-[#D5CEC0] hover:border-brand-500 bg-[#F7F5F0]/60 hover:bg-brand-50/50 rounded-2xl p-5 transition flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer" onclick="document.getElementById('batchFileInput').click()">
-                        <input type="file" id="batchFileInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple class="hidden">
-                        <div class="flex items-center space-x-4">
-                            <div class="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
-                                <i data-lucide="folder-up" class="w-6 h-6"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-bold text-stone-800">批次選擇或拖入 100+ 張發票圖檔 (JPG / PNG)</h3>
-                                <p class="text-xs text-stone-500 mt-0.5">支援一次框選上百張發票憑證，系統將自動計算每張圖檔尺寸與預估 Token 並排入轉換佇列</p>
-                            </div>
-                        </div>
-                        <button type="button" class="shrink-0 bg-[#FCFBF9] hover:bg-[#EFECE4] text-stone-700 border border-[#D5CEC0] text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xs transition">
-                            選擇多張圖檔...
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 右側：高併發執行與一鍵下載區 -->
-                <div class="lg:col-span-5 flex flex-col gap-3">
-                    <!-- 進度條 -->
-                    <div>
-                        <div class="flex items-center justify-between text-xs mb-1.5">
-                            <span id="progressStatusText" class="font-medium text-stone-600">處理進度：尚未開始</span>
-                            <span id="progressPercentText" class="font-mono font-bold text-brand-700">0%</span>
-                        </div>
-                        <div class="w-full h-2.5 bg-[#EAE6DC] rounded-full overflow-hidden">
-                            <div id="batchProgressBar" class="h-full bg-brand-600 transition-all duration-200 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- 操作按鈕列 -->
-                    <div class="flex flex-wrap items-center gap-2 pt-1">
-                        <button id="startBatchBtn" type="button" disabled class="flex-1 inline-flex items-center justify-center space-x-1.5 bg-brand-600 hover:bg-brand-700 disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition cursor-pointer disabled:cursor-not-allowed">
-                            <i data-lucide="play" class="w-4 h-4"></i>
-                            <span>開始批次轉換</span>
-                        </button>
-
-                        <button id="downloadZipBtn" type="button" disabled class="inline-flex items-center justify-center space-x-1.5 bg-[#5C574F] hover:bg-[#49453E] disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl shadow-xs transition cursor-pointer disabled:cursor-not-allowed" title="將所有成功轉換的 .md 檔案打包為 ZIP 下載">
-                            <i data-lucide="archive" class="w-4 h-4"></i>
-                            <span>打包下載 ZIP (.md)</span>
-                        </button>
-
-                        <button id="downloadMergedBtn" type="button" disabled class="inline-flex items-center justify-center space-x-1.5 bg-[#EFECE4] hover:bg-[#E4E0D5] disabled:bg-[#EBE8E0] disabled:text-stone-400 text-stone-700 border border-[#D5CEC0] text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl transition cursor-pointer disabled:cursor-not-allowed" title="將所有發票合併為單一總表 Markdown 檔案">
-                            <i data-lucide="file-Down" class="w-4 h-4"></i>
-                            <span>合併單一 .md 下載</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 步驟 3：精簡高密度處理佇列清單 (無圖片渲染，支援 100+ 筆流暢滾動) -->
-        <section class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex-1 flex flex-col overflow-hidden">
-            <div class="px-5 py-3.5 border-b border-[#EAE6DC] flex flex-wrap items-center justify-between gap-3 bg-[#F4F1EA]/70">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="list-checks" class="w-4 h-4 text-stone-600"></i>
-                    <h3 class="text-sm font-bold text-stone-700">批次檔案處理明細表</h3>
-                    <span class="text-xs text-stone-400">(省略預覽畫面以最大化 100+ 筆處理速度)</span>
-                </div>
-
-                <!-- 狀態篩選器與併發設定 -->
-                <div class="flex items-center space-x-2 text-xs">
-                    <div class="flex items-center bg-[#E8E4DA] p-0.5 rounded-xl">
-                        <button type="button" data-filter="all" class="filter-tab px-3 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition">全部</button>
-                        <button type="button" data-filter="success" class="filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition">僅成功</button>
-                        <button type="button" data-filter="failed" class="filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition">僅失敗</button>
-                    </div>
-                    <select id="concurrencySelect" class="bg-[#FCFBF9] border border-[#DCD6C8] text-stone-700 rounded-xl px-2.5 py-1 text-xs font-medium focus:outline-none">
-                        <option value="5">併發數：5 筆/批次</option>
-                        <option value="10" selected>併發數：10 筆/批次</option>
-                        <option value="20">併發數：20 筆/批次</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 表格容器 -->
-            <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-[#F4F1EA] text-stone-500 text-xs uppercase border-b border-[#E6E1D6] sticky top-0 z-10">
-                        <tr>
-                            <th class="py-3 px-4 font-semibold w-14">#</th>
-                            <th class="py-3 px-4 font-semibold">發票圖檔名稱</th>
-                            <th class="py-3 px-4 font-semibold">圖檔尺寸 / 大小</th>
-                            <th class="py-3 px-4 font-semibold text-right">預估圖檔 Token</th>
-                            <th class="py-3 px-4 font-semibold text-right">轉檔後 MD Token</th>
-                            <th class="py-3 px-4 font-semibold text-right">單筆節省 Token</th>
-                            <th class="py-3 px-4 font-semibold text-center">狀態</th>
-                            <th class="py-3 px-4 font-semibold text-right">對照與下載</th>
-                        </tr>
-                    </thead>
-                    <tbody id="batchTableBody" class="divide-y divide-[#EFECE4] text-stone-700 font-mono text-xs">
-                        <tr>
-                            <td colspan="8" class="py-12 text-center text-stone-400 font-sans">
-                                尚未加入任何發票圖檔。您可以拖入 100+ 張 JPG/PNG，或點擊上方「模擬載入 120 筆發票圖檔測試」立即驗證批次報表。
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-        </div> <!-- 結束 batchModeView -->
-
-        <!-- ==================== 模式 B：單筆即時上傳與對照驗算畫面 ==================== -->
-        <div id="singleModeView" class="hidden flex-col gap-5">
-            <!-- 單筆頂部即時 Token 比較與工具列 -->
-            <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <button type="button" onclick="document.getElementById('singleFileInput').click()" class="inline-flex items-center space-x-1.5 bg-brand-600 hover:bg-brand-700 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer">
-                        <i data-lucide="upload" class="w-4 h-4"></i>
-                        <span>上傳單張發票即時轉換 (JPG/PNG)</span>
-                    </button>
-                    <input type="file" id="singleFileInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden">
-
-                    <button type="button" id="loadSampleSingleBtn" class="inline-flex items-center space-x-1.5 bg-[#F2EFE8] hover:bg-[#E6E1D6] text-stone-700 border border-[#D5CEC0] text-xs sm:text-sm font-medium px-3.5 py-2 rounded-xl transition cursor-pointer">
-                        <i data-lucide="file-check-2" class="w-4 h-4 text-brand-600"></i>
-                        <span>載入標準三聯式發票範例對照</span>
-                    </button>
-
-                    <!-- OCR 即時進度狀態膠囊 -->
-                    <span id="singleOcrStatusBadge" class="hidden inline-flex items-center space-x-1.5 text-xs px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 font-medium">
-                        <i data-lucide="scan-line" class="w-3.5 h-3.5 animate-spin"></i>
-                        <span id="singleOcrStatusText">正在提高圖檔解析度與強化字跡...</span>
-                    </span>
-                </div>
-
-                <!-- 單筆即時 Token 變化顯示膠囊 -->
-                <div class="flex flex-wrap items-center gap-2 sm:gap-3 bg-[#F4F1EA] px-3.5 py-2 rounded-xl border border-[#E2DDD2] text-xs font-mono">
-                    <div class="flex items-center space-x-1">
-                        <span class="text-stone-500 font-sans">原始圖檔預估:</span>
-                        <strong id="singleImgTokenBadge" class="text-stone-800">0</strong>
-                        <span class="text-stone-400">Tokens</span>
-                    </div>
-                    <span class="text-stone-400">→</span>
-                    <div class="flex items-center space-x-1">
-                        <span class="text-stone-500 font-sans">轉後 MD:</span>
-                        <strong id="singleMdTokenBadge" class="text-[#52728C]">0</strong>
-                        <span class="text-stone-400">Tokens</span>
-                    </div>
-                    <span class="text-stone-300">|</span>
-                    <div class="flex items-center space-x-1 text-teal-700 font-semibold">
-                        <span class="font-sans">即時節省:</span>
-                        <span id="singleSavedTokenBadge">0 (0%)</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 左右雙欄同步對照區 (左：發票圖檔放大檢視；右：Markdown 原始碼與渲染預覽) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-                <!-- 左欄：發票原始憑證影像檢視器 -->
-                <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col overflow-hidden min-h-[540px]">
-                    <div class="px-4 py-3 border-b border-[#EAE6DC] bg-[#F4F1EA]/70 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center space-x-2">
-                            <i data-lucide="image" class="w-4 h-4 text-brand-600"></i>
-                            <span class="text-xs sm:text-sm font-bold text-stone-700">發票圖檔檢視与超解析強化</span>
-                            <span id="singleImageMeta" class="text-xs text-stone-400 font-mono">尚未載入圖檔</span>
-                        </div>
-                        <!-- 原圖 / 強化後高對比圖切換與縮放控制 -->
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <div class="flex items-center bg-[#E8E4DA] p-0.5 rounded-lg text-[11px] mr-1">
-                                <button type="button" id="viewOrigImgBtn" onclick="toggleImageLayer('original')" class="px-2 py-0.5 rounded-md bg-[#FCFBF9] text-stone-800 font-semibold shadow-2xs transition cursor-pointer">原始圖檔</button>
-                                <button type="button" id="viewEnhImgBtn" onclick="toggleImageLayer('enhanced')" class="px-2 py-0.5 rounded-md text-stone-600 hover:text-stone-900 transition cursor-pointer" title="檢視去除印章干擾並提高解析度後的辨識專用圖">超解析去印章圖</button>
-                            </div>
-                            <button type="button" onclick="adjustSingleZoom(-0.2)" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="縮小">
-                                <i data-lucide="zoom-out" class="w-4 h-4"></i>
-                            </button>
-                            <span id="singleZoomText" class="text-xs font-mono text-stone-600 px-1">100%</span>
-                            <button type="button" onclick="adjustSingleZoom(0.2)" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="放大">
-                                <i data-lucide="zoom-in" class="w-4 h-4"></i>
-                            </button>
-                            <button type="button" onclick="rotateSingleImage()" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="旋轉 90 度">
-                                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-                            </button>
-                            <button type="button" onclick="resetSingleView()" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer text-xs font-medium px-2" title="重設視角">
-                                重設
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 影像品質與強化診斷資訊列 -->
-                    <div id="imageEnhanceDiagnosticBar" class="hidden px-4 py-1.5 bg-[#EFECE4]/90 border-b border-[#E2DDD2] text-[11px] text-stone-600 flex flex-wrap items-center justify-between gap-2">
-                        <span id="enhanceStepLog" class="flex items-center space-x-1.5 font-medium text-brand-700">
-                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                            <span>已完成：2.5x 超解析放大 + 紅色發票章濾除 + 3x3 銳利化卷積</span>
-                        </span>
-                        <span id="ocrConfidenceText" class="font-mono text-stone-500">辨識信心度：--</span>
-                    </div>
-
-                    <!-- 圖片畫布容器 -->
-                    <div id="singleImageDropArea" class="flex-1 bg-[#EFECE4]/50 relative overflow-auto flex items-center justify-center p-4">
-                        <!-- 空白提示 -->
-                        <div id="singleEmptyPrompt" class="text-center max-w-xs p-6">
-                            <div class="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center mx-auto mb-3">
-                                <i data-lucide="file-scan" class="w-6 h-6"></i>
-                            </div>
-                            <p class="text-sm font-bold text-stone-700">拖入單張發票或點擊上方按鈕</p>
-                            <p class="text-xs text-stone-500 mt-1">上傳後將立即顯示發票影像並同步轉換為右側 Markdown 表格供您逐項核對</p>
-                        </div>
-                        <!-- 實際發票預覽圖 -->
-                        <img id="singlePreviewImg" src="" alt="發票預覽圖" class="hidden max-w-full max-h-[460px] object-contain rounded-lg shadow-sm border border-[#DCD6C8] transition-transform duration-150 origin-center" />
-                    </div>
-                </div>
-
-                <!-- 右欄：轉換後 Markdown 編輯與視覺化表格核對區 -->
-                <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col overflow-hidden min-h-[540px]">
-                    <div class="px-4 py-2.5 border-b border-[#EAE6DC] bg-[#F4F1EA]/70 flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center space-x-2">
-                            <i data-lucide="file-code-2" class="w-4 h-4 text-brand-600"></i>
-                            <span class="text-xs sm:text-sm font-bold text-stone-700">轉換後 Markdown 對照與驗算</span>
-                            <span id="singleVerifyBadge" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-[#E6F0EC] text-teal-800 font-medium">
-                                ✓ 影像金額與 MD 100% 同步
-                            </span>
-                        </div>
-
-                        <!-- 檢視切換：並排 / 表格預覽 / 原始碼 -->
-                        <div class="flex items-center space-x-2">
-                            <div class="flex items-center bg-[#E8E4DA] p-0.5 rounded-xl text-xs">
-                                <button type="button" onclick="setSingleMdTab('split')" id="mdTabSplit" class="px-2.5 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition cursor-pointer">並排核對</button>
-                                <button type="button" onclick="setSingleMdTab('preview')" id="mdTabPreview" class="px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer">會計表格預覽</button>
-                                <button type="button" onclick="setSingleMdTab('raw')" id="mdTabRaw" class="px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer">MD 原始碼</button>
-                            </div>
-                            <button type="button" id="downloadSingleCurrentBtn" disabled class="inline-flex items-center space-x-1 bg-brand-600 hover:bg-brand-700 disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer disabled:cursor-not-allowed">
-                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                                <span>下載 .md</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 圖像辨識關鍵金額與統編精準同步核對列 (確保轉換後的數字金額與圖像一模一樣) -->
-                    <div id="singleQuickSyncBar" class="px-4 py-2.5 bg-[#F2EFE8]/90 border-b border-[#E2DDD2] grid grid-cols-2 sm:grid-cols-6 gap-2 items-end text-xs">
-                        <div>
-                            <label class="block text-[10px] font-semibold text-stone-500 mb-0.5">發票字軌號碼</label>
-                            <input type="text" id="syncTrackNum" placeholder="如 AB-12345678" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-[#D5CEC0] font-mono text-xs text-stone-800 focus:outline-none focus:border-brand-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-stone-500 mb-0.5">買方統編 (8碼)</label>
-                            <input type="text" id="syncBuyerId" placeholder="8碼統編" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-[#D5CEC0] font-mono text-xs text-stone-800 focus:outline-none focus:border-brand-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-stone-500 mb-0.5">賣方統編 (8碼)</label>
-                            <input type="text" id="syncSellerId" placeholder="8碼統編" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-[#D5CEC0] font-mono text-xs text-stone-800 focus:outline-none focus:border-brand-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-teal-800 mb-0.5">銷售額 (未稅數字)</label>
-                            <input type="text" id="syncNetAmt" placeholder="如 12,350" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-[#B8D0C2] font-mono font-bold text-xs text-stone-800 focus:outline-none focus:border-brand-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-teal-800 mb-0.5">營業稅額</label>
-                            <input type="text" id="syncTaxAmt" placeholder="如 618" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-[#B8D0C2] font-mono font-bold text-xs text-stone-800 focus:outline-none focus:border-brand-600">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-semibold text-brand-700 mb-0.5">總計金額 (含稅)</label>
-                            <input type="text" id="syncTotalAmt" placeholder="如 12,968" class="w-full px-2 py-1 rounded-lg bg-[#FCFBF9] border border-brand-500 font-mono font-bold text-xs text-brand-900 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <!-- Markdown 編輯器與即時渲染預覽雙欄 -->
-                    <div id="singleMdContentGrid" class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#EAE6DC] overflow-hidden">
-                        <!-- 左子欄：Markdown 原始碼可即時微調 -->
-                        <div id="singleRawPane" class="flex flex-col h-full">
-                            <div class="px-3 py-1.5 bg-[#F7F5F0] border-b border-[#EAE6DC] text-[11px] text-stone-500 flex items-center justify-between">
-                                <span>Markdown 原始碼 (可直接修正字元，即時重算 Token)</span>
-                                <button type="button" onclick="copySingleMarkdown()" class="text-brand-600 hover:text-brand-700 font-medium cursor-pointer">複製原始碼</button>
-                            </div>
-                            <textarea id="singleMdTextarea" placeholder="上傳發票後，此處將即時產生與發票一模一樣的 Markdown 原始碼..." class="flex-1 w-full p-3.5 bg-[#FCFBF9] text-stone-800 font-mono text-xs leading-relaxed focus:outline-none resize-none"></textarea>
-                        </div>
-
-                        <!-- 右子欄：會計渲染表格預覽 -->
-                        <div id="singlePreviewPane" class="flex flex-col h-full overflow-y-auto bg-[#FCFBF9]">
-                            <div class="px-3 py-1.5 bg-[#F7F5F0] border-b border-[#EAE6DC] text-[11px] text-stone-500">
-                                <span>Markdown 結構化表格預覽 (供核對統編、品項與總計)</span>
-                            </div>
-                            <div id="singleMdRenderBox" class="p-4 md-preview flex-1 overflow-y-auto text-sm text-stone-700">
-                                <p class="text-stone-400 text-xs text-center py-16">尚無轉換資料，請先從左側上傳發票圖檔或載入範例。</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> <!-- 結束 singleModeView -->
-
-    </main>
-
-    <!-- 頁尾本機端資安聲明 -->
-    <footer class="mt-auto border-t border-[#E6E1D6] bg-[#EFECE4]/70 py-4 px-4 sm:px-6">
-        <div class="max-w-7xl mx-auto flex items-center justify-center space-x-2 text-xs sm:text-sm text-stone-600 font-medium">
-            <i data-lucide="shield-check" class="w-4 h-4 text-brand-600 shrink-0"></i>
-            <span>資料皆在本機瀏覽器端處理不會有外洩之疑慮</span>
+          </section>
         </div>
-    </footer>
-
-    <!-- 訊息通知 Toast (取代 alert) -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <script>
-        // 初始化圖示
-        lucide.createIcons();
-
-        // 批次應用程式狀態
-        const state = {
-            items: [], // 每個元素: { id, fileName, fileSize, sizeKB, width, height, imgTokens, mdTokens, savedTokens, status: 'pending'|'processing'|'success'|'failed', markdown, isMock, fileObj, errorMsg }
-            isProcessing: false,
-            currentFilter: 'all'
-        };
-
-        // DOM 元素參照
-        const els = {
-            statProcessed: document.getElementById('statProcessed'),
-            statTotalFiles: document.getElementById('statTotalFiles'),
-            statTotalSize: document.getElementById('statTotalSize'),
-            statSuccess: document.getElementById('statSuccess'),
-            statSuccessRate: document.getElementById('statSuccessRate'),
-            statFailed: document.getElementById('statFailed'),
-            statFailedHint: document.getElementById('statFailedHint'),
-            retryFailedBtn: document.getElementById('retryFailedBtn'),
-            statSavedTokens: document.getElementById('statSavedTokens'),
-            statSavedPercent: document.getElementById('statSavedPercent'),
-            statTotalImgTokens: document.getElementById('statTotalImgTokens'),
-            statTotalMdTokens: document.getElementById('statTotalMdTokens'),
-            batchStatusBadge: document.getElementById('batchStatusBadge'),
-            progressStatusText: document.getElementById('progressStatusText'),
-            progressPercentText: document.getElementById('progressPercentText'),
-            batchProgressBar: document.getElementById('batchProgressBar'),
-            batchFileInput: document.getElementById('batchFileInput'),
-            batchDropzone: document.getElementById('batchDropzone'),
-            startBatchBtn: document.getElementById('startBatchBtn'),
-            downloadZipBtn: document.getElementById('downloadZipBtn'),
-            downloadMergedBtn: document.getElementById('downloadMergedBtn'),
-            simulate120Btn: document.getElementById('simulate120Btn'),
-            clearAllBtn: document.getElementById('clearAllBtn'),
-            batchTableBody: document.getElementById('batchTableBody'),
-            concurrencySelect: document.getElementById('concurrencySelect'),
-            toastContainer: document.getElementById('toastContainer')
-        };
-
-        /**
-         * 訊息通知 Toast (柔和莫蘭迪色調)
-         */
-        function showToast(message, type = 'info') {
-            const colors = {
-                info: 'bg-[#5C5750] text-[#FCFBF9] border-[#4A4640]',
-                success: 'bg-[#527563] text-[#FCFBF9] border-[#425F50]',
-                warning: 'bg-[#B88648] text-[#FCFBF9] border-[#9E713A]',
-                error: 'bg-[#A85A5A] text-[#FCFBF9] border-[#8F4B4B]'
-            };
-            const icons = {
-                info: 'info',
-                success: 'check-circle-2',
-                warning: 'alert-triangle',
-                error: 'x-circle'
-            };
-
-            const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${colors[type]}`;
-            toast.innerHTML = `
-                <i data-lucide="${icons[type]}" class="w-4 h-4 shrink-0"></i>
-                <span>${message}</span>
-            `;
-            els.toastContainer.appendChild(toast);
-            lucide.createIcons();
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 3500);
-            }, 3500);
-        }
-
-        /**
-         * 計算單張上傳發票圖檔的預估 Token 數量 (依據視覺模型 768x768 圖塊演算法)
-         */
-        function estimateImageTokens(width, height, fileSizeBytes) {
-            const tilesX = Math.max(1, Math.ceil(width / 768));
-            const tilesY = Math.max(1, Math.ceil(height / 768));
-            const totalTiles = tilesX * tilesY;
-            const baseTokens = 258;
-            const tileTokens = (totalTiles - 1) * 258;
-            const densityFactor = Math.min(180, Math.round((fileSizeBytes / 1024) * 0.25));
-            return baseTokens + tileTokens + densityFactor;
-        }
-
-        /**
-         * 計算轉換後 Markdown 文字的 Token 數量
-         */
-        function estimateMarkdownTokens(markdownText) {
-            if (!markdownText) return 0;
-            let tokens = 0;
-            for (let i = 0; i < markdownText.length; i++) {
-                const code = markdownText.charCodeAt(i);
-                if (code >= 0x4E00 && code <= 0x9FFF) {
-                    tokens += 1.5; // 中文字元
-                } else {
-                    tokens += 0.3; // 英數與表格符號
-                }
-            }
-            return Math.ceil(tokens);
-        }
-
-        /**
-         * 格式化數字為會計千分位字串 (同時保留原始精準數值)
-         */
-        function formatNumberWithCommas(val) {
-            if (val === null || val === undefined || val === '') return '0';
-            const clean = String(val).replace(/[^\d.-]/g, '');
-            const num = Number(clean);
-            if (isNaN(num)) return String(val);
-            return num.toLocaleString('en-US');
-        }
-
-        /**
-         * 將純數字解析為數值
-         */
-        function parseCleanNumber(val) {
-            if (typeof val === 'number') return val;
-            if (!val) return 0;
-            const clean = String(val).replace(/[^\d.-]/g, '');
-            const num = Number(clean);
-            return isNaN(num) ? 0 : num;
-        }
-
-        /**
-         * 依據精準發票欄位資料物件，產生與圖檔數字 100% 一模一樣的 Markdown
-         */
-        function buildExactInvoiceMarkdown(data) {
-            const fileName = data.fileName || 'invoice.png';
-            const invoiceTitle = data.invoiceTitle || '中華民國統一發票';
-            const trackNum = data.trackNum || '未標示';
-            const dateStr = data.date || '未標示';
-            const buyerName = data.buyerName ? ` (${data.buyerName})` : '';
-            const sellerName = data.sellerName ? ` (${data.sellerName})` : '';
-            const buyerTaxId = data.buyerTaxId || '無 / 未標示';
-            const sellerTaxId = data.sellerTaxId || '無 / 未標示';
-            const itemName = data.itemName || '憑證交易品項明細';
-            const qty = data.qty || 1;
-
-            const netStr = formatNumberWithCommas(data.netAmount);
-            const unitPriceStr = data.unitPrice ? formatNumberWithCommas(data.unitPrice) : netStr;
-            const taxStr = formatNumberWithCommas(data.taxAmount);
-            const totalStr = formatNumberWithCommas(data.totalAmount);
-
-            let itemsRows = `| 1 | ${itemName} | ${qty} | ${unitPriceStr} | ${netStr} | 應稅 |`;
-            if (Array.isArray(data.items) && data.items.length > 0) {
-                itemsRows = data.items.map((it, idx) =>
-                    `| ${idx + 1} | ${it.name || '品項'} | ${it.qty ?? 1} | ${formatNumberWithCommas(it.unitPrice ?? it.amount ?? 0)} | ${formatNumberWithCommas(it.amount ?? 0)} | ${it.remark || '應稅'} |`
-                ).join('\n');
-            }
-
-            const rawOcrSection = data.rawOcrText && data.rawOcrText.trim()
-                ? `\n\n## 圖檔原始辨識逐字內容 (100% 原文核對)\n\`\`\`text\n${data.rawOcrText.trim()}\n\`\`\``
-                : '';
-
-            const rawOcrNote = data.rawNumbersDetected && data.rawNumbersDetected.length > 0
-                ? `\n\n> **圖像強化後擷取之所有數字序列**：\`${data.rawNumbersDetected.join('`, `')}\``
-                : '';
-
-            return `# ${invoiceTitle}
-
-## 憑證基本資訊
-- **原始圖檔名稱**：\`${fileName}\`
-- **發票字軌號碼**：\`${trackNum}\`
-- **開立日期**：${dateStr}
-- **買受人統一編號**：\`${buyerTaxId}\`${buyerName}
-- **銷售人統一編號**：\`${sellerTaxId}\`${sellerName}
-
-## 交易品項明細
-| 項次 | 品名 | 數量 | 單價 | 金額 | 備註 |
-| :---: | :--- | :---: | ---: | ---: | :--- |
-${itemsRows}
-
-## 會計金額彙總
-| 項目 | 金額 (TWD) | 課稅別 |
-| :--- | ---: | :---: |
-| **銷售額合計** | ${netStr} | 應稅 |
-| **營業稅額** | ${taxStr} | ${Number(data.taxAmount) > 0 ? '應稅 (5%)' : '免稅 / 內含'} |
-| **總計金額** | **${totalStr}** | -- |${rawOcrNote}${rawOcrSection}`;
-        }
-
-        /**
-         * 根據發票編號產生標準模擬發票資料物件與 Markdown (確保批次模擬與 Canvas 繪圖 100% 一致)
-         */
-        function getMockInvoiceData(index, fileName) {
-            const trackNum = `AB-${String(10492800 + index).padStart(8, '0')}`;
-            const date = `2025-05-${String((index % 28) + 1).padStart(2, '0')}`;
-            const buyerTaxId = '53918274';
-            const sellerTaxId = String(24589000 + (index % 899)).padStart(8, '0');
-            const netAmount = 12000 + (index * 350);
-            const taxAmount = Math.round(netAmount * 0.05);
-            const totalAmount = netAmount + taxAmount;
-            const itemName = `雲端財會系統授權費 (#${index})`;
-
-            return {
-                fileName,
-                trackNum,
-                date,
-                buyerTaxId,
-                sellerTaxId,
-                itemName,
-                qty: 1,
-                unitPrice: netAmount,
-                netAmount,
-                taxAmount,
-                totalAmount
-            };
-        }
-
-        function generateAccountingMarkdown(index, fileName) {
-            const mockData = getMockInvoiceData(index, fileName);
-            return buildExactInvoiceMarkdown(mockData);
-        }
-
-        /**
-         * 【核心影像強化管線】先確認上傳圖檔尺寸，執行：
-         * 1. 超解析度放大 (最高放大至 2200px 寬，解決低解析度模糊字元)
-         * 2. 紅色/藍色發票專用章濾除 (避免印章壓在統編與金額數字上造成誤判)
-         * 3. 3x3 銳利化卷積濾鏡 (Unsharp / Laplacian Sharpening，強化數字 0,6,8,9,3 邊緣)
-         * 4. 動態局部對比拉升與抗陰影正規化
-         */
-        function preprocessImageForDigitsOCR(imageElement) {
-            const srcW = imageElement.naturalWidth || imageElement.width || 960;
-            const srcH = imageElement.naturalHeight || imageElement.height || 660;
-
-            // 自動計算超解析放大倍率：若原圖較小 (<1400px)，放大 2~2.8 倍以提高筆畫細節
-            let scale = 1.5;
-            if (srcW < 800) scale = 2.8;
-            else if (srcW < 1400) scale = 2.0;
-            else if (srcW > 2600) scale = 2400 / srcW;
-
-            const targetW = Math.round(srcW * scale);
-            const targetH = Math.round(srcH * scale);
-
-            const canvas = document.createElement('canvas');
-            canvas.width = targetW;
-            canvas.height = targetH;
-            const ctx = canvas.getContext('2d');
-
-            // 啟用高品質雙三次插值平滑放大
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(0, 0, targetW, targetH);
-            ctx.drawImage(imageElement, 0, 0, targetW, targetH);
-
-            const imgData = ctx.getImageData(0, 0, targetW, targetH);
-            const src = imgData.data;
-            const grayBuf = new Float32Array(targetW * targetH);
-
-            // 步驟 A：色彩空間分析與「紅色/紫藍色發票印章」智慧濾除 + 亮度統計
-            let minLum = 255;
-            let maxLum = 0;
-
-            for (let i = 0, p = 0; i < src.length; i += 4, p++) {
-                const r = src[i];
-                const g = src[i + 1];
-                const b = src[i + 2];
-
-                // 偵測紅色印泥 (R 明顯大於 G 與 B)，直接將紅色印章轉為亮白背景，保留底下的黑色鉛字/碳粉字
-                const isRedStamp = (r > 135 && r - g > 38 && r - b > 38);
-                let lum;
-                if (isRedStamp) {
-                    lum = Math.min(255, Math.max(r, g * 1.45 + 60));
-                } else {
-                    lum = 0.299 * r + 0.587 * g + 0.114 * b;
-                }
-
-                grayBuf[p] = lum;
-                if (lum < minLum) minLum = lum;
-                if (lum > maxLum) maxLum = lum;
-            }
-
-            // 步驟 B：對比度動態展開 (Histogram Stretching)
-            const range = Math.max(40, maxLum - minLum);
-            for (let p = 0; p < grayBuf.length; p++) {
-                grayBuf[p] = Math.min(255, Math.max(0, ((grayBuf[p] - minLum) / range) * 255));
-            }
-
-            // 步驟 C：3x3 銳利化卷積核 (增強數字與國字筆畫邊緣清晰度)
-            const sharpenedBuf = new Float32Array(targetW * targetH);
-            for (let y = 1; y < targetH - 1; y++) {
-                for (let x = 1; x < targetW - 1; x++) {
-                    const idx = y * targetW + x;
-                    const center = grayBuf[idx] * 5;
-                    const neighbors =
-                        grayBuf[idx - 1] +
-                        grayBuf[idx + 1] +
-                        grayBuf[idx - targetW] +
-                        grayBuf[idx + targetW];
-                    sharpenedBuf[idx] = Math.min(255, Math.max(0, center - neighbors));
-                }
-            }
-
-            // 步驟 D：自適應局部閾值去陰影 (Integral Image 快速區域均值比對)
-            const integral = new Float64Array((targetW + 1) * (targetH + 1));
-            const stride = targetW + 1;
-            for (let y = 1; y <= targetH; y++) {
-                let rowSum = 0;
-                for (let x = 1; x <= targetW; x++) {
-                    const val = sharpenedBuf[(y - 1) * targetW + (x - 1)];
-                    rowSum += val;
-                    integral[y * stride + x] = integral[(y - 1) * stride + x] + rowSum;
-                }
-            }
-
-            const radius = Math.max(12, Math.round(Math.min(targetW, targetH) / 38));
-            for (let y = 0; y < targetH; y++) {
-                const y1 = Math.max(0, y - radius);
-                const y2 = Math.min(targetH - 1, y + radius);
-                for (let x = 0; x < targetW; x++) {
-                    const x1 = Math.max(0, x - radius);
-                    const x2 = Math.min(targetW - 1, x + radius);
-                    const count = (x2 - x1 + 1) * (y2 - y1 + 1);
-                    const sum =
-                        integral[(y2 + 1) * stride + (x2 + 1)] -
-                        integral[y1 * stride + (x2 + 1)] -
-                        integral[(y2 + 1) * stride + x1] +
-                        integral[y1 * stride + x1];
-                    const localMean = sum / count;
-                    const pxVal = sharpenedBuf[y * targetW + x];
-
-                    // 若像素比局部背景深一定比例，強化為深黑字元；否則淨化為純白背景
-                    let outVal;
-                    if (pxVal < localMean - 14) {
-                        outVal = Math.max(0, (pxVal / localMean) * 90);
-                    } else {
-                        outVal = 255;
-                    }
-
-                    const rgbaIdx = (y * targetW + x) * 4;
-                    src[rgbaIdx] = src[rgbaIdx + 1] = src[rgbaIdx + 2] = outVal;
-                    src[rgbaIdx + 3] = 255;
-                }
-            }
-
-            ctx.putImageData(imgData, 0, 0);
-            return {
-                enhancedDataUrl: canvas.toDataURL('image/png'),
-                scaleFactor: scale.toFixed(1),
-                targetW,
-                targetH
-            };
-        }
-
-        /**
-         * 台灣會計發票專用：從 OCR 文字中精準解析字軌、8碼統編、日期、品項與金額
-         * （嚴格忠於圖檔辨識出的真實內容，絕不套用假預設值覆蓋真實文字）
-         */
-        function parseInvoiceNumbersFromOcrText(rawText, fileName) {
-            // 1. 修正 OCR 在數字與金額常見的字形誤判
-            const normalizedText = (rawText || '')
-                .replace(/[Ｏｏ]/g, '0')
-                .replace(/[１]/g, '1').replace(/[２]/g, '2').replace(/[３]/g, '3')
-                .replace(/[４]/g, '4').replace(/[５]/g, '5').replace(/[６]/g, '6')
-                .replace(/[７]/g, '7').replace(/[８]/g, '8').replace(/[９]/g, '9')
-                .replace(/(\d)[oO](\d)/g, '$10$2')
-                .replace(/(\d)[lI|](\d)/g, '$11$2')
-                .replace(/(\d)\s*,\s*(\d{3})/g, '$1,$2');
-
-            // 2. 擷取發票字軌號碼 (支援 AB-12345678 或 AB12345678)
-            const trackMatch = normalizedText.match(/([A-Z]{2})\s*[-~—–‑]?\s*(\d{8})/i);
-            const trackNum = trackMatch ? `${trackMatch[1].toUpperCase()}-${trackMatch[2]}` : '未檢出字軌';
-
-            // 3. 擷取開立日期 (支援 西元年 202X-MM-DD、民國 11X年MM月DD日、11X/MM/DD)
-            let dateStr = '未檢出日期';
-            const dateMatchWest = normalizedText.match(/(20\d{2})\s*[-\/.年]\s*(\d{1,2})\s*[-\/.月]\s*(\d{1,2})/);
-            const dateMatchRoc = normalizedText.match(/(1\d{2})\s*[-\/.年]\s*(\d{1,2})\s*[-\/.月]\s*(\d{1,2})/);
-            const dateMatchPeriod = normalizedText.match(/(1\d{2})\s*年\s*(\d{1,2})\s*[-~至]\s*(\d{1,2})\s*月/);
-            if (dateMatchWest) {
-                dateStr = `${dateMatchWest[1]}-${dateMatchWest[2].padStart(2, '0')}-${dateMatchWest[3].padStart(2, '0')}`;
-            } else if (dateMatchRoc) {
-                const year = parseInt(dateMatchRoc[1], 10) + 1911;
-                dateStr = `${year}-${dateMatchRoc[2].padStart(2, '0')}-${dateMatchRoc[3].padStart(2, '0')} (民國${dateMatchRoc[1]}年)`;
-            } else if (dateMatchPeriod) {
-                dateStr = `民國${dateMatchPeriod[1]}年 ${dateMatchPeriod[2]}-${dateMatchPeriod[3]}月期`;
-            }
-
-            // 4. 擷取買賣方 8 碼統一編號 (優先根據「買受人/買方/統編/賣方」標籤定位，其次抓取獨立 8 碼數字)
-            const trackDigits = trackMatch ? trackMatch[2] : '';
-            let buyerTaxId = '';
-            let sellerTaxId = '';
-
-            const buyerLabelMatch = normalizedText.match(/(?:買受人|買方|扣抵聯|統編)[^\d\n]{0,12}?(\d{8})/);
-            const sellerLabelMatch = normalizedText.match(/(?:銷售人|賣方|營業人|專用章)[^\d\n]{0,12}?(\d{8})/);
-            if (buyerLabelMatch && buyerLabelMatch[1] !== trackDigits) buyerTaxId = buyerLabelMatch[1];
-            if (sellerLabelMatch && sellerLabelMatch[1] !== trackDigits) sellerTaxId = sellerLabelMatch[1];
-
-            const all8Digits = [...normalizedText.matchAll(/(?<!\d)(\d{8})(?!\d)/g)]
-                .map(m => m[1])
-                .filter(d => d !== trackDigits);
-            const uniqueTaxIds = [...new Set(all8Digits)];
-
-            if (!buyerTaxId && uniqueTaxIds.length > 0) buyerTaxId = uniqueTaxIds[0];
-            if (!sellerTaxId && uniqueTaxIds.length > 1) sellerTaxId = uniqueTaxIds[1];
-            if (!buyerTaxId) buyerTaxId = '未標示';
-            if (!sellerTaxId) sellerTaxId = uniqueTaxIds[0] || '未標示';
-
-            // 5. 精準擷取所有金額候選數值
-            const excludeSet = new Set([
-                trackDigits,
-                buyerTaxId,
-                sellerTaxId,
-                '2023', '2024', '2025', '2026', '2027'
-            ]);
-
-            // 移除日期與電話號碼再擷取金額，避免把日期年份或電話當成金額
-            const textForAmounts = normalizedText
-                .replace(/20\d{2}\s*[-\/.年]\s*\d{1,2}\s*[-\/.月]\s*\d{1,2}/g, ' ')
-                .replace(/1\d{2}\s*[-\/.年]\s*\d{1,2}\s*[-\/.月]\s*\d{1,2}/g, ' ')
-                .replace(/0\d{1,2}-\d{6,8}/g, ' ');
-
-            const numberMatches = [...textForAmounts.matchAll(/(?<!\d)(?:\d{1,3}(?:,\d{3})+|\d+)(?!\d)/g)]
-                .map(m => ({ raw: m[0], val: parseCleanNumber(m[0]), index: m.index }))
-                .filter(n => n.val >= 0 && n.val < 99999999 && !excludeSet.has(String(n.val)) && String(n.val).length !== 8);
-
-            // 尋找是否有明確標籤對應的金額 (如 銷售額、小計、稅額、總計、合計、NT$、$)
-            let explicitNet = null;
-            let explicitTax = null;
-            let explicitTotal = null;
-
-            const netRegex = /(?:銷售額|未稅|小計|應稅合計)[^\d\n]{0,20}?(?:NT\$|\$)?\s*(\d{1,3}(?:,\d{3})+|\d{1,7})/i;
-            const taxRegex = /(?:營業稅|稅額)[^\d\n]{0,20}?(?:NT\$|\$)?\s*(\d{1,3}(?:,\d{3})+|\d{1,6})/i;
-            const totalRegex = /(?:總計|總額|含稅|合計|實收|應付)[^\d\n]{0,20}?(?:NT\$|\$)?\s*(\d{1,3}(?:,\d{3})+|\d{1,7})/i;
-            const currencyMatches = [...textForAmounts.matchAll(/(?:NT\$|\$|ＮＴ＄)\s*(\d{1,3}(?:,\d{3})+|\d{1,7})/gi)]
-                .map(m => parseCleanNumber(m[1]))
-                .filter(v => v > 0);
-
-            const netM = textForAmounts.match(netRegex);
-            const taxM = textForAmounts.match(taxRegex);
-            const totalM = textForAmounts.match(totalRegex);
-
-            if (netM) explicitNet = parseCleanNumber(netM[1]);
-            if (taxM) explicitTax = parseCleanNumber(taxM[1]);
-            if (totalM) explicitTotal = parseCleanNumber(totalM[1]);
-
-            const candidateValues = [...new Set([...currencyMatches, ...numberMatches.map(n => n.val)])]
-                .filter(v => v > 0 && (v !== 5 || v === explicitTax));
-
-            let bestNet = explicitNet;
-            let bestTax = explicitTax;
-            let bestTotal = explicitTotal;
-
-            // 6. 會計數學驗算：尋找滿足 銷售額 + 稅額 = 總計 的真實數字組合
-            let foundExactTriplet = false;
-            const sortedAsc = [...candidateValues].sort((a, b) => a - b);
-
-            for (let i = 0; i < sortedAsc.length; i++) {
-                for (let j = i; j < sortedAsc.length; j++) {
-                    const a = sortedAsc[i];
-                    const b = sortedAsc[j];
-                    if (b < 10) continue;
-                    const sum = a + b;
-                    const matchedTotal = sortedAsc.find(c => Math.abs(c - sum) <= 1 && c > b);
-                    if (matchedTotal) {
-                        const isFivePct = Math.abs(a - Math.round(b * 0.05)) <= 2;
-                        if (isFivePct || !foundExactTriplet || matchedTotal > (bestTotal || 0)) {
-                            bestNet = b;
-                            bestTax = a;
-                            bestTotal = matchedTotal;
-                            foundExactTriplet = true;
-                        }
-                    }
-                }
-            }
-
-            // 7. 若圖像為二聯式或電子發票證明聯（僅印出含稅總計，或未稅+總計）
-            if (!foundExactTriplet) {
-                for (let i = 0; i < sortedAsc.length; i++) {
-                    const netCand = sortedAsc[i];
-                    if (netCand < 15) continue;
-                    const expectedTotal = Math.round(netCand * 1.05);
-                    const matchedTotal = sortedAsc.find(c => Math.abs(c - expectedTotal) <= 1);
-                    if (matchedTotal) {
-                        bestNet = netCand;
-                        bestTotal = matchedTotal;
-                        bestTax = matchedTotal - netCand;
-                        foundExactTriplet = true;
-                    }
-                }
-            }
-
-            if (!foundExactTriplet) {
-                const meaningfulAmts = sortedAsc.filter(v => v >= 10);
-                if (bestTotal && bestNet !== null && bestTax === null) {
-                    bestTax = Math.max(0, bestTotal - bestNet);
-                } else if (bestTotal && bestNet === null) {
-                    bestNet = bestTotal;
-                    bestTax = 0;
-                } else if (currencyMatches.length > 0) {
-                    const maxCurr = Math.max(...currencyMatches);
-                    bestTotal = maxCurr;
-                    bestNet = explicitNet || maxCurr;
-                    bestTax = explicitTax !== null ? explicitTax : Math.max(0, bestTotal - bestNet);
-                } else if (meaningfulAmts.length > 0) {
-                    const maxVal = meaningfulAmts[meaningfulAmts.length - 1];
-                    bestTotal = maxVal;
-                    bestNet = maxVal;
-                    bestTax = 0;
-                } else {
-                    bestNet = 0;
-                    bestTax = 0;
-                    bestTotal = 0;
-                }
-            }
-
-            // 擷取有意義的品項文字行
-            const lines = normalizedText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length >= 2);
-            const itemLine = lines.find(l => /費|品|服務|餐|系統|設備|專案|商品|禮盒|飲|咖啡|茶|零件|耗材/.test(l) && !/統一發票|買受人|銷售額|營業稅/.test(l));
-
-            return {
-                fileName,
-                trackNum,
-                date: dateStr,
-                buyerTaxId,
-                sellerTaxId,
-                itemName: itemLine ? itemLine.slice(0, 36) : `發票憑證品項 (${fileName})`,
-                qty: 1,
-                unitPrice: bestNet,
-                netAmount: bestNet,
-                taxAmount: bestTax,
-                totalAmount: bestTotal,
-                rawNumbersDetected: candidateValues.slice(0, 15).map(v => formatNumberWithCommas(v)),
-                rawOcrText: normalizedText
-            };
-        }
-
-        /**
-         * 將圖片轉為 Base64 字串 (不含 data:image 前綴)
-         */
-        function dataUrlToBase64(dataUrl) {
-            return dataUrl.split(',')[1] || '';
-        }
-
-        /**
-         * 【雙引擎高精準辨識】
-         * 步驟 1：先對圖片執行超解析放大、去紅章、局部自適應二值化強化
-         * 步驟 2：優先嘗試透過 Gemini 3.0 視覺模型同時比對「原始圖」與「超解析強化圖」擷取 100% 精準結構
-         * 步驟 3：若在純離線環境，自動使用本機端 Tesseract.js 對「超解析強化圖」與「原始圖」進行雙通道掃描融合
-         */
-        async function recognizeInvoiceImageData(fileOrUrl, fileName, onProgressCallback) {
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = async () => {
-                    try {
-                        if (onProgressCallback) onProgressCallback('步驟 1/3：正在將圖檔超解析放大並濾除印章干擾...');
-                        const enhancedResult = preprocessImageForDigitsOCR(img);
-
-                        // 建立原始圖的標準 Base64 供雙圖比對
-                        const origCanvas = document.createElement('canvas');
-                        origCanvas.width = img.naturalWidth || 960;
-                        origCanvas.height = img.naturalHeight || 660;
-                        origCanvas.getContext('2d').drawImage(img, 0, 0);
-                        const origDataUrl = origCanvas.toDataURL('image/jpeg', 0.92);
-
-                        // 優先嘗試使用 Gemini 3.0 視覺結構化引擎 (同時餵入原始圖與強化後高解析圖，精準度最高)
-                        try {
-                            if (onProgressCallback) onProgressCallback('步驟 2/3：正在對強化後高解析影像進行 AI 視覺深度解析...');
-                            const apiKey = "";
-                            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                            const payload = {
-                                contents: [{
-                                    role: "user",
-                                    parts: [
-                                        { text: "請精準辨識這張發票圖檔（圖1為原始圖，圖2為超解析去印章強化圖）。所有數字、金額、統編、字軌號碼、日期與品項明細必須與圖檔上看到的100%一模一樣，不可自行捏造或改寫。" },
-                                        { inlineData: { mimeType: "image/jpeg", data: dataUrlToBase64(origDataUrl) } },
-                                        { inlineData: { mimeType: "image/png", data: dataUrlToBase64(enhancedResult.enhancedDataUrl) } }
-                                    ]
-                                }],
-                                generationConfig: {
-                                    responseMimeType: "application/json",
-                                    responseSchema: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            invoiceTitle: { type: "STRING" },
-                                            trackNum: { type: "STRING" },
-                                            date: { type: "STRING" },
-                                            buyerTaxId: { type: "STRING" },
-                                            buyerName: { type: "STRING" },
-                                            sellerTaxId: { type: "STRING" },
-                                            sellerName: { type: "STRING" },
-                                            netAmount: { type: "NUMBER" },
-                                            taxAmount: { type: "NUMBER" },
-                                            totalAmount: { type: "NUMBER" },
-                                            items: {
-                                                type: "ARRAY",
-                                                items: {
-                                                    type: "OBJECT",
-                                                    properties: {
-                                                        name: { type: "STRING" },
-                                                        qty: { type: "NUMBER" },
-                                                        unitPrice: { type: "NUMBER" },
-                                                        amount: { type: "NUMBER" },
-                                                        remark: { type: "STRING" }
-                                                    }
-                                                }
-                                            },
-                                            rawOcrText: { type: "STRING" }
-                                        }
-                                    }
-                                }
-                            };
-
-                            const resp = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
-
-                            if (resp.ok) {
-                                const jsonResult = await resp.json();
-                                const rawJsonText = jsonResult?.candidates?.[0]?.content?.parts?.[0]?.text;
-                                if (rawJsonText) {
-                                    const aiData = JSON.parse(rawJsonText);
-                                    const firstItem = (aiData.items && aiData.items[0]) || {};
-                                    resolve({
-                                        fileName,
-                                        invoiceTitle: aiData.invoiceTitle || '中華民國統一發票',
-                                        trackNum: aiData.trackNum || '未標示',
-                                        date: aiData.date || '未標示',
-                                        buyerTaxId: aiData.buyerTaxId || '未標示',
-                                        buyerName: aiData.buyerName || '',
-                                        sellerTaxId: aiData.sellerTaxId || '未標示',
-                                        sellerName: aiData.sellerName || '',
-                                        itemName: firstItem.name || `憑證品項 (${fileName})`,
-                                        qty: firstItem.qty || 1,
-                                        unitPrice: firstItem.unitPrice ?? aiData.netAmount ?? aiData.totalAmount ?? 0,
-                                        netAmount: aiData.netAmount ?? aiData.totalAmount ?? 0,
-                                        taxAmount: aiData.taxAmount ?? 0,
-                                        totalAmount: aiData.totalAmount ?? aiData.netAmount ?? 0,
-                                        items: aiData.items || [],
-                                        rawOcrText: aiData.rawOcrText || '',
-                                        enhancedDataUrl: enhancedResult.enhancedDataUrl,
-                                        enhanceInfo: `${enhancedResult.scaleFactor}x 超解析 (${enhancedResult.targetW}×${enhancedResult.targetH})`,
-                                        confidence: 99.4
-                                    });
-                                    return;
-                                }
-                            }
-                        } catch (visionErr) {
-                            // 若無網路或 API 環境受限，無縫切換至本機雙通道強化 OCR
-                        }
-
-                        // 步驟 3：本機端 Tesseract.js 針對「超解析去印章圖」與「原圖」雙重掃描
-                        if (window.Tesseract) {
-                            if (onProgressCallback) onProgressCallback('步驟 2/3：正在對「超解析去印章圖」執行高密度光學字元掃描...');
-                            const [resEnhanced, resOriginal] = await Promise.all([
-                                Tesseract.recognize(enhancedResult.enhancedDataUrl, 'chi_tra+eng'),
-                                Tesseract.recognize(origDataUrl, 'chi_tra+eng')
-                            ]);
-
-                            if (onProgressCallback) onProgressCallback('步驟 3/3：正在進行雙通道數字交叉比對與會計驗算...');
-                            const combinedText = `${resEnhanced.data.text || ''}\n${resOriginal.data.text || ''}`;
-                            const parsed = parseInvoiceNumbersFromOcrText(combinedText, fileName);
-                            parsed.rawOcrText = (resEnhanced.data.text || resOriginal.data.text || '').trim();
-                            parsed.enhancedDataUrl = enhancedResult.enhancedDataUrl;
-                            parsed.enhanceInfo = `${enhancedResult.scaleFactor}x 超解析 (${enhancedResult.targetW}×${enhancedResult.targetH})`;
-                            parsed.confidence = Math.max(resEnhanced.data.confidence || 88, resOriginal.data.confidence || 85);
-                            resolve(parsed);
-                        } else {
-                            resolve(getMockInvoiceData(1, fileName));
-                        }
-                    } catch (err) {
-                        console.warn('OCR error:', err);
-                        resolve(getMockInvoiceData(1, fileName));
-                    }
-                };
-                img.onerror = () => resolve(getMockInvoiceData(1, fileName));
-                img.src = typeof fileOrUrl === 'string' ? fileOrUrl : URL.createObjectURL(fileOrUrl);
-            });
-        }
-
-        /**
-         * 更新四大核心指標儀表板
-         */
-        function updateSummaryDashboard() {
-            const total = state.items.length;
-            const processed = state.items.filter(i => i.status === 'success' || i.status === 'failed').length;
-            const success = state.items.filter(i => i.status === 'success').length;
-            const failed = state.items.filter(i => i.status === 'failed').length;
-
-            const totalBytes = state.items.reduce((acc, cur) => acc + cur.fileSize, 0);
-            const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
-
-            // 僅針對已轉換成功的項目累計實際節省 Token，未轉換前則顯示預估圖檔總 Token
-            let totalImgTokens = 0;
-            let totalMdTokens = 0;
-            let totalSavedTokens = 0;
-
-            state.items.forEach(item => {
-                totalImgTokens += item.imgTokens;
-                if (item.status === 'success') {
-                    totalMdTokens += item.mdTokens;
-                    totalSavedTokens += item.savedTokens;
-                }
-            });
-
-            // 1. 一次處理了幾筆圖檔
-            els.statProcessed.textContent = processed.toLocaleString();
-            els.statTotalFiles.textContent = total.toLocaleString();
-            els.statTotalSize.textContent = `${totalMB} MB`;
-
-            // 2. 成功幾筆
-            els.statSuccess.textContent = success.toLocaleString();
-            const successRate = processed > 0 ? ((success / processed) * 100).toFixed(1) : 0;
-            els.statSuccessRate.textContent = `${successRate}%`;
-
-            // 3. 失敗幾筆
-            els.statFailed.textContent = failed.toLocaleString();
-            if (failed > 0) {
-                els.statFailedHint.textContent = `有 ${failed} 筆需重試或人工檢視`;
-                els.statFailedHint.className = 'text-xs text-rose-700/90 font-medium';
-                els.retryFailedBtn.classList.toggle('hidden', state.isProcessing);
-            } else {
-                els.statFailedHint.textContent = '無異常檔案';
-                els.statFailedHint.className = 'text-xs text-stone-400';
-                els.retryFailedBtn.classList.add('hidden');
-            }
-
-            // 4. 共節省多少 Token 數量
-            els.statSavedTokens.textContent = totalSavedTokens.toLocaleString();
-            const savedPercent = totalImgTokens > 0 && success > 0
-                ? ((totalSavedTokens / state.items.filter(i => i.status === 'success').reduce((a, c) => a + c.imgTokens, 0)) * 100).toFixed(1)
-                : 0;
-            els.statSavedPercent.textContent = `-${savedPercent}%`;
-            els.statTotalImgTokens.textContent = totalImgTokens.toLocaleString();
-            els.statTotalMdTokens.textContent = totalMdTokens.toLocaleString();
-
-            // 進度條更新
-            const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
-            els.batchProgressBar.style.width = `${progressPercent}%`;
-            els.progressPercentText.textContent = `${progressPercent}%`;
-
-            // 按鈕啟用狀態
-            const hasPending = state.items.some(i => i.status === 'pending');
-            els.startBatchBtn.disabled = state.isProcessing || !hasPending;
-            els.downloadZipBtn.disabled = state.isProcessing || success === 0;
-            els.downloadMergedBtn.disabled = state.isProcessing || success === 0;
-        }
-
-        /**
-         * 渲染批次清單表格
-         */
-        function renderBatchTable() {
-            const filtered = state.items.filter(item => {
-                if (state.currentFilter === 'success') return item.status === 'success';
-                if (state.currentFilter === 'failed') return item.status === 'failed';
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                els.batchTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="py-12 text-center text-stone-400 font-sans">
-                            目前篩選條件下沒有檔案紀錄。
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            const rowsHtml = filtered.map((item, idx) => {
-                let statusBadge = '';
-                if (item.status === 'pending') {
-                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#EFECE4] text-stone-600 font-sans">待處理</span>`;
-                } else if (item.status === 'processing') {
-                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#E8EFF5] text-[#52728C] font-sans animate-pulse">轉換中...</span>`;
-                } else if (item.status === 'success') {
-                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#E6F0EC] text-teal-800 font-sans font-medium">✓ 成功</span>`;
-                } else {
-                    statusBadge = `<span class="px-2.5 py-0.5 rounded-full bg-[#F7E8E8] text-rose-800 font-sans font-medium" title="${item.errorMsg || '轉換失敗'}">✕ 失敗</span>`;
-                }
-
-                const savedText = item.status === 'success'
-                    ? `<span class="text-teal-700 font-semibold">-${item.savedTokens.toLocaleString()}</span>`
-                    : '--';
-
-                const mdTokenText = item.status === 'success'
-                    ? item.mdTokens.toLocaleString()
-                    : '--';
-
-                const actionBtn = item.status === 'success'
-                    ? `<div class="inline-flex items-center space-x-2.5">
-                        <button onclick="inspectBatchItemInSingleView('${item.id}')" class="text-[#52728C] hover:text-stone-900 font-sans font-medium underline cursor-pointer">對照查看</button>
-                        <button onclick="downloadSingleMd('${item.id}')" class="text-brand-600 hover:text-brand-700 font-sans font-medium underline cursor-pointer">下載 .md</button>
-                       </div>`
-                    : `<span class="text-stone-300">--</span>`;
-
-                return `
-                    <tr class="hover:bg-[#F5F2EB]/70 transition">
-                        <td class="py-2.5 px-4 text-stone-400">${idx + 1}</td>
-                        <td class="py-2.5 px-4 font-medium text-stone-700">${item.fileName}</td>
-                        <td class="py-2.5 px-4 text-stone-500">${item.width}×${item.height} (${item.sizeKB} KB)</td>
-                        <td class="py-2.5 px-4 text-right text-stone-600">${item.imgTokens.toLocaleString()}</td>
-                        <td class="py-2.5 px-4 text-right text-[#52728C]">${mdTokenText}</td>
-                        <td class="py-2.5 px-4 text-right">${savedText}</td>
-                        <td class="py-2.5 px-4 text-center">${statusBadge}</td>
-                        <td class="py-2.5 px-4 text-right">${actionBtn}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            els.batchTableBody.innerHTML = rowsHtml;
-        }
-
-        /**
-         * 讀取單張檔案的長寬與預估 Token
-         */
-        function inspectUploadedFile(file, indexOffset) {
-            return new Promise((resolve) => {
-                const url = URL.createObjectURL(file);
-                const img = new Image();
-                img.onload = () => {
-                    const width = img.naturalWidth || 1200;
-                    const height = img.naturalHeight || 900;
-                    URL.revokeObjectURL(url);
-                    const imgTokens = estimateImageTokens(width, height, file.size);
-                    resolve({
-                        id: `file_${Date.now()}_${indexOffset}`,
-                        fileName: file.name,
-                        fileSize: file.size,
-                        sizeKB: (file.size / 1024).toFixed(1),
-                        width,
-                        height,
-                        imgTokens,
-                        mdTokens: 0,
-                        savedTokens: 0,
-                        status: 'pending',
-                        markdown: '',
-                        isMock: false,
-                        fileObj: file
-                    });
-                };
-                img.onerror = () => {
-                    URL.revokeObjectURL(url);
-                    resolve({
-                        id: `file_${Date.now()}_${indexOffset}`,
-                        fileName: file.name,
-                        fileSize: file.size,
-                        sizeKB: (file.size / 1024).toFixed(1),
-                        width: 1024,
-                        height: 768,
-                        imgTokens: 610,
-                        mdTokens: 0,
-                        savedTokens: 0,
-                        status: 'pending',
-                        markdown: '',
-                        isMock: false,
-                        fileObj: file
-                    });
-                };
-                img.src = url;
-            });
-        }
-
-        /**
-         * 處理使用者上傳的多筆 JPG/PNG 圖檔
-         */
-        async function handleBatchFilesUpload(fileList) {
-            const validFiles = Array.from(fileList).filter(f => {
-                const ext = f.name.split('.').pop().toLowerCase();
-                return f.type === 'image/jpeg' || f.type === 'image/png' || ext === 'jpg' || ext === 'jpeg' || ext === 'png';
-            });
-
-            if (validFiles.length === 0) {
-                showToast('請選擇有效的 .jpg 或 .png 發票圖檔！', 'error');
-                return;
-            }
-
-            els.batchStatusBadge.textContent = `正在讀取 ${validFiles.length} 張圖檔資訊...`;
-            const baseIdx = state.items.length;
-            const inspectedItems = await Promise.all(validFiles.map((f, i) => inspectUploadedFile(f, baseIdx + i + 1)));
-
-            state.items.push(...inspectedItems);
-            els.batchStatusBadge.textContent = `已載入 ${state.items.length} 筆發票圖檔，待執行轉換`;
-            els.progressStatusText.textContent = `已準備 ${state.items.length} 筆圖檔`;
-            updateSummaryDashboard();
-            renderBatchTable();
-            showToast(`成功加入 ${validFiles.length} 張發票圖檔！`, 'success');
-        }
-
-        /**
-         * 執行高併發批次轉換佇列
-         */
-        async function runBatchConversion() {
-            const pendingItems = state.items.filter(i => i.status === 'pending');
-            if (pendingItems.length === 0 || state.isProcessing) return;
-
-            state.isProcessing = true;
-            const concurrency = parseInt(els.concurrencySelect.value, 10) || 10;
-            els.batchStatusBadge.textContent = `高併發轉換處理中 (${concurrency} 筆/批次)...`;
-            updateSummaryDashboard();
-
-            let cursor = 0;
-
-            async function worker() {
-                while (cursor < pendingItems.length) {
-                    const currentIndex = cursor++;
-                    const item = pendingItems[currentIndex];
-                    item.status = 'processing';
-
-                    // 模擬本機端 OCR / 結構化解析耗時
-                    await new Promise(r => setTimeout(r, 45 + Math.random() * 60));
-
-                    if (item.shouldFailOnce) {
-                        item.shouldFailOnce = false;
-                        item.status = 'failed';
-                        item.errorMsg = '影像邊緣模糊，字軌辨識信心度低於 95%';
-                    } else {
-                        const seqNum = state.items.indexOf(item) + 1;
-                        let invoiceData;
-                        // 若為使用者真實上傳的發票圖檔，執行真實影像數字 OCR 擷取，確保金額與圖檔一模一樣
-                        if (!item.isMock && item.fileObj) {
-                            invoiceData = await recognizeInvoiceImageData(item.fileObj, item.fileName);
-                        } else {
-                            await new Promise(r => setTimeout(r, 35 + Math.random() * 45));
-                            invoiceData = getMockInvoiceData(seqNum, item.fileName);
-                        }
-                        item.invoiceData = invoiceData;
-                        const md = buildExactInvoiceMarkdown(invoiceData);
-                        const mdTokens = estimateMarkdownTokens(md);
-                        item.markdown = md;
-                        item.mdTokens = mdTokens;
-                        item.savedTokens = Math.max(0, item.imgTokens - mdTokens);
-                        item.status = 'success';
-                    }
-
-                    const doneCount = state.items.filter(i => i.status === 'success' || i.status === 'failed').length;
-                    els.progressStatusText.textContent = `正在處理 (${doneCount} / ${state.items.length})...`;
-                    updateSummaryDashboard();
-
-                    // 每處理 5 筆或最後一筆才重繪表格，確保 100+ 筆極速不卡頓
-                    if (doneCount % 5 === 0 || doneCount === state.items.length) {
-                        renderBatchTable();
-                    }
-                }
-            }
-
-            const workers = Array.from({ length: Math.min(concurrency, pendingItems.length) }, () => worker());
-            await Promise.all(workers);
-
-            state.isProcessing = false;
-            els.batchStatusText = '批次處理完成';
-            els.batchStatusBadge.textContent = `批次處理完成：共處理 ${state.items.length} 筆`;
-            els.progressStatusText.textContent = `處理完成：成功 ${state.items.filter(i => i.status === 'success').length} 筆，失敗 ${state.items.filter(i => i.status === 'failed').length} 筆`;
-            updateSummaryDashboard();
-            renderBatchTable();
-
-            const savedTotal = state.items.filter(i => i.status === 'success').reduce((a, c) => a + c.savedTokens, 0);
-            showToast(`批次處理完成！共節省 ${savedTotal.toLocaleString()} Tokens`, 'success');
-        }
-
-        /**
-         * 一鍵模擬載入 120 筆發票圖檔並自動開始批次測試
-         */
-        async function simulate120InvoicesBatch() {
-            if (state.isProcessing) return;
-            state.items = [];
-
-            const mockCount = 120;
-            for (let i = 1; i <= mockCount; i++) {
-                const isHighRes = i % 3 === 0;
-                const width = isHighRes ? 1600 : 1200;
-                const height = isHighRes ? 1200 : 900;
-                const fileSize = (180 + (i % 150)) * 1024;
-                const imgTokens = estimateImageTokens(width, height, fileSize);
-                const ext = i % 4 === 0 ? 'png' : 'jpg';
-
-                state.items.push({
-                    id: `mock_${i}`,
-                    fileName: `INV_202505_${String(i).padStart(4, '0')}.${ext}`,
-                    fileSize,
-                    sizeKB: (fileSize / 1024).toFixed(1),
-                    width,
-                    height,
-                    imgTokens,
-                    mdTokens: 0,
-                    savedTokens: 0,
-                    status: 'pending',
-                    markdown: '',
-                    isMock: true,
-                    // 模擬其中 2 筆初次辨識異常，展現失敗統計與重試功能
-                    shouldFailOnce: (i === 37 || i === 89)
-                });
-            }
-
-            updateSummaryDashboard();
-            renderBatchTable();
-            showToast('已載入 120 筆模擬發票圖檔，開始執行高併發轉檔...', 'info');
-            await runBatchConversion();
-        }
-
-        /**
-         * 下載單筆 Markdown 檔案
-         */
-        window.downloadSingleMd = function(itemId) {
-            const item = state.items.find(i => i.id === itemId);
-            if (!item || !item.markdown) return;
-
-            const baseName = item.fileName.replace(/\.[^/.]+$/, '');
-            const blob = new Blob([item.markdown], { type: 'text/markdown;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${baseName}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`已下載 ${baseName}.md`, 'success');
-        };
-
-        /**
-         * 將所有成功轉換的 .md 檔案打包為單一 ZIP 壓縮檔下載
-         */
-        async function downloadAllAsZip() {
-            const successItems = state.items.filter(i => i.status === 'success' && i.markdown);
-            if (successItems.length === 0) return;
-
-            showToast(`正在打包 ${successItems.length} 筆 .md 檔案...`, 'info');
-            const zip = new JSZip();
-            const folder = zip.folder("invoices_markdown");
-
-            successItems.forEach((item) => {
-                const baseName = item.fileName.replace(/\.[^/.]+$/, '');
-                folder.file(`${baseName}.md`, item.markdown);
-            });
-
-            const content = await zip.generateAsync({ type: "blob" });
-            const url = URL.createObjectURL(content);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Batch_Invoices_${successItems.length}_files.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`已成功打包下載 ${successItems.length} 筆 Markdown (.zip)！`, 'success');
-        }
-
-        /**
-         * 將所有成功轉換的發票合併為單一 .md 總表下載
-         */
-        function downloadMergedMarkdown() {
-            const successItems = state.items.filter(i => i.status === 'success' && i.markdown);
-            if (successItems.length === 0) return;
-
-            const totalSaved = successItems.reduce((acc, cur) => acc + cur.savedTokens, 0);
-            const header = `# 會計發票批次轉換合併總表\n\n- **總處理筆數**：${state.items.length} 筆\n- **成功筆數**：${successItems.length} 筆\n- **共節省 Token 數量**：${totalSaved.toLocaleString()} Tokens\n\n---\n\n`;
-            const body = successItems.map(item => `<!-- 原始檔案: ${item.fileName} -->\n${item.markdown}`).join('\n\n---\n\n');
-
-            const blob = new Blob([header + body], { type: 'text/markdown;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Merged_Invoices_${successItems.length}_records.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`已成功下載合併總檔 (${successItems.length} 筆)！`, 'success');
-        }
-
-        // 綁定上傳與拖曳事件
-        els.batchFileInput.addEventListener('change', (e) => {
-            handleBatchFilesUpload(e.target.files);
-            e.target.value = '';
-        });
-
-        els.batchDropzone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            els.batchDropzone.classList.add('border-brand-500', 'bg-brand-50/70');
-        });
-
-        els.batchDropzone.addEventListener('dragleave', () => {
-            els.batchDropzone.classList.remove('border-brand-500', 'bg-brand-50/70');
-        });
-
-        els.batchDropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            els.batchDropzone.classList.remove('border-brand-500', 'bg-brand-50/70');
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleBatchFilesUpload(e.dataTransfer.files);
-            }
-        });
-
-        // 綁定按鈕事件
-        els.startBatchBtn.addEventListener('click', runBatchConversion);
-        els.simulate120Btn.addEventListener('click', simulate120InvoicesBatch);
-        els.downloadZipBtn.addEventListener('click', downloadAllAsZip);
-        els.downloadMergedBtn.addEventListener('click', downloadMergedMarkdown);
-
-        els.retryFailedBtn.addEventListener('click', async () => {
-            if (state.isProcessing) return;
-            state.items.forEach(item => {
-                if (item.status === 'failed') item.status = 'pending';
-            });
-            updateSummaryDashboard();
-            renderBatchTable();
-            await runBatchConversion();
-        });
-
-        els.clearAllBtn.addEventListener('click', () => {
-            if (state.isProcessing) return;
-            state.items = [];
-            els.batchStatusBadge.textContent = '待命：請選擇或拖入 100+ 筆發票圖檔';
-            els.progressStatusText.textContent = '處理進度：尚未開始';
-            updateSummaryDashboard();
-            renderBatchTable();
-            showToast('已清空所有佇列紀錄', 'info');
-        });
-
-        document.querySelectorAll('.filter-tab').forEach(btn => {
-            btn.addEventListener('click', () => {
-                state.currentFilter = btn.dataset.filter;
-                document.querySelectorAll('.filter-tab').forEach(b => {
-                    b.className = 'filter-tab px-3 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition';
-                });
-                btn.className = 'filter-tab px-3 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition';
-                renderBatchTable();
-            });
-        });
-
-        // ==================== 單筆即時對照與驗算模式邏輯 ====================
-        const singleState = {
-            fileName: 'SAMPLE_INV_202505.png',
-            imgTokens: 0,
-            mdTokens: 0,
-            zoom: 1,
-            rotation: 0,
-            invoiceData: null,
-            originalImgUrl: '',
-            enhancedImgUrl: '',
-            currentLayer: 'original'
-        };
-
-        const singleEls = {
-            modeBatchBtn: document.getElementById('modeBatchBtn'),
-            modeSingleBtn: document.getElementById('modeSingleBtn'),
-            batchModeView: document.getElementById('batchModeView'),
-            singleModeView: document.getElementById('singleModeView'),
-            singleFileInput: document.getElementById('singleFileInput'),
-            loadSampleSingleBtn: document.getElementById('loadSampleSingleBtn'),
-            singleOcrStatusBadge: document.getElementById('singleOcrStatusBadge'),
-            singleOcrStatusText: document.getElementById('singleOcrStatusText'),
-            singleImgTokenBadge: document.getElementById('singleImgTokenBadge'),
-            singleMdTokenBadge: document.getElementById('singleMdTokenBadge'),
-            singleSavedTokenBadge: document.getElementById('singleSavedTokenBadge'),
-            singleImageMeta: document.getElementById('singleImageMeta'),
-            singleZoomText: document.getElementById('singleZoomText'),
-            singleEmptyPrompt: document.getElementById('singleEmptyPrompt'),
-            singlePreviewImg: document.getElementById('singlePreviewImg'),
-            singleImageDropArea: document.getElementById('singleImageDropArea'),
-            singleVerifyBadge: document.getElementById('singleVerifyBadge'),
-            singleMdTextarea: document.getElementById('singleMdTextarea'),
-            singleMdRenderBox: document.getElementById('singleMdRenderBox'),
-            downloadSingleCurrentBtn: document.getElementById('downloadSingleCurrentBtn'),
-            singleMdContentGrid: document.getElementById('singleMdContentGrid'),
-            singleRawPane: document.getElementById('singleRawPane'),
-            singlePreviewPane: document.getElementById('singlePreviewPane'),
-            mdTabSplit: document.getElementById('mdTabSplit'),
-            mdTabPreview: document.getElementById('mdTabPreview'),
-            mdTabRaw: document.getElementById('mdTabRaw'),
-            syncTrackNum: document.getElementById('syncTrackNum'),
-            syncBuyerId: document.getElementById('syncBuyerId'),
-            syncSellerId: document.getElementById('syncSellerId'),
-            syncNetAmt: document.getElementById('syncNetAmt'),
-            syncTaxAmt: document.getElementById('syncTaxAmt'),
-            syncTotalAmt: document.getElementById('syncTotalAmt'),
-            viewOrigImgBtn: document.getElementById('viewOrigImgBtn'),
-            viewEnhImgBtn: document.getElementById('viewEnhImgBtn'),
-            imageEnhanceDiagnosticBar: document.getElementById('imageEnhanceDiagnosticBar'),
-            enhanceStepLog: document.getElementById('enhanceStepLog'),
-            ocrConfidenceText: document.getElementById('ocrConfidenceText')
-        };
-
-        /**
-         * 切換檢視「原始上傳圖檔」與「超解析去印章強化圖」
-         */
-        window.toggleImageLayer = function(layer) {
-            singleState.currentLayer = layer;
-            const activeCls = 'px-2 py-0.5 rounded-md bg-[#FCFBF9] text-stone-800 font-semibold shadow-2xs transition cursor-pointer';
-            const inactiveCls = 'px-2 py-0.5 rounded-md text-stone-600 hover:text-stone-900 transition cursor-pointer';
-
-            singleEls.viewOrigImgBtn.className = layer === 'original' ? activeCls : inactiveCls;
-            singleEls.viewEnhImgBtn.className = layer === 'enhanced' ? activeCls : inactiveCls;
-
-            if (layer === 'enhanced' && singleState.enhancedImgUrl) {
-                singleEls.singlePreviewImg.src = singleState.enhancedImgUrl;
-            } else if (singleState.originalImgUrl) {
-                singleEls.singlePreviewImg.src = singleState.originalImgUrl;
-            }
-        };
-
-        /**
-         * 同步更新單筆模式上方的「關鍵金額與統編核對列」輸入框
-         */
-        function populateQuickSyncInputs(invoiceData) {
-            if (!invoiceData) return;
-            singleEls.syncTrackNum.value = invoiceData.trackNum || '';
-            singleEls.syncBuyerId.value = invoiceData.buyerTaxId || '';
-            singleEls.syncSellerId.value = invoiceData.sellerTaxId || '';
-            singleEls.syncNetAmt.value = formatNumberWithCommas(invoiceData.netAmount);
-            singleEls.syncTaxAmt.value = formatNumberWithCommas(invoiceData.taxAmount);
-            singleEls.syncTotalAmt.value = formatNumberWithCommas(invoiceData.totalAmount);
-        }
-
-        /**
-         * 當使用者在「關鍵金額與統編核對列」調整任何一個數字時，立即重新產生 100% 同步的 Markdown 與預覽表格
-         */
-        function handleQuickSyncInputChange(changedField) {
-            if (!singleState.invoiceData) {
-                singleState.invoiceData = getMockInvoiceData(1, singleState.fileName);
-            }
-            const d = singleState.invoiceData;
-            d.trackNum = singleEls.syncTrackNum.value.trim();
-            d.buyerTaxId = singleEls.syncBuyerId.value.trim();
-            d.sellerTaxId = singleEls.syncSellerId.value.trim();
-
-            let netVal = parseCleanNumber(singleEls.syncNetAmt.value);
-            let taxVal = parseCleanNumber(singleEls.syncTaxAmt.value);
-            let totalVal = parseCleanNumber(singleEls.syncTotalAmt.value);
-
-            // 若修改的是未稅銷售額或稅額，自動更新總計確保會計恆等式，若直接修改總計則保留使用者輸入的總計數字
-            if (changedField === 'net' || changedField === 'tax') {
-                totalVal = netVal + taxVal;
-                singleEls.syncTotalAmt.value = formatNumberWithCommas(totalVal);
-            }
-
-            d.netAmount = netVal;
-            d.unitPrice = netVal;
-            d.taxAmount = taxVal;
-            d.totalAmount = totalVal;
-
-            singleEls.singleMdTextarea.value = buildExactInvoiceMarkdown(d);
-            refreshSingleMarkdownStats();
-        }
-
-        ['syncTrackNum', 'syncBuyerId', 'syncSellerId'].forEach(id => {
-            singleEls[id].addEventListener('input', () => handleQuickSyncInputChange('meta'));
-        });
-        singleEls.syncNetAmt.addEventListener('input', () => handleQuickSyncInputChange('net'));
-        singleEls.syncTaxAmt.addEventListener('input', () => handleQuickSyncInputChange('tax'));
-        singleEls.syncTotalAmt.addEventListener('input', () => handleQuickSyncInputChange('total'));
-
-        /**
-         * 切換「100+ 筆批次轉檔模式」與「單筆即時對照驗算模式」
-         */
-        window.switchWorkMode = function(mode) {
-            if (mode === 'single') {
-                singleEls.batchModeView.classList.add('hidden');
-                singleEls.singleModeView.classList.remove('hidden');
-                singleEls.singleModeView.classList.add('flex');
-
-                singleEls.modeSingleBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer';
-                singleEls.modeBatchBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
-            } else {
-                singleEls.singleModeView.classList.add('hidden');
-                singleEls.singleModeView.classList.remove('flex');
-                singleEls.batchModeView.classList.remove('hidden');
-
-                singleEls.modeBatchBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer';
-                singleEls.modeSingleBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
-            }
-        };
-
-        /**
-         * 使用 Canvas 動態繪製高解析度台灣三聯式統一發票影像 (確保圖片與轉換後 Markdown 資料 100% 一模一樣)
-         */
-        function createInvoiceCanvasDataUrl(invoiceData) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 960;
-            canvas.height = 660;
-            const ctx = canvas.getContext('2d');
-
-            // 溫暖發票紙張底色
-            ctx.fillStyle = '#FDFBF7';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // 外框線
-            ctx.strokeStyle = '#8C7A6B';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(24, 24, 912, 612);
-
-            // 標題區
-            ctx.fillStyle = '#3E3832';
-            ctx.font = 'bold 26px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('中華民國統一發票（三聯式）', 480, 68);
-
-            // 基本欄位資訊
-            ctx.font = '16px "JetBrains Mono", "Noto Sans TC", monospace';
-            ctx.textAlign = 'left';
-            ctx.fillStyle = '#4A443F';
-            ctx.fillText(`發票字軌號碼：${invoiceData.trackNum}`, 48, 115);
-            ctx.fillText(`開立日期：${invoiceData.date}`, 580, 115);
-            ctx.fillText(`買受人統一編號：${invoiceData.buyerTaxId}`, 48, 145);
-            ctx.fillText(`銷售人統一編號：${invoiceData.sellerTaxId}`, 580, 145);
-            ctx.fillText(`原始檔案名稱：${invoiceData.fileName}`, 48, 175);
-
-            // 表格格線
-            ctx.strokeStyle = '#B8AFA6';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(45, 195, 870, 260);
-
-            // 表頭底色
-            ctx.fillStyle = '#EFECE4';
-            ctx.fillRect(46, 196, 868, 42);
-            ctx.fillStyle = '#2D4237';
-            ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
-            ctx.fillText('項次', 65, 223);
-            ctx.fillText('品名 / 規格說明', 145, 223);
-            ctx.fillText('數量', 500, 223);
-            ctx.fillText('單價 (TWD)', 600, 223);
-            ctx.fillText('金額 (TWD)', 755, 223);
-
-            // 品項明細內容
-            ctx.fillStyle = '#292524';
-            ctx.font = '15px "JetBrains Mono", "Noto Sans TC", sans-serif';
-            ctx.fillText('1', 72, 275);
-            ctx.fillText(invoiceData.itemName, 145, 275);
-            ctx.fillText('1', 512, 275);
-            ctx.fillText(invoiceData.netAmount.toLocaleString(), 615, 275);
-            ctx.fillText(invoiceData.netAmount.toLocaleString(), 770, 275);
-
-            // 底部金額彙總區
-            ctx.fillStyle = '#F5F2EB';
-            ctx.fillRect(45, 470, 870, 135);
-            ctx.strokeRect(45, 470, 870, 135);
-
-            ctx.fillStyle = '#44403C';
-            ctx.font = 'bold 16px "Noto Sans TC", monospace';
-            ctx.fillText(`銷售額合計 (應稅)：NT$ ${invoiceData.netAmount.toLocaleString()}`, 65, 508);
-            ctx.fillText(`營業稅額 (5%)：NT$ ${invoiceData.taxAmount.toLocaleString()}`, 65, 545);
-
-            ctx.fillStyle = '#426351';
-            ctx.font = 'bold 20px "Noto Sans TC", monospace';
-            ctx.fillText(`總計金額 (含稅)：NT$ ${invoiceData.totalAmount.toLocaleString()}`, 65, 585);
-
-            // 模擬發票專用章
-            ctx.save();
-            ctx.translate(760, 535);
-            ctx.rotate(-0.08);
-            ctx.strokeStyle = 'rgba(185, 74, 72, 0.75)';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-110, -42, 220, 84);
-            ctx.fillStyle = 'rgba(185, 74, 72, 0.8)';
-            ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('統一發票專用章', 0, -15);
-            ctx.fillText(`統編：${invoiceData.sellerTaxId}`, 0, 10);
-            ctx.fillText('核對無誤・帳務相符', 0, 32);
-            ctx.restore();
-
-            return canvas.toDataURL('image/png');
-        }
-
-        /**
-         * 更新單筆對照區的 Markdown 渲染與即時 Token 統計
-         */
-        function refreshSingleMarkdownStats() {
-            const mdText = singleEls.singleMdTextarea.value || '';
-            const mdTokens = estimateMarkdownTokens(mdText);
-            singleState.mdTokens = mdTokens;
-
-            const saved = Math.max(0, singleState.imgTokens - mdTokens);
-            const savedPct = singleState.imgTokens > 0 ? ((saved / singleState.imgTokens) * 100).toFixed(1) : '0.0';
-
-            singleEls.singleImgTokenBadge.textContent = singleState.imgTokens.toLocaleString();
-            singleEls.singleMdTokenBadge.textContent = mdTokens.toLocaleString();
-            singleEls.singleSavedTokenBadge.textContent = `-${saved.toLocaleString()} (-${savedPct}%)`;
-
-            if (mdText.trim()) {
-                singleEls.singleMdRenderBox.innerHTML = marked.parse(mdText);
-                singleEls.downloadSingleCurrentBtn.disabled = false;
-                singleEls.singleVerifyBadge.classList.remove('hidden');
-            } else {
-                singleEls.singleMdRenderBox.innerHTML = `<p class="text-stone-400 text-xs text-center py-16">尚無轉換資料，請先從左側上傳發票圖檔或載入範例。</p>`;
-                singleEls.downloadSingleCurrentBtn.disabled = true;
-                singleEls.singleVerifyBadge.classList.add('hidden');
-            }
-        }
-
-        /**
-         * 載入單張真實圖片或範例發票至單筆即時對照畫面
-         */
-        function loadInvoiceIntoSingleVerifier({ fileName, imgSrc, enhancedImgSrc, width, height, sizeKB, imgTokens, markdown, invoiceData }) {
-            singleState.fileName = fileName;
-            singleState.imgTokens = imgTokens;
-            singleState.zoom = 1;
-            singleState.rotation = 0;
-            singleState.invoiceData = invoiceData || getMockInvoiceData(1, fileName);
-            singleState.originalImgUrl = imgSrc;
-            singleState.enhancedImgUrl = enhancedImgSrc || (invoiceData && invoiceData.enhancedDataUrl) || imgSrc;
-
-            singleEls.singleEmptyPrompt.classList.add('hidden');
-            toggleImageLayer('original');
-            singleEls.singlePreviewImg.classList.remove('hidden');
-            singleEls.singlePreviewImg.style.transform = 'scale(1) rotate(0deg)';
-            singleEls.singleZoomText.textContent = '100%';
-            singleEls.singleImageMeta.textContent = `${fileName} (${width}×${height}, ${sizeKB} KB)`;
-
-            if (invoiceData && invoiceData.enhanceInfo) {
-                singleEls.imageEnhanceDiagnosticBar.classList.remove('hidden');
-                singleEls.enhanceStepLog.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>已執行影像強化：${invoiceData.enhanceInfo} + 紅章濾除 + 銳利化</span>`;
-                singleEls.ocrConfidenceText.textContent = `辨識信心度：${Number(invoiceData.confidence || 96).toFixed(1)}%`;
-                lucide.createIcons();
-            }
-
-            populateQuickSyncInputs(singleState.invoiceData);
-            singleEls.singleMdTextarea.value = markdown || buildExactInvoiceMarkdown(singleState.invoiceData);
-            refreshSingleMarkdownStats();
-        }
-
-        /**
-         * 處理單筆即時上傳圖檔 (先提高解析度與清晰度，再執行高精準辨識)
-         */
-        function handleSingleFileUpload(file) {
-            if (!file) return;
-            const ext = file.name.split('.').pop().toLowerCase();
-            if (file.type !== 'image/jpeg' && file.type !== 'image/png' && !['jpg', 'jpeg', 'png'].includes(ext)) {
-                showToast('請上傳 JPG 或 PNG 格式的發票圖檔！', 'error');
-                return;
-            }
-
-            const url = URL.createObjectURL(file);
-            const img = new Image();
-            img.onload = async () => {
-                const width = img.naturalWidth || 1200;
-                const height = img.naturalHeight || 900;
-                const sizeKB = (file.size / 1024).toFixed(1);
-                const imgTokens = estimateImageTokens(width, height, file.size);
-
-                // 先立即顯示上傳的發票影像與預估圖檔 Token
-                singleState.originalImgUrl = url;
-                singleEls.singleEmptyPrompt.classList.add('hidden');
-                singleEls.singlePreviewImg.src = url;
-                singleEls.singlePreviewImg.classList.remove('hidden');
-                singleEls.singleImageMeta.textContent = `${file.name} (${width}×${height}, ${sizeKB} KB)`;
-                singleEls.singleImgTokenBadge.textContent = imgTokens.toLocaleString();
-
-                // 顯示影像超解析強化與辨識進度提示
-                singleEls.singleOcrStatusBadge.classList.remove('hidden');
-                singleEls.singleOcrStatusText.textContent = '步驟 1/3：正在提高圖檔解析度與去除印章干擾...';
-                showToast(`已載入「${file.name}」，正在先提高解析度與銳利度後再解析...`, 'info');
-
-                const parsedInvoiceData = await recognizeInvoiceImageData(file, file.name, (stepMsg) => {
-                    singleEls.singleOcrStatusText.textContent = stepMsg;
-                });
-                const exactMd = buildExactInvoiceMarkdown(parsedInvoiceData);
-
-                singleEls.singleOcrStatusBadge.classList.add('hidden');
-
-                loadInvoiceIntoSingleVerifier({
-                    fileName: file.name,
-                    imgSrc: url,
-                    enhancedImgSrc: parsedInvoiceData.enhancedDataUrl,
-                    width,
-                    height,
-                    sizeKB,
-                    imgTokens,
-                    markdown: exactMd,
-                    invoiceData: parsedInvoiceData
-                });
-                showToast(`已完成圖檔超解析強化與辨識！可點選左欄「超解析去印章圖」檢視強化結果`, 'success');
-            };
-            img.src = url;
-        }
-
-        /**
-         * 從批次清單點選「對照查看」直接載入單筆對照模式
-         */
-        window.inspectBatchItemInSingleView = function(itemId) {
-            const item = state.items.find(i => i.id === itemId);
-            if (!item) return;
-
-            const idx = state.items.indexOf(item) + 1;
-            const invoiceData = item.invoiceData || getMockInvoiceData(idx, item.fileName);
-
-            let imgSrc = '';
-            if (item.fileObj) {
-                imgSrc = URL.createObjectURL(item.fileObj);
-            } else {
-                imgSrc = createInvoiceCanvasDataUrl(invoiceData);
-            }
-
-            switchWorkMode('single');
-            loadInvoiceIntoSingleVerifier({
-                fileName: item.fileName,
-                imgSrc,
-                width: item.width,
-                height: item.height,
-                sizeKB: item.sizeKB,
-                imgTokens: item.imgTokens,
-                markdown: item.markdown || buildExactInvoiceMarkdown(invoiceData),
-                invoiceData
-            });
-            showToast(`已切換至單筆對照模式：正在檢視 ${item.fileName}`, 'info');
-        };
-
-        // 圖片縮放與旋轉控制
-        window.adjustSingleZoom = function(delta) {
-            singleState.zoom = Math.min(2.4, Math.max(0.5, +(singleState.zoom + delta).toFixed(2)));
-            singleEls.singleZoomText.textContent = `${Math.round(singleState.zoom * 100)}%`;
-            singleEls.singlePreviewImg.style.transform = `scale(${singleState.zoom}) rotate(${singleState.rotation}deg)`;
-        };
-
-        window.rotateSingleImage = function() {
-            singleState.rotation = (singleState.rotation + 90) % 360;
-            singleEls.singlePreviewImg.style.transform = `scale(${singleState.zoom}) rotate(${singleState.rotation}deg)`;
-        };
-
-        window.resetSingleView = function() {
-            singleState.zoom = 1;
-            singleState.rotation = 0;
-            singleEls.singleZoomText.textContent = '100%';
-            singleEls.singlePreviewImg.style.transform = 'scale(1) rotate(0deg)';
-        };
-
-        // 切換右側 Markdown 檢視分頁 (並排 / 預覽 / 原始碼)
-        window.setSingleMdTab = function(tab) {
-            const activeClass = 'px-2.5 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition cursor-pointer';
-            const inactiveClass = 'px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer';
-
-            singleEls.mdTabSplit.className = tab === 'split' ? activeClass : inactiveClass;
-            singleEls.mdTabPreview.className = tab === 'preview' ? activeClass : inactiveClass;
-            singleEls.mdTabRaw.className = tab === 'raw' ? activeClass : inactiveClass;
-
-            if (tab === 'split') {
-                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#EAE6DC] overflow-hidden';
-                singleEls.singleRawPane.classList.remove('hidden');
-                singleEls.singlePreviewPane.classList.remove('hidden');
-            } else if (tab === 'preview') {
-                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 overflow-hidden';
-                singleEls.singleRawPane.classList.add('hidden');
-                singleEls.singlePreviewPane.classList.remove('hidden');
-            } else {
-                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 overflow-hidden';
-                singleEls.singleRawPane.classList.remove('hidden');
-                singleEls.singlePreviewPane.classList.add('hidden');
-            }
-        };
-
-        window.copySingleMarkdown = function() {
-            const text = singleEls.singleMdTextarea.value;
-            if (!text) return;
-            singleEls.singleMdTextarea.select();
-            document.execCommand('copy');
-            showToast('已複製 Markdown 原始碼至剪貼簿！', 'success');
-        };
-
-        // 綁定單筆即時對照事件
-        singleEls.singleFileInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                handleSingleFileUpload(e.target.files[0]);
-                e.target.value = '';
-            }
-        });
-
-        singleEls.singleImageDropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            singleEls.singleImageDropArea.classList.add('bg-brand-50/70');
-        });
-        singleEls.singleImageDropArea.addEventListener('dragleave', () => {
-            singleEls.singleImageDropArea.classList.remove('bg-brand-50/70');
-        });
-        singleEls.singleImageDropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            singleEls.singleImageDropArea.classList.remove('bg-brand-50/70');
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                handleSingleFileUpload(e.dataTransfer.files[0]);
-            }
-        });
-
-        singleEls.loadSampleSingleBtn.addEventListener('click', () => {
-            const sampleData = getMockInvoiceData(1, 'SAMPLE_INV_20250501.png');
-            const sampleImgUrl = createInvoiceCanvasDataUrl(sampleData);
-            const md = buildExactInvoiceMarkdown(sampleData);
-            loadInvoiceIntoSingleVerifier({
-                fileName: 'SAMPLE_INV_20250501.png',
-                imgSrc: sampleImgUrl,
-                width: 960,
-                height: 660,
-                sizeKB: '195.4',
-                imgTokens: estimateImageTokens(960, 660, 195400),
-                markdown: md,
-                invoiceData: sampleData
-            });
-            showToast('已載入標準三聯式發票與 100% 對應之 Markdown！', 'success');
-        });
-
-        singleEls.singleMdTextarea.addEventListener('input', refreshSingleMarkdownStats);
-
-        singleEls.downloadSingleCurrentBtn.addEventListener('click', () => {
-            const md = singleEls.singleMdTextarea.value;
-            if (!md) return;
-            const baseName = singleState.fileName.replace(/\.[^/.]+$/, '');
-            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${baseName}.md`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`已下載 ${baseName}.md`, 'success');
-        });
-    </script>
-</body>
-</html>
+
+        <section class="issues" id="s-issues" aria-live="polite"></section>
+      </div>
+    </section>
+
+    <!-- 批次處理 -->
+    <section id="view-batch" role="tabpanel" aria-labelledby="tab-batch" hidden>
+      <label class="drop" id="b-drop" for="b-file">
+        <input class="sr" type="file" id="b-file" accept="image/jpeg,image/png" multiple>
+        <strong>拖曳多張發票圖檔，或按此選擇</strong>
+        <span>支援 JPG、PNG，可一次選取 100 張以上。</span>
+      </label>
+
+      <div class="sel" id="b-sel" hidden>
+        <p class="kv">已選 <b id="b-count">0</b> 張，圖檔預估 <b id="b-imgtok">0</b> tokens，預估耗時 <b id="b-eta">—</b></p>
+        <p class="note">每張至少呼叫 1 次 Claude，檢核不符時再多 1 次，使用的是你自己的 Claude 用量。處理期間請保持此頁開啟。</p>
+        <p class="note warn" id="b-skip" hidden></p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="b-start">開始處理</button>
+          <button class="btn" type="button" id="b-retry" hidden>重試失敗項目</button>
+          <button class="btn" type="button" id="b-stop" hidden>停止</button>
+          <button class="btn" type="button" id="b-clear">清除全部</button>
+        </div>
+      </div>
+
+      <div id="b-progress" hidden aria-live="polite">
+        <div class="prog"><i id="b-bar"></i></div>
+        <p id="b-ptext" class="kv"></p>
+        <p class="note warn" id="b-pause" role="alert" hidden></p>
+      </div>
+
+      <section id="b-result" hidden aria-live="polite">
+        <h2 class="sec">處理結果</h2>
+        <div class="metrics">
+          <div class="metric"><span class="lab">處理筆數</span><span class="val" id="r-total">0</span></div>
+          <div class="metric ok"><span class="lab">成功</span><span class="val" id="r-ok">0</span></div>
+          <div class="metric bad"><span class="lab">失敗</span><span class="val" id="r-fail">0</span></div>
+          <div class="metric warn"><span class="lab">成功中需覆核</span><span class="val" id="r-review">0</span></div>
+          <div class="metric"><span class="lab">圖檔 tokens（預估）</span><span class="val" id="r-img">0</span></div>
+          <div class="metric"><span class="lab">Markdown tokens（預估）</span><span class="val" id="r-md">0</span></div>
+          <div class="metric hero"><span class="lab">共節省 tokens</span><span class="val" id="r-save">0</span><span class="sub" id="r-pct">&nbsp;</span></div>
+        </div>
+        <div class="actions" id="r-actions">
+          <button class="btn primary" type="button" id="r-zip">下載全部（.zip）</button>
+          <button class="btn" type="button" id="r-merged">下載合併 Markdown</button>
+          <button class="btn" type="button" id="r-csv">下載彙總 CSV</button>
+        </div>
+        <p class="note" id="r-dlnote" hidden>此檢視無法儲存檔案，請改在 Claude 的網頁或桌面版開啟此頁。</p>
+        <details id="r-review-box" hidden><summary id="r-review-sum"></summary><ul id="r-review-list"></ul></details>
+        <details id="r-fail-box" hidden><summary id="r-fail-sum"></summary><ul id="r-fail-list"></ul></details>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+/*LOGIC-START*/
+const digitsOnly = s => String(s == null ? '' : s).normalize('NFKC').replace(/\D/g, '');
+function num(s) {
+  if (s == null) return null;
+  const t = String(s).normalize('NFKC').replace(/[,\s]/g, '');
+  const neg = /[-−–]/.test(t) || /^\(.*\)$/.test(t);
+  const m = t.replace(/[^\d.]/g, '');
+  if (!m || isNaN(Number(m))) return null;
+  return neg ? -Number(m) : Number(m);
+}
+const fmtN = n => Number(Number(n).toFixed(2)).toLocaleString('en-US');
+
+function taxIdDetail(id) {
+  const w = [1, 2, 1, 2, 1, 2, 4, 1];
+  const d = id.split('').map(Number);
+  const prod = d.map((x, i) => x * w[i]);
+  const sums = prod.map(p => Math.floor(p / 10) + (p % 10));
+  const total = sums.reduce((a, b) => a + b, 0);
+  return { d, w, prod, sums, total };
+}
+// 2023-04 起財政部將統編檢核除數由 10 改為 5；第 7 碼為 7 時，合計或合計+1 可被整除即可。
+function taxIdOk(id) {
+  if (!/^\d{8}$/.test(id)) return false;
+  const { total } = taxIdDetail(id);
+  if (total % 5 === 0) return true;
+  return id[6] === '7' && (total + 1) % 5 === 0;
+}
+
+function estimateTokens(t) {
+  let cjk = 0, dig = 0, lat = 0, oth = 0;
+  for (const ch of String(t)) {
+    const c = ch.codePointAt(0);
+    if ((c >= 0x4e00 && c <= 0x9fff) || (c >= 0x3400 && c <= 0x4dbf) || (c >= 0x3000 && c <= 0x303f) || (c >= 0xff00 && c <= 0xffef)) cjk++;
+    else if (c >= 48 && c <= 57) dig++;
+    else if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122)) lat++;
+    else oth++;
+  }
+  return Math.max(1, Math.ceil(cjk * 1.1 + dig * 0.55 + lat * 0.28 + oth * 0.4));
+}
+function estimateImageTokens(w, h) {
+  const s = Math.min(1, Math.sqrt(1.2e6 / (w * h)), 1568 / Math.max(w, h));
+  const W = Math.max(1, Math.round(w * s)), H = Math.max(1, Math.round(h * s));
+  return { tokens: Math.min(1600, Math.ceil(W * H / 750)), W, H };
+}
+
+const str = v => { if (v == null) return null; const s = String(v).replace(/\s+/g, ' ').trim(); return (s === '' || /^(null|n\/a)$/i.test(s)) ? null : s; };
+const strNL = v => { if (v == null) return null; const s = String(v).split(/\r?\n/).map(x => x.replace(/[ \t]+/g, ' ').trim()).filter(Boolean).join('\n'); return (s === '' || /^(null|n\/a)$/i.test(s)) ? null : s; };
+function normalizeData(raw) {
+  const o = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
+  const party = p => ({ name: str(p && p.name), taxId: str(p && p.taxId), address: str(p && p.address), phone: str(p && p.phone) });
+  if (o.notInvoice === true) return { notInvoice: true, seller: party(), buyer: party(), items: [], uncertain: [] };
+  return {
+    notInvoice: false,
+    invoiceType: str(o.invoiceType), invoiceNumber: str(o.invoiceNumber), date: str(o.date), time: str(o.time),
+    period: str(o.period), randomCode: str(o.randomCode),
+    seller: party(o.seller), buyer: party(o.buyer),
+    items: (Array.isArray(o.items) ? o.items : []).map(it => ({ name: str(it && it.name), qty: str(it && it.qty), unitPrice: str(it && it.unitPrice), amount: str(it && it.amount), note: str(it && it.note) })),
+    salesAmount: str(o.salesAmount), taxType: str(o.taxType), taxAmount: str(o.taxAmount), totalAmount: str(o.totalAmount),
+    otherText: strNL(o.otherText),
+    uncertain: (Array.isArray(o.uncertain) ? o.uncertain : []).map(str).filter(Boolean)
+  };
+}
+const isEmptyData = d => !d.notInvoice && !d.invoiceNumber && !d.seller.taxId && !d.totalAmount && d.items.length === 0;
+
+function validate(d) {
+  const issues = [], checks = [];
+  const add = (level, msg, hint) => issues.push({ level, msg, hint: hint || msg });
+  if (d.notInvoice) { add('error', '圖片不像發票或收據'); return { issues, checks, errors: 1 }; }
+  const isInv = /發票/.test(d.invoiceType || '') || !!d.invoiceNumber;
+
+  for (const [role, label] of [['seller', '賣方'], ['buyer', '買方']]) {
+    const raw = d[role].taxId;
+    if (raw != null) {
+      const id = digitsOnly(raw), okLen = id.length === 8, ok = okLen && taxIdOk(id);
+      checks.push({ type: 'taxid', label: label + '統一編號', ok, id: okLen ? id : null, raw, detail: okLen ? (ok ? '檢核碼通過' : '檢核碼不符') : '不是 8 位數字（讀到 ' + id.length + ' 位）' });
+      if (!ok) add('error', okLen ? label + '統一編號 ' + id + ' 未通過檢核碼' : label + '統一編號「' + raw + '」不是 8 位數字', label + '統一編號未通過檢核，可能有一位數字讀錯，請逐位重看');
+    } else if (role === 'seller' && isInv) {
+      checks.push({ type: 'taxid', label: '賣方統一編號', ok: false, id: null, raw: null, detail: '未讀到' });
+      add('error', '未讀到賣方統一編號', '上次沒有讀到賣方統一編號，請找出並逐位辨識');
+    }
+  }
+
+  const rows = d.items.map((it, i) => ({ i: i + 1, name: it.name, q: num(it.qty), p: num(it.unitPrice), a: num(it.amount) }));
+  rows.forEach(r => { if (r.name && r.a == null) add('warn', '第 ' + r.i + ' 項「' + r.name + '」沒有讀到金額'); });
+  const tested = rows.filter(r => r.q != null && r.p != null && r.a != null);
+  const bad = tested.filter(r => Math.abs(r.q * r.p - r.a) > 1);
+  if (tested.length) {
+    checks.push({ type: 'calc', label: '數量 × 單價 = 金額', ok: !bad.length, detail: bad.length ? bad.map(r => '第 ' + r.i + ' 項 ' + r.q + '×' + r.p + '=' + fmtN(r.q * r.p) + '，印的是 ' + fmtN(r.a)).join('；') : tested.length + ' 項皆相符' });
+    bad.forEach(r => add('error', '第 ' + r.i + ' 項 數量×單價（' + fmtN(r.q * r.p) + '）≠ 金額（' + fmtN(r.a) + '）', '第 ' + r.i + ' 項的數量、單價、金額彼此對不上，請逐位重看這一列'));
+  }
+
+  const S = num(d.salesAmount), T = num(d.taxAmount), G = num(d.totalAmount);
+  if (G == null && isInv) add('error', '未讀到總計', '上次沒有讀到總計金額，請找出並逐位辨識');
+  if (S != null && T != null && G != null) {
+    const ok = Math.abs(S + T - G) < 0.005;
+    checks.push({ type: 'calc', label: '銷售額 + 營業稅 = 總計', ok, detail: fmtN(S) + ' + ' + fmtN(T) + ' = ' + fmtN(S + T) + '，總計 ' + fmtN(G) });
+    if (!ok) add('error', '銷售額 ' + fmtN(S) + ' + 營業稅 ' + fmtN(T) + ' ≠ 總計 ' + fmtN(G), '銷售額、營業稅、總計三者加總對不上，可能有數字讀錯，請逐位重看');
+  }
+  const amts = rows.map(r => r.a);
+  if (amts.length && amts.every(x => x != null)) {
+    const sum = amts.reduce((a, b) => a + b, 0);
+    const targets = [['銷售額合計', S], ['總計', G]].filter(t => t[1] != null);
+    if (targets.length) {
+      const hit = targets.find(t => Math.abs(t[1] - sum) <= 1);
+      const tail = targets.map(t => t[0] + ' ' + fmtN(t[1])).join('、');
+      checks.push({ type: 'calc', label: '品項金額加總', ok: !!hit, detail: '加總 ' + fmtN(sum) + '；' + (hit ? '等於' + hit[0] : '與 ' + tail + ' 不符') });
+      if (!hit) add('error', '品項金額加總 ' + fmtN(sum) + ' 與 ' + tail + ' 不符', '品項金額加總與合計金額對不上，請確認品項是否完整、數字是否讀對');
+    }
+  }
+  if (S != null && T != null && !/免稅|零稅/.test(d.taxType || '')) {
+    const exp = Math.round(S * 0.05), ok = Math.abs(T - exp) <= 1;
+    checks.push({ type: 'calc', label: '營業稅約為銷售額的 5%', ok, detail: fmtN(S) + ' × 5% ≈ ' + fmtN(exp) + '，印的是 ' + fmtN(T) });
+    if (!ok) add('warn', '營業稅 ' + fmtN(T) + ' 與銷售額 5%（約 ' + fmtN(exp) + '）差距超過 1 元');
+  }
+  if (isInv && d.invoiceNumber && !/^[A-Za-z]{2}[- ]?\d{8}$/.test(d.invoiceNumber)) add('warn', '發票號碼格式不是「2 個英文字母 + 8 位數字」：' + d.invoiceNumber);
+  if (d.date && !/\d{2,4}\s*[年\/.\-]\s*\d{1,2}\s*[月\/.\-]\s*\d{1,2}/.test(d.date.normalize('NFKC'))) add('warn', '開立日期無法解析：' + d.date);
+  if (d.uncertain.length) add('warn', '模型標示看不清楚的欄位：' + d.uncertain.join('、'));
+  return { issues, checks, errors: issues.filter(i => i.level === 'error').length };
+}
+
+function crossDiff(a, b) {
+  const pick = d => ({
+    '賣方統編': digitsOnly(d.seller.taxId), '買方統編': digitsOnly(d.buyer.taxId),
+    '發票號碼': (d.invoiceNumber || '').replace(/[\s-]/g, '').toUpperCase(),
+    '銷售額': num(d.salesAmount), '營業稅': num(d.taxAmount), '總計': num(d.totalAmount)
+  });
+  const A = pick(a), B = pick(b), out = [];
+  for (const k of Object.keys(A)) {
+    const x = A[k] == null || A[k] === '' ? '無' : A[k], y = B[k] == null || B[k] === '' ? '無' : B[k];
+    if (String(x) !== String(y)) out.push(k + ' ' + x + ' ↔ ' + y);
+  }
+  return out;
+}
+
+function toMarkdown(d, fileName, v) {
+  const esc = s => String(s).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+  const src = String(fileName).replace(/-{2,}/g, '-').replace(/>/g, '＞');
+  const L = [];
+  if (d.notInvoice) { L.push('# 無法辨識為發票', '', '> 【需覆核】此圖片不像發票或收據。', '', '<!-- source: ' + src + ' -->'); return L.join('\n') + '\n'; }
+  L.push('# ' + (d.invoiceType || '發票'), '');
+  for (const [k, val] of [['發票號碼', d.invoiceNumber], ['期別', d.period], ['開立日期', d.date], ['時間', d.time], ['隨機碼', d.randomCode], ['課稅別', d.taxType]]) if (val != null) L.push('- ' + k + '：' + val);
+  L.push('');
+  const party = (title, p, must) => {
+    const rows = [['名稱', p.name], ['統一編號', p.taxId], ['地址', p.address], ['電話', p.phone]];
+    if (!must && rows.every(r => r[1] == null)) return;
+    L.push('## ' + title, '');
+    for (const [k, val] of rows) { if (val != null) L.push('- ' + k + '：' + val); else if (k === '統一編號') L.push('- 統一編號：（未印出或未讀到）'); }
+    L.push('');
+  };
+  party('賣方', d.seller, true); party('買方', d.buyer, false);
+  if (d.items.length) {
+    const hasNote = d.items.some(i => i.note != null);
+    L.push('## 品項明細', '', '| 品名 | 數量 | 單價 | 金額 |' + (hasNote ? ' 備註 |' : ''), '|---|---:|---:|---:|' + (hasNote ? '---|' : ''));
+    for (const it of d.items) L.push('| ' + esc(it.name == null ? '' : it.name) + ' | ' + esc(it.qty == null ? '' : it.qty) + ' | ' + esc(it.unitPrice == null ? '' : it.unitPrice) + ' | ' + esc(it.amount == null ? '' : it.amount) + ' |' + (hasNote ? ' ' + esc(it.note == null ? '' : it.note) + ' |' : ''));
+    L.push('');
+  }
+  L.push('## 金額', '');
+  if (d.salesAmount != null) L.push('- 銷售額合計：' + d.salesAmount);
+  if (d.taxAmount != null) L.push('- 營業稅：' + d.taxAmount);
+  L.push('- 總計：' + (d.totalAmount != null ? d.totalAmount : '（未印出或未讀到）'), '');
+  if (d.otherText) { L.push('## 備註', ''); for (const ln of d.otherText.split('\n')) L.push('- ' + ln); L.push(''); }
+  if (v && v.issues.length) { L.push('> 【需覆核】'); for (const i of v.issues) L.push('> - ' + i.msg); L.push(''); }
+  L.push('<!-- source: ' + src + ' -->');
+  return L.join('\n') + '\n';
+}
+
+function mdToHtml(md) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const cell = s => esc(s.trim()).replace(/\\\|/g, '|');
+  const split = r => r.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/);
+  const table = rows => {
+    const head = split(rows[0]); let body = rows.slice(1), align = [];
+    if (body[0] && split(body[0]).every(c => /^\s*:?-+:?\s*$/.test(c))) { align = split(body[0]).map(c => /:\s*$/.test(c) ? 'r' : ''); body = body.slice(1); }
+    return '<div class="tw"><table><thead><tr>' + head.map((c, k) => '<th' + (align[k] ? ' class="r"' : '') + '>' + cell(c) + '</th>').join('') + '</tr></thead><tbody>' +
+      body.map(r => '<tr>' + split(r).map((c, k) => '<td' + (align[k] ? ' class="r"' : '') + '>' + cell(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+  };
+  const lines = md.replace(/<!--[\s\S]*?-->/g, '').split('\n'), out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const ln = lines[i]; let m;
+    if (/^\s*$/.test(ln)) { i++; continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(ln))) { out.push('<h' + m[1].length + '>' + esc(m[2]) + '</h' + m[1].length + '>'); i++; continue; }
+    if (/^\s*\|/.test(ln)) { const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]); out.push(table(rows)); continue; }
+    if (/^>/.test(ln)) { const q = []; while (i < lines.length && /^>/.test(lines[i])) q.push(lines[i++].replace(/^>\s?/, '')); out.push('<blockquote>' + mdToHtml(q.join('\n')) + '</blockquote>'); continue; }
+    if (/^\s*[-*]\s+/.test(ln)) { const li = []; while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) li.push('<li>' + esc(lines[i++].replace(/^\s*[-*]\s+/, '')) + '</li>'); out.push('<ul>' + li.join('') + '</ul>'); continue; }
+    if (/^---+\s*$/.test(ln)) { out.push('<hr>'); i++; continue; }
+    const p = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,3}\s|\s*\||>|\s*[-*]\s)/.test(lines[i])) p.push(esc(lines[i++]));
+    if (!p.length) { p.push(esc(ln)); i++; }
+    out.push('<p>' + p.join('<br>') + '</p>');
+  }
+  return out.join('');
+}
+
+const crcTable = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function buildZip(files) {
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const now = new Date();
+  const dt = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const tm = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  for (const f of files) {
+    const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, tm, true); lh.setUint16(12, dt, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true);
+    lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, tm, true); ch.setUint16(14, dt, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+    ch.setUint16(28, name.length, true); ch.setUint16(30, 0, true); ch.setUint16(32, 0, true); ch.setUint16(34, 0, true); ch.setUint16(36, 0, true);
+    ch.setUint32(38, 0, true); ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  let cdSize = 0; for (const p of central) cdSize += p.length;
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(4, 0, true); end.setUint16(6, 0, true);
+  end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cdSize, true); end.setUint32(16, offset, true); end.setUint16(20, 0, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+function csvCell(v) {
+  let s = v == null ? '' : String(v);
+  if (/^[=+@]/.test(s) || (/^-/.test(s) && !/^-[\d.,]+$/.test(s))) s = "'" + s;
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+const safeBase = n => String(n).replace(/\.[^.]*$/, '').replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || 'invoice';
+/*LOGIC-END*/
+
+/* ===== 以下為畫面與辨識流程 ===== */
+let sample = null, downloads = null, imgLimit = null, tier2 = 'complex';
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toLocaleString('zh-TW');
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') el.className = v; else if (k === 'text') el.textContent = v;
+    else if (v === true) el.setAttribute(k, ''); else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return el;
+}
+const ready = () => !!(sample && imgLimit);
+function errMsg(e) {
+  switch (e && e.code) {
+    case 'not_granted': return '你尚未允許此頁面使用 Claude，請重新整理後在提示中選擇允許。';
+    case 'rate_limited': return '已達 Claude 用量或頻率上限，請稍後再試。';
+    case 'image_rejected': return '圖片格式或大小不被接受。';
+    case 'refused': return 'Claude 無法處理這張圖片。';
+    case 'invalid_json': return '辨識結果格式不正確。';
+    case 'empty_completion': return 'Claude 沒有回覆內容。';
+    case 'no_content': return '未辨識到任何發票內容。';
+    case 'session_expired': return '登入已逾時，請重新整理頁面。';
+    case 'sampling_disabled': return '此帳號或組織未開放 Claude 辨識。';
+    case 'prompt_too_large': return '送出的內容過大。';
+    case 'cancelled': return '已取消。';
+    case 'upstream_error': return '連線中斷，請再試一次。';
+    default: return (e && e.message) ? String(e.message) : '辨識失敗。';
+  }
+}
+const HALT = ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed', 'images_unavailable', 'session_expired'];
+
+const PROMPT = `你是專業的台灣會計 OCR 校對員。請把圖片中的發票（統一發票、電子發票證明聯、收銀機發票、收據等）逐字轉成 JSON。
+
+最高原則：只抄錄圖片上實際看得到的內容。不推測、不補全、不翻譯、不「修正」任何數字或文字，也不要自己重新計算或調整合計。看不清楚的欄位填 null，並把欄位名稱列入 uncertain；沒有印出的欄位填 null 即可，不必列入 uncertain。
+
+欄位規則：
+- 所有值一律用字串，照印刷原樣抄錄，保留英文大小寫、連字號、逗號、小數點、負號、貨幣符號與民國年格式。
+- 統一編號是 8 位數字，請逐位仔細辨識，特別注意 0/8/6、1/7、3/8、5/6、2/7 容易混淆。賣方統編與買方統編不可互換：賣方在「賣方」欄或店家表頭，買方在「買方」欄；只印一個統編且位於表頭時視為賣方；只印出買方統編時，賣方填 null。
+- 金額每個數字都要看清楚。salesAmount 是「銷售額合計」或未稅金額，taxAmount 是「營業稅」，totalAmount 是「總計」（含稅應付總額）。
+- 品項依圖片由上到下的順序完整列出，不可省略、合併或重排；數量、單價、金額各放在自己的欄位。
+- otherText 放備註與其他未歸類的印刷文字（例如載具、折讓、付款方式、機台或收銀員），以換行分隔；沒有就填 null。
+- 若圖片不是發票或收據，只回傳 {"notInvoice": true}。
+
+只回傳一個 JSON 物件，不要加任何說明或 Markdown 圍欄，格式如下：
+{"invoiceType":"<原文或null>","invoiceNumber":"<原文或null>","date":"<原文或null>","time":"<原文或null>","period":"<原文或null>","randomCode":"<原文或null>","seller":{"name":"<原文或null>","taxId":"<原文或null>","address":"<原文或null>","phone":"<原文或null>"},"buyer":{"name":"<原文或null>","taxId":"<原文或null>","address":"<原文或null>"},"items":[{"name":"<原文>","qty":"<原文或null>","unitPrice":"<原文或null>","amount":"<原文或null>","note":"<原文或null>"}],"salesAmount":"<原文或null>","taxType":"<原文或null>","taxAmount":"<原文或null>","totalAmount":"<原文或null>","otherText":"<原文或null>","uncertain":["<看不清楚的欄位名稱>"]}`;
+
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), im = new Image();
+    im.onload = () => res({ im, url, w: im.naturalWidth, h: im.naturalHeight });
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('無法讀取這個圖檔')); };
+    im.src = url;
+  });
+}
+async function readDims(file) { const r = await loadImage(file); URL.revokeObjectURL(r.url); return { w: r.w, h: r.h }; }
+async function makeCrops(file) {
+  const maxCount = (imgLimit && imgLimit.maxCount) || 1;
+  const { im, url, w, h } = await loadImage(file);
+  try {
+    if (w * h <= 1.3e6) return [];
+    const n = Math.min(h / w > 2.2 ? 3 : 2, maxCount - 1);
+    if (n < 1) return [];
+    const sh = h / n, ov = sh * 0.08, out = [];
+    for (let i = 0; i < n; i++) {
+      const y0 = Math.max(0, Math.round(i * sh - ov)), y1 = Math.min(h, Math.round((i + 1) * sh + ov));
+      const c = document.createElement('canvas'); c.width = w; c.height = y1 - y0;
+      c.getContext('2d').drawImage(im, 0, y0, w, y1 - y0, 0, 0, w, y1 - y0);
+      out.push(await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92)));
+    }
+    return out.filter(Boolean);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function extract(file, o) {
+  const crops = o.crops || [];
+  let p = PROMPT;
+  if (o.hints && o.hints.length) {
+    p += '\n\n【第二次辨識】上一次辨識的結果在下列檢核不通過：\n' + o.hints.map(x => '- ' + x).join('\n') +
+      '\n請重新、獨立地逐位檢視圖片，不要沿用先前的答案。' +
+      (crops.length ? '圖片 1 是整張圖；圖片 2 起是同一張圖由上而下的分區放大（相鄰區域略有重疊，重疊處的品項不要重複列出）。' : '') +
+      '只依圖片實際印刷的內容作答：若圖片上確實就是這樣印的，請照實抄錄，不要為了通過檢核而改動數字。';
+  }
+  const opts = { images: [file, ...crops], modelTier: o.tier || 'default' };
+  if (o.signal) opts.signal = o.signal;
+  if (o.fresh) opts.cache = false;
+  return normalizeData(await sample.json(p, opts));
+}
+
+async function convertFile(file, o) {
+  const stage = o.onStage || (() => {});
+  stage('第 1 次辨識中…');
+  const d1 = await extract(file, { tier: o.tier, signal: o.signal, fresh: o.fresh });
+  if (isEmptyData(d1)) throw { code: 'no_content', message: '未辨識到任何發票內容' };
+  const v1 = validate(d1);
+  let best = { d: d1, v: v1, pass: 1 }, rateLimited = false;
+  if (o.auto2 && v1.errors > 0 && !d1.notInvoice) {
+    stage('檢核不符，進行二次辨識（分區放大）…');
+    try {
+      const crops = await makeCrops(file);
+      const d2 = await extract(file, { tier: tier2, hints: v1.issues.filter(i => i.level === 'error').map(i => i.hint), crops, signal: o.signal, fresh: true });
+      if (!isEmptyData(d2)) {
+        const v2 = validate(d2), diffs = crossDiff(d1, d2);
+        if (v2.errors <= v1.errors) best = { d: d2, v: v2, pass: 2 };
+        if (diffs.length) best.v.issues.push({ level: 'warn', msg: '兩次辨識結果不同：' + diffs.join('；') + '（採用第 ' + best.pass + ' 次）' });
+      }
+    } catch (e) {
+      if (e && e.code === 'cancelled') throw e;
+      if (e && e.code === 'rate_limited') rateLimited = true;
+      best.v.issues.push({ level: 'warn', msg: '二次辨識未完成，沿用第 1 次結果' });
+    }
+  }
+  return { data: best.d, v: best.v, pass: best.pass, md: toMarkdown(best.d, file.name, best.v), rateLimited };
+}
+
+async function saveFile(filename, data, setMsg) {
+  if (!downloads) { setMsg('此檢視無法儲存檔案。'); return; }
+  try { await downloads.save({ filename, data }); setMsg('已送出儲存：' + filename); }
+  catch (e) { setMsg(e && e.code === 'declined' ? '已取消儲存。' : '無法儲存檔案（' + ((e && e.code) || '未知錯誤') + '）。'); }
+}
+
+/* ---------- 分頁與路由 ---------- */
+function route() {
+  const v = location.hash === '#batch' ? 'batch' : 'single';
+  for (const n of ['single', 'batch']) {
+    $('view-' + n).hidden = n !== v;
+    const t = $('tab-' + n); t.setAttribute('aria-selected', String(n === v)); t.tabIndex = n === v ? 0 : -1;
+  }
+}
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { location.hash = '#' + b.dataset.view; route(); }));
+addEventListener('hashchange', route);
+route();
+
+/* ---------- 單張即時轉換 ---------- */
+const S = { file: null, url: null, dims: null, tk: null, data: null, v: null, md: '', run: 0, ctl: null };
+
+function setStatus(kind, text) {
+  const el = $('s-status');
+  el.className = 'status ' + (kind || '');
+  el.textContent = '';
+  if (kind === 'run') el.append(h('span', { class: 'spin', 'aria-hidden': 'true' }));
+  el.append(h('span', { text }));
+  el.hidden = !text;
+}
+function updateMeter() {
+  const img = S.tk ? S.tk.tokens : null, md = S.md ? estimateTokens(S.md) : null;
+  $('s-imgtok').textContent = img != null ? fmt(img) : '—';
+  $('s-mdtok').textContent = md != null ? fmt(md) : '—';
+  $('s-bar-img').style.width = img != null ? '100%' : '0';
+  if (img != null && md != null) {
+    const save = img - md;
+    $('s-save').textContent = (save < 0 ? '−' : '') + fmt(Math.abs(save));
+    $('s-pct').textContent = save >= 0 ? '約少 ' + Math.round(save / img * 100) + '%' : 'Markdown 比圖檔多';
+    $('s-bar-md').style.width = Math.min(100, md / img * 100) + '%';
+  } else { $('s-save').textContent = '—'; $('s-pct').innerHTML = '&nbsp;'; $('s-bar-md').style.width = '0'; }
+}
+function setMdTab(name) {
+  document.querySelectorAll('#s-mdtabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.md === name)));
+  $('s-md-src').hidden = name !== 'src'; $('s-md-prev').hidden = name !== 'prev'; $('s-md-check').hidden = name !== 'check';
+  if (name === 'prev') $('s-md-prev').innerHTML = mdToHtml(S.md || '');
+  if (name === 'check') renderCheck();
+}
+document.querySelectorAll('#s-mdtabs button').forEach(b => b.addEventListener('click', () => setMdTab(b.dataset.md)));
+$('s-fit').addEventListener('click', () => { $('s-imgbox').classList.remove('orig'); $('s-fit').setAttribute('aria-pressed', 'true'); $('s-orig').setAttribute('aria-pressed', 'false'); });
+$('s-orig').addEventListener('click', () => { $('s-imgbox').classList.add('orig'); $('s-fit').setAttribute('aria-pressed', 'false'); $('s-orig').setAttribute('aria-pressed', 'true'); });
+
+function renderIssues() {
+  const box = $('s-issues'); box.textContent = '';
+  if (!S.v) return;
+  if (!S.v.issues.length) { box.append(h('p', { class: 'note', text: '統一編號與金額的檢核都通過。檢核只能發現算不通的錯誤，重要欄位仍請對照左側圖檔確認。' })); return; }
+  box.append(h('h2', { text: '需要覆核（' + S.v.issues.length + '）' }), h('ul', null, S.v.issues.map(i => h('li', null, h('span', { class: 'pill ' + i.level, text: i.level === 'error' ? '錯誤' : '提示' }), h('span', { text: i.msg })))));
+}
+function renderCheck() {
+  const el = $('s-md-check'); el.textContent = '';
+  if (!S.data) { el.append(h('p', { class: 'note', text: '辨識完成後會在這裡列出關鍵欄位與檢核過程。' })); return; }
+  const d = S.data, checks = S.v.checks;
+  const tid = role => checks.find(c => c.type === 'taxid' && c.label.startsWith(role));
+  const keyBox = (label, val, chk) => h('div', { class: 'key' + (chk && !chk.ok ? ' bad' : '') },
+    h('div', { class: 'lab' }, label, chk ? h('span', { class: 'badge ' + (chk.ok ? 'ok' : 'bad'), text: chk.ok ? '通過' : '未通過' }) : null),
+    h('div', { class: 'v' + (val == null ? ' none' : ''), text: val == null ? '（未印出或未讀到）' : val }));
+  el.append(h('div', { class: 'keys' },
+    keyBox('發票號碼', d.invoiceNumber), keyBox('開立日期', d.date),
+    keyBox('賣方統一編號', d.seller.taxId, tid('賣方')), keyBox('買方統一編號', d.buyer.taxId, tid('買方')),
+    keyBox('銷售額合計', d.salesAmount), keyBox('營業稅', d.taxAmount), keyBox('總計', d.totalAmount)));
+  if (d.uncertain.length) el.append(h('p', { class: 'note warn', text: '模型標示看不清楚：' + d.uncertain.join('、') }), h('p'));
+  el.append(h('ul', { class: 'chk-list' }, checks.filter(c => c.type === 'calc').map(c => h('li', { class: c.ok ? 'ok' : 'bad' }, h('span', { class: 'mark', text: c.ok ? '✓' : '✗' }), h('span', { text: c.label + '：' + c.detail })))));
+  for (const c of checks.filter(c => c.type === 'taxid' && c.id)) {
+    const x = taxIdDetail(c.id), row = (label, arr) => h('tr', null, h('th', { text: label }), arr.map(v => h('td', { text: v })));
+    const rule = x.total % 5 === 0 ? '位數和 ' + x.total + ' 可被 5 整除，通過。' : (c.id[6] === '7' && (x.total + 1) % 5 === 0 ? '第 7 碼為 7，位數和 ' + x.total + ' 加 1 可被 5 整除，通過。' : '位數和 ' + x.total + ' 不能被 5 整除，未通過。');
+    el.append(h('div', { class: 'calc' }, h('h3', { text: c.label + ' ' + c.id + ' 的檢核碼計算' }),
+      h('div', { class: 'tw' }, h('table', null, row('數字', x.d), row('權重', x.w), row('乘積', x.prod), row('位數和', x.sums))), h('p', { text: rule })));
+  }
+}
+function renderSingle() {
+  $('s-md').value = S.md;
+  updateMeter(); renderIssues();
+  if (!$('s-md-prev').hidden) $('s-md-prev').innerHTML = mdToHtml(S.md);
+  if (!$('s-md-check').hidden) renderCheck();
+  const has = !!S.md;
+  $('s-dl').disabled = !has || !downloads; $('s-copy').disabled = !has;
+}
+function setBusy(b) {
+  $('s-stop').hidden = !b; $('s-redo').disabled = b || !S.file || !ready();
+  if (b) { $('s-dl').disabled = true; $('s-copy').disabled = true; }
+}
+$('s-md').addEventListener('input', () => { S.md = $('s-md').value; updateMeter(); if (!$('s-md-prev').hidden) $('s-md-prev').innerHTML = mdToHtml(S.md); $('s-dl').disabled = !S.md || !downloads; $('s-copy').disabled = !S.md; });
+
+async function singleConvert(fresh, tier) {
+  if (!ready() || !S.file) return;
+  const run = ++S.run; if (S.ctl) S.ctl.abort();
+  const ctl = new AbortController(); S.ctl = ctl;
+  setBusy(true); setStatus('run', '辨識中…');
+  try {
+    const r = await convertFile(S.file, { tier: tier || $('tier').value, auto2: $('auto2').checked, signal: ctl.signal, fresh, onStage: t => { if (run === S.run) setStatus('run', t); } });
+    if (run !== S.run) return;
+    S.data = r.data; S.v = r.v; S.md = r.md; renderSingle();
+    const n = r.v.issues.length;
+    setStatus(n ? 'warn' : 'ok', (n ? '轉換完成，有 ' + n + ' 項需要覆核' : '轉換完成，統一編號與金額檢核通過；重要欄位仍請對照圖檔確認') + (r.pass === 2 ? '（採用二次辨識結果）' : '') + '。');
+  } catch (e) {
+    if (run !== S.run) return;
+    setStatus(e && e.code === 'cancelled' ? '' : 'err', e && e.code === 'cancelled' ? '已停止。' : errMsg(e));
+  } finally { if (run === S.run) setBusy(false); }
+}
+async function singleLoad(file) {
+  if (!file) return;
+  if (!/^image\/(jpeg|png)$/.test(file.type) && !/\.(jpe?g|png)$/i.test(file.name)) { $('s-desk').hidden = false; setStatus('err', '只支援 JPG 與 PNG 圖檔。'); return; }
+  if (S.ctl) S.ctl.abort(); S.run++;
+  if (S.url) URL.revokeObjectURL(S.url);
+  Object.assign(S, { file, url: URL.createObjectURL(file), data: null, v: null, md: '', dims: null, tk: null });
+  $('s-desk').hidden = false; $('s-drop').classList.add('compact');
+  $('s-img').src = S.url; $('s-md').value = ''; $('s-issues').textContent = '';
+  $('s-fileinfo').textContent = file.name + '（' + Math.round(file.size / 1024) + ' KB）';
+  setStatus('', ''); setMdTab('src'); updateMeter(); setBusy(false);
+  try {
+    S.dims = await readDims(file); S.tk = estimateImageTokens(S.dims.w, S.dims.h);
+    $('s-fileinfo').textContent = file.name + '｜' + S.dims.w + '×' + S.dims.h + ' px｜' + Math.round(file.size / 1024) + ' KB｜送入模型約 ' + S.tk.W + '×' + S.tk.H + ' px';
+    updateMeter();
+  } catch (e) { setStatus('err', e.message); return; }
+  if (!ready()) { setStatus('err', '目前無法使用 Claude 辨識：' + ($('capNote').textContent || '請在 Claude 中開啟此頁面。')); return; }
+  singleConvert(false);
+}
+$('s-file').addEventListener('change', e => { singleLoad(e.target.files[0]); e.target.value = ''; });
+$('s-redo').addEventListener('click', () => singleConvert(true, 'complex'));
+$('s-stop').addEventListener('click', () => { if (S.ctl) S.ctl.abort(); });
+$('s-dl').addEventListener('click', () => saveFile(safeBase(S.file ? S.file.name : 'invoice') + '.md', S.md, t => setStatus('', t)));
+$('s-copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(S.md); setStatus('ok', '已複製 Markdown。'); }
+  catch { setMdTab('src'); $('s-md').focus(); $('s-md').select(); setStatus('', '已選取全文，請按 Ctrl 或 Cmd + C 複製。'); }
+});
+function bindDrop(zone, onFiles) {
+  ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.classList.remove('over'); }));
+  zone.addEventListener('drop', e => onFiles([...e.dataTransfer.files]));
+}
+bindDrop($('s-drop'), fs => singleLoad(fs[0]));
+document.addEventListener('paste', e => {
+  if ($('view-single').hidden) return;
+  const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(x => /^image\//.test(x.type));
+  if (f) singleLoad(f);
+});
+
+/* ---------- 批次處理 ---------- */
+const B = { items: [], running: false, stop: false, ctl: null, t0: 0, base: 0, skipped: 0, pause: null };
+let wake = null;
+const lockWake = async () => { try { wake = await navigator.wakeLock.request('screen'); } catch {} };
+const unlockWake = () => { try { wake && wake.release(); } catch {} wake = null; };
+const fkey = f => f.name + '|' + f.size + '|' + f.lastModified;
+const etaText = s => s < 90 ? '約 ' + Math.max(1, Math.round(s)) + ' 秒' : '約 ' + Math.round(s / 60) + ' 分鐘';
+const counts = () => {
+  const done = B.items.filter(i => i.status === 'done'), failed = B.items.filter(i => i.status === 'failed');
+  return { total: B.items.length, done, failed, pending: B.items.filter(i => i.status === 'pending' || i.status === 'running').length, review: done.filter(i => i.review) };
+};
+
+async function addBatchFiles(list) {
+  const all = [...list], ok = all.filter(f => /^image\/(jpeg|png)$/.test(f.type) || /\.(jpe?g|png)$/i.test(f.name));
+  B.skipped += all.length - ok.length;
+  const seen = new Set(B.items.map(i => fkey(i.file)));
+  const fresh = ok.filter(f => { const k = fkey(f); if (seen.has(k)) return false; seen.add(k); return true; });
+  $('b-sel').hidden = false;
+  let n = 0; const queue = fresh.slice();
+  const worker = async () => {
+    for (let f; (f = queue.shift());) {
+      const it = { file: f, name: f.name, status: 'pending', imgTokens: 0, mdTokens: 0 };
+      try { const dm = await readDims(f); it.imgTokens = estimateImageTokens(dm.w, dm.h).tokens; }
+      catch { it.status = 'failed'; it.error = '無法讀取這個圖檔'; }
+      B.items.push(it); n++;
+      if (n % 5 === 0) $('b-count').textContent = fmt(B.items.length);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  renderBatchSel();
+}
+function renderBatchSel() {
+  const c = counts();
+  $('b-sel').hidden = !c.total;
+  $('b-count').textContent = fmt(c.total);
+  $('b-imgtok').textContent = fmt(B.items.reduce((a, i) => a + i.imgTokens, 0));
+  $('b-eta').textContent = etaText(Math.max(0, c.pending) * 9);
+  const sk = $('b-skip'); sk.hidden = !B.skipped; sk.textContent = '已略過 ' + B.skipped + ' 個不是 JPG 或 PNG 的檔案。';
+  $('b-start').hidden = B.running || !c.pending;
+  $('b-start').textContent = (c.done.length + c.failed.length) ? '繼續處理' : '開始處理';
+  $('b-stop').hidden = !B.running;
+  $('b-retry').hidden = B.running || !c.failed.length;
+  $('b-retry').textContent = '重試失敗項目（' + c.failed.length + '）';
+  $('b-clear').disabled = B.running;
+  $('b-start').disabled = !ready();
+}
+function renderProgress() {
+  const c = counts(), processed = c.done.length + c.failed.length;
+  $('b-progress').hidden = !(B.running || B.pause);
+  $('b-bar').style.width = (c.total ? processed / c.total * 100 : 0) + '%';
+  let t = '已處理 ' + fmt(processed) + ' / ' + fmt(c.total) + ' 張，成功 ' + fmt(c.done.length) + '，失敗 ' + fmt(c.failed.length);
+  if (B.running && processed > B.base) {
+    const per = (performance.now() - B.t0) / 1000 / (processed - B.base);
+    t += '，剩餘' + etaText(per * c.pending);
+  }
+  $('b-ptext').textContent = t;
+  const p = $('b-pause'); p.hidden = !B.pause; p.textContent = B.pause || '';
+  renderBatchSel();
+  renderResult();
+}
+function renderResult() {
+  const c = counts(), processed = c.done.length + c.failed.length;
+  $('b-result').hidden = !processed;
+  if (!processed) return;
+  const img = c.done.reduce((a, i) => a + i.imgTokens, 0), md = c.done.reduce((a, i) => a + i.mdTokens, 0), save = img - md;
+  $('r-total').textContent = fmt(processed); $('r-ok').textContent = fmt(c.done.length); $('r-fail').textContent = fmt(c.failed.length); $('r-review').textContent = fmt(c.review.length);
+  $('r-img').textContent = fmt(img); $('r-md').textContent = fmt(md);
+  $('r-save').textContent = (save < 0 ? '−' : '') + fmt(Math.abs(save));
+  $('r-pct').textContent = img ? (save >= 0 ? '約少 ' + Math.round(save / img * 100) + '%（僅計成功項目）' : 'Markdown 比圖檔多') : ' ';
+  const dl = !!downloads;
+  ['r-zip', 'r-merged', 'r-csv'].forEach(id => $(id).disabled = !dl || !c.done.length);
+  $('r-dlnote').hidden = dl;
+  const rv = $('r-review-box'); rv.hidden = !c.review.length;
+  $('r-review-sum').textContent = '成功但需覆核（' + c.review.length + '）';
+  $('r-review-list').textContent = ''; c.review.forEach(i => $('r-review-list').append(h('li', null, h('span', { class: 'mono', text: i.name }), '：' + i.issues.map(x => x.msg).join('；'))));
+  const fb = $('r-fail-box'); fb.hidden = !c.failed.length;
+  $('r-fail-sum').textContent = '失敗（' + c.failed.length + '）';
+  $('r-fail-list').textContent = ''; c.failed.forEach(i => $('r-fail-list').append(h('li', null, h('span', { class: 'mono', text: i.name }), '：' + (i.error || '辨識失敗'))));
+}
+
+async function runBatch() {
+  if (B.running || !ready()) return;
+  B.running = true; B.stop = false; B.pause = null; B.ctl = new AbortController(); B.t0 = performance.now();
+  B.base = counts().done.length + counts().failed.length;
+  lockWake(); renderProgress();
+  const queue = B.items.filter(i => i.status === 'pending'); let qi = 0, halt = false;
+  const tier = $('tier').value, auto2 = $('auto2').checked;
+  const next = () => (halt || B.stop) ? null : (queue[qi++] || null);
+  const handle = async it => {
+    it.status = 'running';
+    try {
+      const r = await convertFile(it.file, { tier, auto2, signal: B.ctl.signal });
+      Object.assign(it, { status: 'done', md: r.md, mdTokens: estimateTokens(r.md), data: r.data, issues: r.v.issues, review: r.v.issues.length > 0 });
+      if (r.rateLimited) { halt = true; B.pause = '已達 Claude 用量或頻率上限，已暫停。稍後按「繼續處理」即可接著做。'; }
+    } catch (e) {
+      const c = e && e.code;
+      if (c === 'cancelled') { it.status = 'pending'; return; }
+      if (c === 'rate_limited') { it.status = 'pending'; halt = true; B.pause = '已達 Claude 用量或頻率上限，已暫停。稍後按「繼續處理」即可接著做。'; return; }
+      if (HALT.includes(c)) { it.status = 'pending'; halt = true; B.pause = errMsg(e); return; }
+      it.status = 'failed'; it.error = errMsg(e);
+    } finally { renderProgress(); }
+  };
+  const worker = async () => { for (let it; (it = next());) await handle(it); };
+  const first = next(); if (first) await handle(first);
+  await Promise.all([worker(), worker()]);
+  B.running = false; unlockWake();
+  if (B.stop && !B.pause) B.pause = '已停止。按「繼續處理」可接著處理剩下的圖檔。';
+  renderProgress();
+}
+$('b-file').addEventListener('change', e => { addBatchFiles(e.target.files); e.target.value = ''; });
+bindDrop($('b-drop'), fs => addBatchFiles(fs));
+$('b-start').addEventListener('click', runBatch);
+$('b-stop').addEventListener('click', () => { B.stop = true; if (B.ctl) B.ctl.abort(); });
+$('b-retry').addEventListener('click', () => { B.items.forEach(i => { if (i.status === 'failed' && i.error !== '無法讀取這個圖檔') { i.status = 'pending'; i.error = null; } }); runBatch(); });
+$('b-clear').addEventListener('click', () => { B.items = []; B.skipped = 0; B.pause = null; $('b-progress').hidden = true; $('b-result').hidden = true; renderBatchSel(); });
+
+function batchFiles() {
+  const done = B.items.filter(i => i.status === 'done'), used = new Set(), files = [];
+  for (const it of done) {
+    let name = safeBase(it.name), k = name, n = 2; while (used.has(k)) k = name + '_' + n++;
+    used.add(k); files.push({ name: k + '.md', data: it.md });
+  }
+  return { done, files };
+}
+function batchCsv(done) {
+  const head = ['檔名', '發票類型', '發票號碼', '開立日期', '賣方名稱', '賣方統編', '買方統編', '銷售額合計', '營業稅', '總計', '需覆核', '覆核原因', '圖檔tokens(預估)', 'MD tokens(預估)'];
+  const rows = done.map(i => [i.name, i.data.invoiceType, i.data.invoiceNumber, i.data.date, i.data.seller.name, i.data.seller.taxId, i.data.buyer.taxId, i.data.salesAmount, i.data.taxAmount, i.data.totalAmount, i.review ? '是' : '否', i.issues.map(x => x.msg).join('；'), i.imgTokens, i.mdTokens]);
+  return '﻿' + [head, ...rows].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+function batchReport() {
+  const c = counts(), img = c.done.reduce((a, i) => a + i.imgTokens, 0), md = c.done.reduce((a, i) => a + i.mdTokens, 0);
+  const L = ['# 處理報告', '', '- 處理筆數：' + (c.done.length + c.failed.length), '- 成功：' + c.done.length, '- 失敗：' + c.failed.length, '- 成功中需覆核：' + c.review.length,
+    '- 圖檔 tokens（預估）：' + img, '- Markdown tokens（預估）：' + md, '- 共節省 tokens：' + (img - md), ''];
+  if (c.review.length) { L.push('## 需覆核', ''); c.review.forEach(i => L.push('- ' + i.name + '：' + i.issues.map(x => x.msg).join('；'))); L.push(''); }
+  if (c.failed.length) { L.push('## 失敗', ''); c.failed.forEach(i => L.push('- ' + i.name + '：' + (i.error || '辨識失敗'))); L.push(''); }
+  return L.join('\n');
+}
+const rMsg = t => { $('r-dlnote').hidden = false; $('r-dlnote').textContent = t; };
+$('r-zip').addEventListener('click', () => {
+  const { done, files } = batchFiles(); if (!done.length) return;
+  const all = [...files, { name: '_彙總.csv', data: batchCsv(done) }, { name: '_處理報告.md', data: batchReport() }];
+  saveFile('發票轉換結果.zip', buildZip(all), rMsg);
+});
+$('r-merged').addEventListener('click', () => { const { done } = batchFiles(); if (done.length) saveFile('發票合併.md', done.map(i => i.md).join('\n---\n\n'), rMsg); });
+$('r-csv').addEventListener('click', () => { const { done } = batchFiles(); if (done.length) saveFile('發票彙總.csv', batchCsv(done), rMsg); });
+
+/* ---------- 連線辨識與下載功能 ---------- */
+(async () => {
+  const note = $('capNote');
+  note.textContent = '正在連線辨識功能…';
+  const use = n => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  [sample, downloads] = await Promise.all([use('sample'), use('downloads')]);
+  if (sample) { try { const lim = await sample.limits(); imgLimit = lim.images || null; if (lim.modelTiers && !lim.modelTiers.includes('complex')) { tier2 = 'default'; const o = $('tier').querySelector('option[value="complex"]'); if (o) o.remove(); } } catch {} }
+  if (!sample) note.textContent = '此檢視無法使用 Claude 辨識，請在 Claude 中開啟此頁面。';
+  else if (!imgLimit) note.textContent = '此檢視無法傳送圖片給 Claude，無法辨識。';
+  else if (!downloads) note.textContent = '此檢視無法儲存檔案，可改用「複製」。';
+  else note.textContent = '';
+  note.classList.toggle('warn', !!note.textContent);
+  renderBatchSel(); renderResult();
+  if (S.file) { renderSingle(); setBusy(false); }
+})();
+</script>
+
+</body></html>
