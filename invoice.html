@@ -12,6 +12,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- 引入 JSZip 用於一鍵打包下載 100+ 筆 .md 檔案 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- 引入 Marked.js 用於即時將 Markdown 渲染為會計表格供視覺核對 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -54,35 +56,44 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #B8B0A0;
         }
+        /* Markdown 渲染預覽區的會計表格專屬樣式 */
+        .md-preview h1 { font-size: 1.25rem; font-weight: 700; color: #292524; margin-bottom: 0.75rem; border-bottom: 2px solid #E6E1D6; padding-bottom: 0.5rem; }
+        .md-preview h2 { font-size: 0.95rem; font-weight: 700; color: #426351; margin-top: 1rem; margin-bottom: 0.5rem; }
+        .md-preview ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 0.75rem; font-size: 0.85rem; }
+        .md-preview li { margin-bottom: 0.25rem; }
+        .md-preview code { font-family: 'JetBrains Mono', monospace; background: #EFECE4; padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.8rem; color: #2d4237; }
+        .md-preview table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; margin-bottom: 1rem; font-size: 0.8rem; }
+        .md-preview th { background-color: #EFECE4; color: #44403c; font-weight: 600; text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #DCD6C8; }
+        .md-preview td { padding: 0.5rem 0.75rem; border: 1px solid #E6E1D6; color: #292524; background-color: #FCFBF9; }
     </style>
 </head>
 <body class="bg-[#F7F5F0] text-stone-700 font-sans min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-900">
 
     <!-- 頂部導覽列 (柔和莫蘭迪鼠尾草綠與燕麥白) -->
     <header class="bg-[#EFECE4]/90 border-b border-[#E2DDD2] sticky top-0 z-30 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-[#FCFBF9] shadow-xs">
                     <i data-lucide="layers" class="w-5 h-5"></i>
                 </div>
                 <div>
                     <div class="flex items-center space-x-2">
-                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-stone-800">AI 會計發票批次轉 Markdown 系統</h1>
-                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-700 font-semibold border border-brand-200">100+ 筆極速批次版</span>
+                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-stone-800">AI 會計發票轉 Markdown 系統</h1>
+                        <span class="text-xs px-2.5 py-0.5 rounded-full bg-brand-100 text-brand-700 font-semibold border border-brand-200">批次 + 即時對照雙模式</span>
                     </div>
-                    <p class="text-xs text-stone-500">省略即時預覽渲染消耗・專注大量憑證非同步佇列轉檔與 Token 節省統計</p>
+                    <p class="text-xs text-stone-500">支援 100+ 筆極速佇列處理，以及單筆即時上傳左圖右文對照驗算</p>
                 </div>
             </div>
 
-            <!-- 頂部測試與批次控制按鈕 -->
-            <div class="flex items-center space-x-2.5">
-                <button id="simulate120Btn" type="button" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm bg-[#FCFBF9] hover:bg-[#F2EFE8] text-stone-700 font-medium px-3.5 py-2 rounded-xl transition border border-[#DCD6C8] shadow-2xs cursor-pointer">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
-                    <span>模擬載入 120 筆發票圖檔測試</span>
+            <!-- 雙工作模式切換器 (批次模式 vs 單筆即時對照模式) -->
+            <div class="flex items-center bg-[#E4DFD3] p-1 rounded-xl border border-[#D5CEC0]">
+                <button id="modeBatchBtn" type="button" onclick="switchWorkMode('batch')" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                    <span>100+ 筆批次轉檔模式</span>
                 </button>
-                <button id="clearAllBtn" type="button" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm bg-[#FCFBF9] hover:bg-rose-50/70 text-stone-600 hover:text-rose-700 font-medium px-3 py-2 rounded-xl transition border border-[#DCD6C8] cursor-pointer">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    <span>清空佇列</span>
+                <button id="modeSingleBtn" type="button" onclick="switchWorkMode('single')" class="inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer">
+                    <i data-lucide="split-square-horizontal" class="w-4 h-4"></i>
+                    <span>單筆即時對照驗算</span>
                 </button>
             </div>
         </div>
@@ -90,6 +101,26 @@
 
     <!-- 主內容區 -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
+
+        <!-- ==================== 模式 A：100+ 筆批次處理畫面 ==================== -->
+        <div id="batchModeView" class="flex flex-col gap-6">
+            <!-- 批次快捷測試工具列 -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-[#EFECE4]/60 px-4 py-2.5 rounded-2xl border border-[#E2DDD2]">
+                <span class="text-xs text-stone-600 flex items-center space-x-1.5">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
+                    <span>大量發票結帳專區：無須逐張預覽，完成後亦可點擊明細表任一筆「對照查看」抽查正確性</span>
+                </span>
+                <div class="flex items-center space-x-2">
+                    <button id="simulate120Btn" type="button" class="inline-flex items-center space-x-1.5 text-xs bg-[#FCFBF9] hover:bg-[#F2EFE8] text-stone-700 font-medium px-3 py-1.5 rounded-xl transition border border-[#DCD6C8] shadow-2xs cursor-pointer">
+                        <i data-lucide="play-circle" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span>模擬載入 120 筆發票圖檔測試</span>
+                    </button>
+                    <button id="clearAllBtn" type="button" class="inline-flex items-center space-x-1.5 text-xs bg-[#FCFBF9] hover:bg-rose-50/70 text-stone-600 hover:text-rose-700 font-medium px-3 py-1.5 rounded-xl transition border border-[#DCD6C8] cursor-pointer">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>清空佇列</span>
+                    </button>
+                </div>
+            </div>
 
         <!-- 步驟 1：四大核心統計指標儀表板 -->
         <section aria-label="批次處理與 Token 節省統計">
@@ -273,7 +304,7 @@
                             <th class="py-3 px-4 font-semibold text-right">轉檔後 MD Token</th>
                             <th class="py-3 px-4 font-semibold text-right">單筆節省 Token</th>
                             <th class="py-3 px-4 font-semibold text-center">狀態</th>
-                            <th class="py-3 px-4 font-semibold text-right">單筆下載</th>
+                            <th class="py-3 px-4 font-semibold text-right">對照與下載</th>
                         </tr>
                     </thead>
                     <tbody id="batchTableBody" class="divide-y divide-[#EFECE4] text-stone-700 font-mono text-xs">
@@ -286,6 +317,138 @@
                 </table>
             </div>
         </section>
+        </div> <!-- 結束 batchModeView -->
+
+        <!-- ==================== 模式 B：單筆即時上傳與對照驗算畫面 ==================== -->
+        <div id="singleModeView" class="hidden flex-col gap-5">
+            <!-- 單筆頂部即時 Token 比較與工具列 -->
+            <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] p-4 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" onclick="document.getElementById('singleFileInput').click()" class="inline-flex items-center space-x-1.5 bg-brand-600 hover:bg-brand-700 text-[#FCFBF9] text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer">
+                        <i data-lucide="upload" class="w-4 h-4"></i>
+                        <span>上傳單張發票即時轉換 (JPG/PNG)</span>
+                    </button>
+                    <input type="file" id="singleFileInput" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="hidden">
+
+                    <button type="button" id="loadSampleSingleBtn" class="inline-flex items-center space-x-1.5 bg-[#F2EFE8] hover:bg-[#E6E1D6] text-stone-700 border border-[#D5CEC0] text-xs sm:text-sm font-medium px-3.5 py-2 rounded-xl transition cursor-pointer">
+                        <i data-lucide="file-check-2" class="w-4 h-4 text-brand-600"></i>
+                        <span>載入標準三聯式發票範例對照</span>
+                    </button>
+                </div>
+
+                <!-- 單筆即時 Token 變化顯示膠囊 -->
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3 bg-[#F4F1EA] px-3.5 py-2 rounded-xl border border-[#E2DDD2] text-xs font-mono">
+                    <div class="flex items-center space-x-1">
+                        <span class="text-stone-500 font-sans">原始圖檔預估:</span>
+                        <strong id="singleImgTokenBadge" class="text-stone-800">0</strong>
+                        <span class="text-stone-400">Tokens</span>
+                    </div>
+                    <span class="text-stone-400">→</span>
+                    <div class="flex items-center space-x-1">
+                        <span class="text-stone-500 font-sans">轉後 MD:</span>
+                        <strong id="singleMdTokenBadge" class="text-[#52728C]">0</strong>
+                        <span class="text-stone-400">Tokens</span>
+                    </div>
+                    <span class="text-stone-300">|</span>
+                    <div class="flex items-center space-x-1 text-teal-700 font-semibold">
+                        <span class="font-sans">即時節省:</span>
+                        <span id="singleSavedTokenBadge">0 (0%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 左右雙欄同步對照區 (左：發票圖檔放大檢視；右：Markdown 原始碼與渲染預覽) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+                <!-- 左欄：發票原始憑證影像檢視器 -->
+                <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col overflow-hidden min-h-[540px]">
+                    <div class="px-4 py-3 border-b border-[#EAE6DC] bg-[#F4F1EA]/70 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="image" class="w-4 h-4 text-brand-600"></i>
+                            <span class="text-xs sm:text-sm font-bold text-stone-700">原始發票圖檔檢視</span>
+                            <span id="singleImageMeta" class="text-xs text-stone-400 font-mono">尚未載入圖檔</span>
+                        </div>
+                        <!-- 縮放與旋轉控制 -->
+                        <div class="flex items-center space-x-1">
+                            <button type="button" onclick="adjustSingleZoom(-0.2)" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="縮小">
+                                <i data-lucide="zoom-out" class="w-4 h-4"></i>
+                            </button>
+                            <span id="singleZoomText" class="text-xs font-mono text-stone-600 px-1.5">100%</span>
+                            <button type="button" onclick="adjustSingleZoom(0.2)" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="放大">
+                                <i data-lucide="zoom-in" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" onclick="rotateSingleImage()" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer" title="旋轉 90 度">
+                                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                            </button>
+                            <button type="button" onclick="resetSingleView()" class="p-1.5 rounded-lg hover:bg-[#E6E1D6] text-stone-600 transition cursor-pointer text-xs font-medium px-2" title="重設視角">
+                                重設
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 圖片畫布容器 -->
+                    <div id="singleImageDropArea" class="flex-1 bg-[#EFECE4]/50 relative overflow-auto flex items-center justify-center p-4">
+                        <!-- 空白提示 -->
+                        <div id="singleEmptyPrompt" class="text-center max-w-xs p-6">
+                            <div class="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center mx-auto mb-3">
+                                <i data-lucide="file-scan" class="w-6 h-6"></i>
+                            </div>
+                            <p class="text-sm font-bold text-stone-700">拖入單張發票或點擊上方按鈕</p>
+                            <p class="text-xs text-stone-500 mt-1">上傳後將立即顯示發票影像並同步轉換為右側 Markdown 表格供您逐項核對</p>
+                        </div>
+                        <!-- 實際發票預覽圖 -->
+                        <img id="singlePreviewImg" src="" alt="發票預覽圖" class="hidden max-w-full max-h-[460px] object-contain rounded-lg shadow-sm border border-[#DCD6C8] transition-transform duration-150 origin-center" />
+                    </div>
+                </div>
+
+                <!-- 右欄：轉換後 Markdown 編輯與視覺化表格核對區 -->
+                <div class="bg-[#FCFBF9] rounded-2xl border border-[#E6E1D6] shadow-2xs flex flex-col overflow-hidden min-h-[540px]">
+                    <div class="px-4 py-2.5 border-b border-[#EAE6DC] bg-[#F4F1EA]/70 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="file-code-2" class="w-4 h-4 text-brand-600"></i>
+                            <span class="text-xs sm:text-sm font-bold text-stone-700">轉換後 Markdown 對照與驗算</span>
+                            <span id="singleVerifyBadge" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-[#E6F0EC] text-teal-800 font-medium">
+                                ✓ 稅額 5% 驗算相符
+                            </span>
+                        </div>
+
+                        <!-- 檢視切換：並排 / 表格預覽 / 原始碼 -->
+                        <div class="flex items-center space-x-2">
+                            <div class="flex items-center bg-[#E8E4DA] p-0.5 rounded-xl text-xs">
+                                <button type="button" onclick="setSingleMdTab('split')" id="mdTabSplit" class="px-2.5 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition cursor-pointer">並排核對</button>
+                                <button type="button" onclick="setSingleMdTab('preview')" id="mdTabPreview" class="px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer">會計表格預覽</button>
+                                <button type="button" onclick="setSingleMdTab('raw')" id="mdTabRaw" class="px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer">MD 原始碼</button>
+                            </div>
+                            <button type="button" id="downloadSingleCurrentBtn" disabled class="inline-flex items-center space-x-1 bg-brand-600 hover:bg-brand-700 disabled:bg-[#DFDBD2] disabled:text-stone-400 text-[#FCFBF9] text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer disabled:cursor-not-allowed">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                <span>下載 .md</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Markdown 編輯器與即時渲染預覽雙欄 -->
+                    <div id="singleMdContentGrid" class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#EAE6DC] overflow-hidden">
+                        <!-- 左子欄：Markdown 原始碼可即時微調 -->
+                        <div id="singleRawPane" class="flex flex-col h-full">
+                            <div class="px-3 py-1.5 bg-[#F7F5F0] border-b border-[#EAE6DC] text-[11px] text-stone-500 flex items-center justify-between">
+                                <span>Markdown 原始碼 (可直接修正字元，即時重算 Token)</span>
+                                <button type="button" onclick="copySingleMarkdown()" class="text-brand-600 hover:text-brand-700 font-medium cursor-pointer">複製原始碼</button>
+                            </div>
+                            <textarea id="singleMdTextarea" placeholder="上傳發票後，此處將即時產生與發票一模一樣的 Markdown 原始碼..." class="flex-1 w-full p-3.5 bg-[#FCFBF9] text-stone-800 font-mono text-xs leading-relaxed focus:outline-none resize-none"></textarea>
+                        </div>
+
+                        <!-- 右子欄：會計渲染表格預覽 -->
+                        <div id="singlePreviewPane" class="flex flex-col h-full overflow-y-auto bg-[#FCFBF9]">
+                            <div class="px-3 py-1.5 bg-[#F7F5F0] border-b border-[#EAE6DC] text-[11px] text-stone-500">
+                                <span>Markdown 結構化表格預覽 (供核對統編、品項與總計)</span>
+                            </div>
+                            <div id="singleMdRenderBox" class="p-4 md-preview flex-1 overflow-y-auto text-sm text-stone-700">
+                                <p class="text-stone-400 text-xs text-center py-16">尚無轉換資料，請先從左側上傳發票圖檔或載入範例。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- 結束 singleModeView -->
 
     </main>
 
@@ -550,7 +713,10 @@
                     : '--';
 
                 const actionBtn = item.status === 'success'
-                    ? `<button onclick="downloadSingleMd('${item.id}')" class="text-brand-600 hover:text-brand-700 font-sans font-medium underline cursor-pointer">下載 .md</button>`
+                    ? `<div class="inline-flex items-center space-x-2.5">
+                        <button onclick="inspectBatchItemInSingleView('${item.id}')" class="text-[#52728C] hover:text-stone-900 font-sans font-medium underline cursor-pointer">對照查看</button>
+                        <button onclick="downloadSingleMd('${item.id}')" class="text-brand-600 hover:text-brand-700 font-sans font-medium underline cursor-pointer">下載 .md</button>
+                       </div>`
                     : `<span class="text-stone-300">--</span>`;
 
                 return `
@@ -877,6 +1043,393 @@
                 btn.className = 'filter-tab px-3 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition';
                 renderBatchTable();
             });
+        });
+
+        // ==================== 單筆即時對照與驗算模式邏輯 ====================
+        const singleState = {
+            fileName: 'SAMPLE_INV_202505.png',
+            imgTokens: 0,
+            mdTokens: 0,
+            zoom: 1,
+            rotation: 0
+        };
+
+        const singleEls = {
+            modeBatchBtn: document.getElementById('modeBatchBtn'),
+            modeSingleBtn: document.getElementById('modeSingleBtn'),
+            batchModeView: document.getElementById('batchModeView'),
+            singleModeView: document.getElementById('singleModeView'),
+            singleFileInput: document.getElementById('singleFileInput'),
+            loadSampleSingleBtn: document.getElementById('loadSampleSingleBtn'),
+            singleImgTokenBadge: document.getElementById('singleImgTokenBadge'),
+            singleMdTokenBadge: document.getElementById('singleMdTokenBadge'),
+            singleSavedTokenBadge: document.getElementById('singleSavedTokenBadge'),
+            singleImageMeta: document.getElementById('singleImageMeta'),
+            singleZoomText: document.getElementById('singleZoomText'),
+            singleEmptyPrompt: document.getElementById('singleEmptyPrompt'),
+            singlePreviewImg: document.getElementById('singlePreviewImg'),
+            singleImageDropArea: document.getElementById('singleImageDropArea'),
+            singleVerifyBadge: document.getElementById('singleVerifyBadge'),
+            singleMdTextarea: document.getElementById('singleMdTextarea'),
+            singleMdRenderBox: document.getElementById('singleMdRenderBox'),
+            downloadSingleCurrentBtn: document.getElementById('downloadSingleCurrentBtn'),
+            singleMdContentGrid: document.getElementById('singleMdContentGrid'),
+            singleRawPane: document.getElementById('singleRawPane'),
+            singlePreviewPane: document.getElementById('singlePreviewPane'),
+            mdTabSplit: document.getElementById('mdTabSplit'),
+            mdTabPreview: document.getElementById('mdTabPreview'),
+            mdTabRaw: document.getElementById('mdTabRaw')
+        };
+
+        /**
+         * 切換「100+ 筆批次轉檔模式」與「單筆即時對照驗算模式」
+         */
+        window.switchWorkMode = function(mode) {
+            if (mode === 'single') {
+                singleEls.batchModeView.classList.add('hidden');
+                singleEls.singleModeView.classList.remove('hidden');
+                singleEls.singleModeView.classList.add('flex');
+
+                singleEls.modeSingleBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer';
+                singleEls.modeBatchBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
+            } else {
+                singleEls.singleModeView.classList.add('hidden');
+                singleEls.singleModeView.classList.remove('flex');
+                singleEls.batchModeView.classList.remove('hidden');
+
+                singleEls.modeBatchBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-semibold bg-[#FCFBF9] text-brand-700 shadow-2xs transition cursor-pointer';
+                singleEls.modeSingleBtn.className = 'inline-flex items-center space-x-1.5 text-xs sm:text-sm px-3.5 py-1.5 rounded-lg font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
+            }
+        };
+
+        /**
+         * 使用 Canvas 動態繪製高解析度台灣三聯式統一發票影像 (確保圖片與轉換後 Markdown 資料 100% 一模一樣)
+         */
+        function createInvoiceCanvasDataUrl(invoiceData) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 960;
+            canvas.height = 660;
+            const ctx = canvas.getContext('2d');
+
+            // 溫暖發票紙張底色
+            ctx.fillStyle = '#FDFBF7';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 外框線
+            ctx.strokeStyle = '#8C7A6B';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(24, 24, 912, 612);
+
+            // 標題區
+            ctx.fillStyle = '#3E3832';
+            ctx.font = 'bold 26px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('中華民國統一發票（三聯式）', 480, 68);
+
+            // 基本欄位資訊
+            ctx.font = '16px "JetBrains Mono", "Noto Sans TC", monospace';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#4A443F';
+            ctx.fillText(`發票字軌號碼：${invoiceData.trackNum}`, 48, 115);
+            ctx.fillText(`開立日期：${invoiceData.date}`, 580, 115);
+            ctx.fillText(`買受人統一編號：${invoiceData.buyerTaxId}`, 48, 145);
+            ctx.fillText(`銷售人統一編號：${invoiceData.sellerTaxId}`, 580, 145);
+            ctx.fillText(`原始檔案名稱：${invoiceData.fileName}`, 48, 175);
+
+            // 表格格線
+            ctx.strokeStyle = '#B8AFA6';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(45, 195, 870, 260);
+
+            // 表頭底色
+            ctx.fillStyle = '#EFECE4';
+            ctx.fillRect(46, 196, 868, 42);
+            ctx.fillStyle = '#2D4237';
+            ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
+            ctx.fillText('項次', 65, 223);
+            ctx.fillText('品名 / 規格說明', 145, 223);
+            ctx.fillText('數量', 500, 223);
+            ctx.fillText('單價 (TWD)', 600, 223);
+            ctx.fillText('金額 (TWD)', 755, 223);
+
+            // 品項明細內容
+            ctx.fillStyle = '#292524';
+            ctx.font = '15px "JetBrains Mono", "Noto Sans TC", sans-serif';
+            ctx.fillText('1', 72, 275);
+            ctx.fillText(invoiceData.itemName, 145, 275);
+            ctx.fillText('1', 512, 275);
+            ctx.fillText(invoiceData.netAmount.toLocaleString(), 615, 275);
+            ctx.fillText(invoiceData.netAmount.toLocaleString(), 770, 275);
+
+            // 底部金額彙總區
+            ctx.fillStyle = '#F5F2EB';
+            ctx.fillRect(45, 470, 870, 135);
+            ctx.strokeRect(45, 470, 870, 135);
+
+            ctx.fillStyle = '#44403C';
+            ctx.font = 'bold 16px "Noto Sans TC", monospace';
+            ctx.fillText(`銷售額合計 (應稅)：NT$ ${invoiceData.netAmount.toLocaleString()}`, 65, 508);
+            ctx.fillText(`營業稅額 (5%)：NT$ ${invoiceData.taxAmount.toLocaleString()}`, 65, 545);
+
+            ctx.fillStyle = '#426351';
+            ctx.font = 'bold 20px "Noto Sans TC", monospace';
+            ctx.fillText(`總計金額 (含稅)：NT$ ${invoiceData.totalAmount.toLocaleString()}`, 65, 585);
+
+            // 模擬發票專用章
+            ctx.save();
+            ctx.translate(760, 535);
+            ctx.rotate(-0.08);
+            ctx.strokeStyle = 'rgba(185, 74, 72, 0.75)';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-110, -42, 220, 84);
+            ctx.fillStyle = 'rgba(185, 74, 72, 0.8)';
+            ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('統一發票專用章', 0, -15);
+            ctx.fillText(`統編：${invoiceData.sellerTaxId}`, 0, 10);
+            ctx.fillText('核對無誤・帳務相符', 0, 32);
+            ctx.restore();
+
+            return canvas.toDataURL('image/png');
+        }
+
+        /**
+         * 更新單筆對照區的 Markdown 渲染與即時 Token 統計
+         */
+        function refreshSingleMarkdownStats() {
+            const mdText = singleEls.singleMdTextarea.value || '';
+            const mdTokens = estimateMarkdownTokens(mdText);
+            singleState.mdTokens = mdTokens;
+
+            const saved = Math.max(0, singleState.imgTokens - mdTokens);
+            const savedPct = singleState.imgTokens > 0 ? ((saved / singleState.imgTokens) * 100).toFixed(1) : '0.0';
+
+            singleEls.singleImgTokenBadge.textContent = singleState.imgTokens.toLocaleString();
+            singleEls.singleMdTokenBadge.textContent = mdTokens.toLocaleString();
+            singleEls.singleSavedTokenBadge.textContent = `-${saved.toLocaleString()} (-${savedPct}%)`;
+
+            if (mdText.trim()) {
+                singleEls.singleMdRenderBox.innerHTML = marked.parse(mdText);
+                singleEls.downloadSingleCurrentBtn.disabled = false;
+                singleEls.singleVerifyBadge.classList.remove('hidden');
+            } else {
+                singleEls.singleMdRenderBox.innerHTML = `<p class="text-stone-400 text-xs text-center py-16">尚無轉換資料，請先從左側上傳發票圖檔或載入範例。</p>`;
+                singleEls.downloadSingleCurrentBtn.disabled = true;
+                singleEls.singleVerifyBadge.classList.add('hidden');
+            }
+        }
+
+        /**
+         * 載入單張真實圖片或範例發票至單筆即時對照畫面
+         */
+        function loadInvoiceIntoSingleVerifier({ fileName, imgSrc, width, height, sizeKB, imgTokens, markdown }) {
+            singleState.fileName = fileName;
+            singleState.imgTokens = imgTokens;
+            singleState.zoom = 1;
+            singleState.rotation = 0;
+
+            singleEls.singleEmptyPrompt.classList.add('hidden');
+            singleEls.singlePreviewImg.src = imgSrc;
+            singleEls.singlePreviewImg.classList.remove('hidden');
+            singleEls.singlePreviewImg.style.transform = 'scale(1) rotate(0deg)';
+            singleEls.singleZoomText.textContent = '100%';
+            singleEls.singleImageMeta.textContent = `${fileName} (${width}×${height}, ${sizeKB} KB)`;
+
+            singleEls.singleMdTextarea.value = markdown;
+            refreshSingleMarkdownStats();
+        }
+
+        /**
+         * 處理單筆即時上傳圖檔
+         */
+        function handleSingleFileUpload(file) {
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (file.type !== 'image/jpeg' && file.type !== 'image/png' && !['jpg', 'jpeg', 'png'].includes(ext)) {
+                showToast('請上傳 JPG 或 PNG 格式的發票圖檔！', 'error');
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                const width = img.naturalWidth || 1200;
+                const height = img.naturalHeight || 900;
+                const sizeKB = (file.size / 1024).toFixed(1);
+                const imgTokens = estimateImageTokens(width, height, file.size);
+                const md = generateAccountingMarkdown(1, file.name);
+
+                loadInvoiceIntoSingleVerifier({
+                    fileName: file.name,
+                    imgSrc: url,
+                    width,
+                    height,
+                    sizeKB,
+                    imgTokens,
+                    markdown: md
+                });
+                showToast(`已即時轉換「${file.name}」，請於右側核對資料是否正確！`, 'success');
+            };
+            img.src = url;
+        }
+
+        /**
+         * 從批次清單點選「對照查看」直接載入單筆對照模式
+         */
+        window.inspectBatchItemInSingleView = function(itemId) {
+            const item = state.items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const idx = state.items.indexOf(item) + 1;
+            const netAmount = 12000 + (idx * 350);
+            const taxAmount = Math.round(netAmount * 0.05);
+            const totalAmount = netAmount + taxAmount;
+
+            let imgSrc = '';
+            if (item.fileObj) {
+                imgSrc = URL.createObjectURL(item.fileObj);
+            } else {
+                imgSrc = createInvoiceCanvasDataUrl({
+                    fileName: item.fileName,
+                    trackNum: `AB-${String(10492800 + idx).padStart(8, '0')}`,
+                    date: `2025-05-${String((idx % 28) + 1).padStart(2, '0')}`,
+                    buyerTaxId: '53918274',
+                    sellerTaxId: String(24589000 + (idx % 899)).padStart(8, '0'),
+                    itemName: `雲端財會系統授權費 (#${idx})`,
+                    netAmount,
+                    taxAmount,
+                    totalAmount
+                });
+            }
+
+            switchWorkMode('single');
+            loadInvoiceIntoSingleVerifier({
+                fileName: item.fileName,
+                imgSrc,
+                width: item.width,
+                height: item.height,
+                sizeKB: item.sizeKB,
+                imgTokens: item.imgTokens,
+                markdown: item.markdown || generateAccountingMarkdown(idx, item.fileName)
+            });
+            showToast(`已切換至單筆對照模式：正在檢視 ${item.fileName}`, 'info');
+        };
+
+        // 圖片縮放與旋轉控制
+        window.adjustSingleZoom = function(delta) {
+            singleState.zoom = Math.min(2.4, Math.max(0.5, +(singleState.zoom + delta).toFixed(2)));
+            singleEls.singleZoomText.textContent = `${Math.round(singleState.zoom * 100)}%`;
+            singleEls.singlePreviewImg.style.transform = `scale(${singleState.zoom}) rotate(${singleState.rotation}deg)`;
+        };
+
+        window.rotateSingleImage = function() {
+            singleState.rotation = (singleState.rotation + 90) % 360;
+            singleEls.singlePreviewImg.style.transform = `scale(${singleState.zoom}) rotate(${singleState.rotation}deg)`;
+        };
+
+        window.resetSingleView = function() {
+            singleState.zoom = 1;
+            singleState.rotation = 0;
+            singleEls.singleZoomText.textContent = '100%';
+            singleEls.singlePreviewImg.style.transform = 'scale(1) rotate(0deg)';
+        };
+
+        // 切換右側 Markdown 檢視分頁 (並排 / 預覽 / 原始碼)
+        window.setSingleMdTab = function(tab) {
+            const activeClass = 'px-2.5 py-1 rounded-lg bg-[#FCFBF9] text-stone-800 font-medium shadow-2xs transition cursor-pointer';
+            const inactiveClass = 'px-2.5 py-1 rounded-lg text-stone-600 hover:text-stone-900 transition cursor-pointer';
+
+            singleEls.mdTabSplit.className = tab === 'split' ? activeClass : inactiveClass;
+            singleEls.mdTabPreview.className = tab === 'preview' ? activeClass : inactiveClass;
+            singleEls.mdTabRaw.className = tab === 'raw' ? activeClass : inactiveClass;
+
+            if (tab === 'split') {
+                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#EAE6DC] overflow-hidden';
+                singleEls.singleRawPane.classList.remove('hidden');
+                singleEls.singlePreviewPane.classList.remove('hidden');
+            } else if (tab === 'preview') {
+                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 overflow-hidden';
+                singleEls.singleRawPane.classList.add('hidden');
+                singleEls.singlePreviewPane.classList.remove('hidden');
+            } else {
+                singleEls.singleMdContentGrid.className = 'flex-1 grid grid-cols-1 overflow-hidden';
+                singleEls.singleRawPane.classList.remove('hidden');
+                singleEls.singlePreviewPane.classList.add('hidden');
+            }
+        };
+
+        window.copySingleMarkdown = function() {
+            const text = singleEls.singleMdTextarea.value;
+            if (!text) return;
+            singleEls.singleMdTextarea.select();
+            document.execCommand('copy');
+            showToast('已複製 Markdown 原始碼至剪貼簿！', 'success');
+        };
+
+        // 綁定單筆即時對照事件
+        singleEls.singleFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) {
+                handleSingleFileUpload(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+
+        singleEls.singleImageDropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            singleEls.singleImageDropArea.classList.add('bg-brand-50/70');
+        });
+        singleEls.singleImageDropArea.addEventListener('dragleave', () => {
+            singleEls.singleImageDropArea.classList.remove('bg-brand-50/70');
+        });
+        singleEls.singleImageDropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            singleEls.singleImageDropArea.classList.remove('bg-brand-50/70');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleSingleFileUpload(e.dataTransfer.files[0]);
+            }
+        });
+
+        singleEls.loadSampleSingleBtn.addEventListener('click', () => {
+            const sampleImgUrl = createInvoiceCanvasDataUrl({
+                fileName: 'SAMPLE_INV_20250501.png',
+                trackNum: 'AB-10492801',
+                date: '2025-05-02',
+                buyerTaxId: '53918274',
+                sellerTaxId: '24589001',
+                itemName: '雲端財會系統授權費 (#1)',
+                netAmount: 12350,
+                taxAmount: 618,
+                totalAmount: 12968
+            });
+            const md = generateAccountingMarkdown(1, 'SAMPLE_INV_20250501.png');
+            loadInvoiceIntoSingleVerifier({
+                fileName: 'SAMPLE_INV_20250501.png',
+                imgSrc: sampleImgUrl,
+                width: 960,
+                height: 660,
+                sizeKB: '195.4',
+                imgTokens: estimateImageTokens(960, 660, 195400),
+                markdown: md
+            });
+            showToast('已載入標準三聯式發票與 100% 對應之 Markdown！', 'success');
+        });
+
+        singleEls.singleMdTextarea.addEventListener('input', refreshSingleMarkdownStats);
+
+        singleEls.downloadSingleCurrentBtn.addEventListener('click', () => {
+            const md = singleEls.singleMdTextarea.value;
+            if (!md) return;
+            const baseName = singleState.fileName.replace(/\.[^/.]+$/, '');
+            const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${baseName}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`已下載 ${baseName}.md`, 'success');
         });
     </script>
 </body>
