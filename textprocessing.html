@@ -37,6 +37,11 @@
                             cyan: '#00A3E0',
                             red: '#EF3340',
                             teal: '#41748D',
+                        },
+                        brand: {
+                            navy: '#13274F',
+                            red: '#CE1141',
+                            gold: '#EAAA00'
                         }
                     },
                     fontFamily: {
@@ -100,6 +105,18 @@
             border-color: #00A3E0;
             background-color: rgba(0, 163, 224, 0.1); 
         }
+
+        /* PDF Capturing Styles */
+        .pc-canvas-bg {
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .pc-crop-overlay {
+            border: 2px dashed #CE1141;
+            background-color: rgba(206, 17, 65, 0.14);
+            box-shadow: 0 0 0 9999px rgba(19, 39, 79, 0.50);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-lightBeige min-h-screen flex flex-col font-sans text-gray-800">
@@ -119,6 +136,7 @@
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab4')">BatchProcessor</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab5')">TranMarkdown</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab6')">PDF Remover</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab7')">PDF Capturing</button>
     </nav>
 
     <!-- 內容區域 -->
@@ -636,6 +654,196 @@
             </div>
         </div>
 
+        <!-- =================== TAB 7: PDF Capturing =================== -->
+        <div id="tab7" class="tab-content w-full bg-[#f4f6f9] text-slate-800 p-0 rounded-2xl shadow-xl flex-col border-t-8 border-primaryBlue overflow-hidden">
+            <!-- Top Navigation Bar (內部) -->
+            <div class="bg-[#13274F] text-white shadow-sm border-b-2 border-[#EAAA00]">
+                <div class="w-full px-4 sm:px-6 h-14 flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="bg-[#CE1141] w-8 h-8 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-file-pdf text-sm text-white"></i>
+                        </div>
+                        <h1 class="text-base font-bold tracking-wide text-white">專利 PDF 智慧擷取系統</h1>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <span id="pc-todayDateBadge" class="text-[#EAAA00] text-xs font-mono hidden sm:inline-block"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toast Notification Container -->
+            <div id="pc-toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+            <!-- Main Content (Clean 2-Column Layout) -->
+            <div class="w-full px-4 sm:px-6 py-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- Left Column: Upload & Format Template (5 cols) -->
+                    <div class="lg:col-span-5 flex flex-col gap-5">
+                        
+                        <!-- 1. Compact PDF Upload Bar -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                            <div id="pc-dropZone" class="border-2 border-dashed border-[#13274F]/30 hover:border-[#CE1141] bg-slate-50/70 hover:bg-[#EAAA00]/5 transition rounded-lg p-4 flex items-center justify-between cursor-pointer relative">
+                                <input type="file" id="pc-pdfFileInput" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                <div class="flex items-center gap-3 pointer-events-none">
+                                    <div class="w-10 h-10 bg-[#13274F] text-[#EAAA00] rounded-lg flex items-center justify-center text-base shrink-0">
+                                        <i class="fa-solid fa-file-arrow-up"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-[#13274F]">上傳專利 PDF 檔案</p>
+                                        <p id="pc-fileInfoBadge" class="text-xs text-slate-500">點擊或拖曳 PDF 檔案至此處</p>
+                                    </div>
+                                </div>
+                                <span class="bg-[#13274F] text-white text-xs font-semibold px-3 py-1.5 rounded-md pointer-events-none shrink-0">
+                                    選擇檔案
+                                </span>
+                            </div>
+
+                            <!-- Parsing Progress Bar -->
+                            <div id="pc-progressContainer" class="mt-3 hidden">
+                                <div class="flex justify-between text-xs font-semibold text-[#13274F] mb-1">
+                                    <span id="pc-progressStatusText">正在解析 PDF...</span>
+                                    <span id="pc-progressPercentText">0%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                    <div id="pc-progressBar" class="bg-[#CE1141] h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Clean Output Template Card -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-sm font-bold text-[#13274F] uppercase tracking-wider">##格式樣板</h2>
+                                    <span id="pc-repFigStatusTag" class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                                        待下載 JPG
+                                    </span>
+                                </div>
+                                <button id="pc-copyTemplateBtn" class="bg-[#13274F] hover:bg-[#CE1141] text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5">
+                                    <i class="fa-regular fa-copy text-[#EAAA00]"></i>
+                                    <span>複製內容</span>
+                                </button>
+                            </div>
+
+                            <div class="bg-[#13274F] rounded-lg p-4 border-l-4 border-[#EAAA00]">
+                                <textarea id="pc-finalTemplateOutput" rows="13" class="w-full min-h-[280px] bg-transparent text-white text-sm focus:outline-none resize-y leading-relaxed font-sans" readonly></textarea>
+                            </div>
+
+                            <!-- Collapsible Fine-Tune Editor for A & B -->
+                            <details class="mt-4 group border-t border-slate-100 pt-3">
+                                <summary class="text-xs font-bold text-[#13274F] cursor-pointer flex items-center justify-between select-none hover:text-[#CE1141] transition">
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fa-solid fa-pen-to-square text-[#CE1141]"></i>
+                                        檢視與微調擷取欄位 (A 與 B)
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <span id="pc-badgeStatusA" class="text-[11px] text-slate-400"></span>
+                                        <span id="pc-badgeStatusB" class="text-[11px] text-slate-400"></span>
+                                        <i class="fa-solid fa-chevron-down text-[10px] transition-transform group-open:rotate-180"></i>
+                                    </div>
+                                </summary>
+
+                                <div class="mt-3 space-y-3">
+                                    <div>
+                                        <label for="pc-inputContentA" class="text-xs font-semibold text-[#13274F] block mb-1">
+                                            內容 A（【發明摘要】→【中文】段落，對應至【摘要】）
+                                        </label>
+                                        <textarea id="pc-inputContentA" rows="3" placeholder="擷取之內容 A..." class="w-full rounded-lg border border-slate-200 bg-slate-50 focus:bg-white px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#13274F]"></textarea>
+                                    </div>
+                                    <div>
+                                        <label for="pc-inputContentB" class="text-xs font-semibold text-[#13274F] block mb-1">
+                                            內容 B（【0001】段落內容，對應至【其他】）
+                                        </label>
+                                        <textarea id="pc-inputContentB" rows="3" placeholder="擷取之內容 B..." class="w-full rounded-lg border border-slate-200 bg-slate-50 focus:bg-white px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#13274F]"></textarea>
+                                    </div>
+                                    <div class="flex justify-end">
+                                        <button id="pc-toggleRawTextBtn" type="button" class="text-[11px] text-slate-400 hover:text-[#13274F] underline">
+                                            顯示/隱藏 PDF 原始全文
+                                        </button>
+                                    </div>
+                                    <div id="pc-rawTextSection" class="hidden">
+                                        <textarea id="pc-rawPdfTextArea" rows="4" readonly class="w-full rounded-lg border border-slate-200 bg-slate-100 p-2 text-[11px] font-mono text-slate-600 focus:outline-none"></textarea>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+
+                    </div>
+
+                    <!-- Right Column: Representative Figure Crop & Download (7 cols) -->
+                    <div class="lg:col-span-7">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col">
+                            
+                            <!-- Top Toolbar -->
+                            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-100">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="text-sm font-bold text-[#13274F]">指定代表圖擷取</h2>
+                                    <span id="pc-detectedRepFigBadge" class="bg-[#13274F] text-[#EAAA00] text-xs font-semibold px-2.5 py-0.5 rounded">
+                                        尚未載入 PDF
+                                    </span>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button id="pc-prevPageBtn" disabled class="w-7 h-7 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-[#13274F] hover:text-white disabled:opacity-40 transition" title="上一頁">
+                                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                                    </button>
+                                    <span id="pc-pageIndicator" class="text-xs font-semibold text-[#13274F] px-2">0 / 0</span>
+                                    <button id="pc-nextPageBtn" disabled class="w-7 h-7 rounded border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-[#13274F] hover:text-white disabled:opacity-40 transition" title="下一頁">
+                                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                                    </button>
+                                    <button id="pc-resetCropBtn" disabled class="ml-1 text-xs bg-slate-100 hover:bg-[#13274F] hover:text-white text-[#13274F] font-semibold px-2.5 py-1 rounded transition disabled:opacity-40">
+                                        重新自動對焦圖檔
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Interactive Canvas Area -->
+                            <div id="pc-canvasWrapper" class="relative w-full min-h-[420px] max-h-[640px] overflow-auto rounded-lg border border-slate-200 pc-canvas-bg flex items-center justify-center p-3 select-none">
+                                <!-- Placeholder -->
+                                <div id="pc-canvasEmptyState" class="text-center py-12 px-4">
+                                    <i class="fa-regular fa-image text-3xl text-slate-300 mb-2"></i>
+                                    <p class="text-xs text-slate-400">請上傳專利 PDF 檔案，系統將自動定位【指定代表圖】並精準對焦圖檔範圍</p>
+                                </div>
+
+                                <!-- Interactive PDF Canvas Container -->
+                                <div id="pc-canvasContainer" class="relative hidden shadow-md bg-white">
+                                    <canvas id="pc-pdfRenderCanvas" class="block max-w-full h-auto cursor-crosshair"></canvas>
+                                    <!-- Visual Crop Box -->
+                                    <div id="pc-cropBox" class="pc-crop-overlay absolute hidden rounded-sm">
+                                        <div class="absolute -top-6 left-0 bg-[#CE1141] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow whitespace-nowrap">
+                                            代表圖對焦擷取範圍（可滑鼠拖曳微調）
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Action Bar -->
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 w-full sm:w-auto">
+                                    <div class="w-12 h-12 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden shrink-0">
+                                        <img id="pc-croppedPreviewImg" alt="預覽圖" class="max-w-full max-h-full object-contain hidden" />
+                                        <span id="pc-croppedPreviewEmpty" class="text-[10px] text-slate-400">預覽</span>
+                                    </div>
+                                    <div class="text-xs">
+                                        <p class="text-slate-500">下載檔名：<span id="pc-expectedFileName" class="font-mono font-bold text-[#CE1141]">代表圖.jpg</span></p>
+                                        <p class="text-[11px] text-slate-400">系統已自動偵測圖檔墨跡邊界對焦，亦可直接在畫布上拖曳調整範圍</p>
+                                    </div>
+                                </div>
+
+                                <button id="pc-downloadRepFigBtn" disabled class="w-full sm:w-auto bg-[#CE1141] hover:bg-[#13274F] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-2.5 px-5 rounded-lg transition flex items-center justify-center gap-2 text-xs shadow-sm">
+                                    <i class="fa-solid fa-download text-[#EAAA00]"></i>
+                                    <span>下載代表圖 (.JPG) 並標記 OK</span>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- 最下方顯示 Copyright -->
@@ -708,6 +916,9 @@
             
             // 綁定 PDF Annotation Remover 的事件
             setupPdfAnnotationRemover();
+
+            // 綁定 PDF Capturing 的事件
+            setupPdfCapturing();
         });
 
         // ==========================================
@@ -1788,6 +1999,822 @@ c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
             }
+        }
+
+        // ==========================================
+        // TAB 7: PDF Capturing 邏輯
+        // ==========================================
+        function setupPdfCapturing() {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+
+            // Application State
+            const appState = {
+                pdfDoc: null,
+                currentPage: 1,
+                totalPages: 0,
+                fullText: '',
+                pageTexts: [],
+                extractedA: '',
+                extractedB: '',
+                repFigLabel: '',
+                repFigPage: 1,
+                isRepFigDownloaded: false,
+                cropRect: { x: 40, y: 80, width: 300, height: 220 },
+                isDraggingCrop: false,
+                dragStartX: 0,
+                dragStartY: 0
+            };
+
+            // DOM Elements Reference
+            const els = {
+                pdfFileInput: document.getElementById('pc-pdfFileInput'),
+                dropZone: document.getElementById('pc-dropZone'),
+                fileInfoBadge: document.getElementById('pc-fileInfoBadge'),
+                progressContainer: document.getElementById('pc-progressContainer'),
+                progressBar: document.getElementById('pc-progressBar'),
+                progressStatusText: document.getElementById('pc-progressStatusText'),
+                progressPercentText: document.getElementById('pc-progressPercentText'),
+                inputContentA: document.getElementById('pc-inputContentA'),
+                inputContentB: document.getElementById('pc-inputContentB'),
+                badgeStatusA: document.getElementById('pc-badgeStatusA'),
+                badgeStatusB: document.getElementById('pc-badgeStatusB'),
+                finalTemplateOutput: document.getElementById('pc-finalTemplateOutput'),
+                repFigStatusTag: document.getElementById('pc-repFigStatusTag'),
+                copyTemplateBtn: document.getElementById('pc-copyTemplateBtn'),
+                toggleRawTextBtn: document.getElementById('pc-toggleRawTextBtn'),
+                rawTextSection: document.getElementById('pc-rawTextSection'),
+                rawPdfTextArea: document.getElementById('pc-rawPdfTextArea'),
+                detectedRepFigBadge: document.getElementById('pc-detectedRepFigBadge'),
+                prevPageBtn: document.getElementById('pc-prevPageBtn'),
+                nextPageBtn: document.getElementById('pc-nextPageBtn'),
+                pageIndicator: document.getElementById('pc-pageIndicator'),
+                resetCropBtn: document.getElementById('pc-resetCropBtn'),
+                canvasEmptyState: document.getElementById('pc-canvasEmptyState'),
+                canvasContainer: document.getElementById('pc-canvasContainer'),
+                pdfRenderCanvas: document.getElementById('pc-pdfRenderCanvas'),
+                cropBox: document.getElementById('pc-cropBox'),
+                croppedPreviewImg: document.getElementById('pc-croppedPreviewImg'),
+                croppedPreviewEmpty: document.getElementById('pc-croppedPreviewEmpty'),
+                expectedFileName: document.getElementById('pc-expectedFileName'),
+                downloadRepFigBtn: document.getElementById('pc-downloadRepFigBtn'),
+                todayDateBadge: document.getElementById('pc-todayDateBadge'),
+                toastContainer: document.getElementById('pc-toastContainer')
+            };
+
+            if (!els.pdfFileInput) return;
+
+            // Get today's date string (YYYYMMDD or YYYY-MM-DD)
+            function getTodayFormattedDate(withHyphens = false) {
+                const now = new Date();
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                return withHyphens ? `${yyyy}-${mm}-${dd}` : `${yyyy}${mm}${dd}`;
+            }
+
+            // Display non-intrusive toast notifications
+            function showToast(message, type = 'info') {
+                const colors = {
+                    success: 'bg-[#13274F] border-[#EAAA00] text-white',
+                    warning: 'bg-[#EAAA00] border-[#13274F] text-[#13274F]',
+                    error: 'bg-[#CE1141] border-white text-white',
+                    info: 'bg-[#13274F] border-slate-400 text-white'
+                };
+                const toast = document.createElement('div');
+                toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg border-l-4 text-xs font-semibold transition-all duration-300 ${colors[type] || colors.info}`;
+                toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${message}</span>`;
+                els.toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3200);
+            }
+
+            // Normalize bracketed headers and extract A, B, and Representative Figure label
+            function parsePatentTextSections(fullText) {
+                let normalized = fullText.replace(/【\s*([^】]+?)\s*】/g, (_, inner) => {
+                    return `【${inner.replace(/\s+/g, '')}】`;
+                });
+
+                // 1. Extract A: strictly 【發明摘要】 -> 【中文】 paragraph
+                let extractedA = '';
+                const matchA = normalized.match(/【(?:發明|新型)?摘要】[\s\S]*?【中文】([\s\S]*?)(?=【|$)/i);
+                if (matchA && matchA[1]) {
+                    extractedA = matchA[1]
+                        .replace(/第\s*\d+\s*頁\s*[，,]\s*共\s*\d+\s*頁（[^）]*）/g, '')
+                        .replace(/[\s\u3000]+/g, '');
+                } else {
+                    const fallbackA = normalized.match(/【中文】([\s\S]*?)(?=【(?:英文|指定代表圖|代表圖|特徵化學式|發明名稱|新型名稱|技術領域|發明內容)|$)/i);
+                    if (fallbackA && fallbackA[1]) {
+                        extractedA = fallbackA[1]
+                            .replace(/第\s*\d+\s*頁\s*[，,]\s*共\s*\d+\s*頁（[^）]*）/g, '')
+                            .replace(/[\s\u3000]+/g, '');
+                    }
+                }
+
+                // 2. Extract B: 【0001】 paragraph content
+                let extractedB = '';
+                const matchB = normalized.match(/(?:【0001】|\[0001\])([\s\S]*?)(?=【0002】|\[0002\]|【[^0-9】]+】|$)/i);
+                if (matchB && matchB[1]) {
+                    extractedB = matchB[1]
+                        .replace(/第\s*\d+\s*頁\s*[，,]\s*共\s*\d+\s*頁（[^）]*）/g, '')
+                        .replace(/[\s\u3000]+/g, '');
+                }
+
+                // 3. Extract Representative Figure label from 【指定代表圖】
+                let repFigLabel = '';
+                const repSectionMatch = normalized.match(/【(?:指定)?代表圖】([\s\S]{0,120})/i);
+                if (repSectionMatch && repSectionMatch[1]) {
+                    const snippet = repSectionMatch[1].split(/【(?:本案|代表圖之|特徵化學式|發明|新型|中文|英文|申請|技術|先前|圖式簡單)/)[0];
+                    const figToken = snippet.match(/(第\s*[0-9一二三四五六七八九十百千]+[A-Za-z0-9\-]*\s*圖|圖\s*[0-9一二三四五六七八九十百千]+[A-Za-z0-9\-]*|FIG\.?\s*[0-9A-Za-z\-]+)/i);
+                    if (figToken) {
+                        repFigLabel = figToken[1].replace(/\s+/g, '');
+                    } else {
+                        const cleanedSnippet = snippet.replace(/^[：:\s【】\[\]]+/, '').split(/[\n\r【】]/)[0].trim();
+                        if (cleanedSnippet && !/^無$/i.test(cleanedSnippet)) {
+                            repFigLabel = cleanedSnippet.replace(/\s+/g, '');
+                        }
+                    }
+                }
+
+                return { extractedA, extractedB, repFigLabel };
+            }
+
+            // Convert Chinese numeral (一 ~ 九十九) to Arabic integer string
+            function chineseNumToInt(cnStr) {
+                if (!cnStr) return null;
+                if (/^\d+$/.test(cnStr)) return cnStr;
+                const map = { '零': 0, '〇': 0, '一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+                if (cnStr === '十') return '10';
+                if (cnStr.includes('十')) {
+                    const parts = cnStr.split('十');
+                    const tens = parts[0] === '' ? 1 : (map[parts[0]] || 0);
+                    const ones = parts[1] === '' ? 0 : (map[parts[1]] || 0);
+                    if (tens > 0 || ones > 0) return String(tens * 10 + ones);
+                }
+                let val = 0;
+                for (const ch of cnStr) {
+                    if (map[ch] === undefined) return null;
+                    val = val * 10 + map[ch];
+                }
+                return val > 0 ? String(val) : null;
+            }
+
+            // Convert Arabic integer string (1 ~ 99) to Chinese numeral
+            function intToChineseNum(numStr) {
+                const n = parseInt(numStr, 10);
+                if (isNaN(n) || n <= 0 || n >= 100) return null;
+                const digits = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+                if (n < 10) return digits[n];
+                if (n === 10) return '十';
+                if (n < 20) return '十' + digits[n % 10];
+                const tens = Math.floor(n / 10);
+                const ones = n % 10;
+                return digits[tens] + '十' + digits[ones];
+            }
+
+            // Build equivalent figure label variants
+            function buildFigureSearchVariants(label) {
+                if (!label) return [];
+                const clean = label.replace(/[【】\[\]\s：:]/g, '');
+                if (!clean) return [];
+
+                let coreToken = '';
+                const m1 = clean.match(/^第([0-9一二三四五六七八九十百]+[A-Za-z0-9\-]*)圖$/i);
+                const m2 = clean.match(/^圖([0-9一二三四五六七八九十百]+[A-Za-z0-9\-]*)$/i);
+                const m3 = clean.match(/^FIG\.?([0-9A-Za-z\-]+)$/i);
+
+                if (m1) coreToken = m1[1];
+                else if (m2) coreToken = m2[1];
+                else if (m3) coreToken = m3[1];
+                else if (/^[0-9一二三四五六七八九十百]+[A-Za-z0-9\-]*$/.test(clean)) coreToken = clean;
+
+                const variants = new Set([clean]);
+                if (coreToken) {
+                    const numMatch = coreToken.match(/^([0-9]+|[一二三四五六七八九十百]+)(.*)$/);
+                    if (numMatch) {
+                        const baseRaw = numMatch[1];
+                        const suffix = numMatch[2] || '';
+                        const arabicBase = chineseNumToInt(baseRaw) || baseRaw;
+                        const chineseBase = intToChineseNum(arabicBase) || baseRaw;
+
+                        const bases = new Set([baseRaw, arabicBase, chineseBase]);
+                        bases.forEach(b => {
+                            if (!b) return;
+                            const token = `${b}${suffix}`;
+                            variants.add(`第${token}圖`);
+                            variants.add(`圖${token}`);
+                            if (/^\d/.test(token)) {
+                                variants.add(`FIG.${token}`);
+                                variants.add(`FIG${token}`);
+                            }
+                        });
+                    }
+                }
+                return Array.from(variants);
+            }
+
+            // Check if a line contains a standalone figure caption
+            function lineHasStandaloneFigureCaption(lineText, variants = null) {
+                const compact = (lineText || '')
+                    .replace(/第\s*\d+\s*頁\s*[，,]\s*共\s*\d+\s*頁（[^）]*）/g, '')
+                    .replace(/【(?:發明圖式|新型圖式|圖式)】/g, '')
+                    .replace(/\s+/g, '');
+                if (!compact) return false;
+
+                if (compact.length > 26 || /[為係表示顯示說明實施例步驟流程參照如第剖視立體方塊示意結構局部放大]/.test(compact)) {
+                    return false;
+                }
+
+                if (variants && variants.length > 0) {
+                    return variants.some(v => {
+                        const rawV = v.replace(/[【】\[\]\s]/g, '');
+                        const escaped = rawV.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`(?:^|[【\\[])(${escaped})(?:[】\\]]|$)(?![0-9A-Za-z一二三四五六七八九十圖])`, 'i');
+                        if (regex.test(compact)) return true;
+
+                        const exactLineRegex = new RegExp(`^${escaped}$`, 'i');
+                        return exactLineRegex.test(compact);
+                    });
+                }
+
+                return /(?:^|[【\[])(第[0-9一二三四五六七八九十百]+[A-Za-z0-9\-]*圖|圖[0-9一二三四五六七八九十百]+[A-Za-z0-9\-]*|FIG\.?[0-9A-Za-z\-]+)(?:[】\]]|$)/i.test(compact);
+            }
+
+            // Locate the exact page inside 【發明圖式】 that contains the target figure
+            function locateRepresentativeFigurePage(pageTexts, repFigLabel) {
+                const total = pageTexts.length - 1;
+                if (total <= 0) return 1;
+
+                const variants = buildFigureSearchVariants(repFigLabel);
+
+                let briefDescPage = -1;
+                let claimsPage = -1;
+                let drawingsStartPage = -1;
+
+                for (let p = 1; p <= total; p++) {
+                    const compact = (pageTexts[p] || '').replace(/\s+/g, '');
+                    if (/【圖式簡單說明】/.test(compact)) briefDescPage = p;
+                    if (/【(?:發明|新型)?申請專利範圍】/.test(compact)) claimsPage = p;
+                }
+
+                const minDrawingsSearchPage = Math.max(1, briefDescPage, claimsPage);
+
+                for (let p = minDrawingsSearchPage; p <= total; p++) {
+                    const compact = (pageTexts[p] || '').replace(/\s+/g, '');
+                    if (
+                        /【(?:發明圖式|新型圖式|圖式)】/.test(compact) ||
+                        /第\d+頁[，,]共\d+頁（(?:發明|新型)?圖式）/.test(compact)
+                    ) {
+                        drawingsStartPage = p;
+                        break;
+                    }
+                }
+
+                if (drawingsStartPage === -1 && minDrawingsSearchPage > 1 && minDrawingsSearchPage < total) {
+                    drawingsStartPage = minDrawingsSearchPage + 1;
+                }
+
+                const searchStart = drawingsStartPage !== -1 ? drawingsStartPage : 2;
+
+                if (variants.length > 0) {
+                    for (let p = searchStart; p <= total; p++) {
+                        const pageStr = pageTexts[p] || '';
+                        const compactPage = pageStr.replace(/\s+/g, '');
+
+                        if (/【指定代表圖】/.test(compactPage) && !/【(?:發明圖式|新型圖式|圖式)】/.test(compactPage)) {
+                            continue;
+                        }
+                        if (/【圖式簡單說明】/.test(compactPage) && !/【(?:發明圖式|新型圖式|圖式)】/.test(compactPage)) {
+                            continue;
+                        }
+
+                        const lines = pageStr.split('\n');
+                        if (lines.some(line => lineHasStandaloneFigureCaption(line, variants))) {
+                            return p;
+                        }
+                    }
+
+                    for (let p = searchStart; p <= total; p++) {
+                        const compactPage = (pageTexts[p] || '').replace(/\s+/g, '');
+                        if (/【指定代表圖】/.test(compactPage) && !/【(?:發明圖式|新型圖式|圖式)】/.test(compactPage)) continue;
+
+                        const matchedBracket = variants.some(v => {
+                            const rawV = v.replace(/[【】\[\]\s]/g, '');
+                            const escaped = rawV.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const bracketRegex = new RegExp(`[【\\[]${escaped}[】\\]](?![為係表示顯示說明])`, 'i');
+                            return bracketRegex.test(compactPage);
+                        });
+                        if (matchedBracket) return p;
+                    }
+                }
+
+                return drawingsStartPage !== -1 ? drawingsStartPage : total;
+            }
+
+            // Scan canvas pixels within a vertical band to tightly bound non-white drawing ink
+            function findInkBoundingBox(canvas, bandTop, bandBottom) {
+                const ctx = canvas.getContext('2d');
+                const w = canvas.width;
+                const h = canvas.height;
+
+                const yStart = Math.max(0, Math.floor(bandTop));
+                const yEnd = Math.min(h - 1, Math.ceil(bandBottom));
+                const xMargin = Math.round(w * 0.04);
+
+                if (yEnd <= yStart) return null;
+
+                const imgData = ctx.getImageData(0, yStart, w, yEnd - yStart + 1).data;
+                let minX = w, maxX = 0, minY = yEnd, maxY = yStart;
+                let inkCount = 0;
+
+                for (let row = 0; row <= yEnd - yStart; row += 2) {
+                    for (let col = xMargin; col < w - xMargin; col += 2) {
+                        const idx = (row * w + col) * 4;
+                        const r = imgData[idx];
+                        const g = imgData[idx + 1];
+                        const b = imgData[idx + 2];
+                        const a = imgData[idx + 3];
+                        if (a > 30 && (r < 242 || g < 242 || b < 242)) {
+                            inkCount++;
+                            if (col < minX) minX = col;
+                            if (col > maxX) maxX = col;
+                            const absY = yStart + row;
+                            if (absY < minY) minY = absY;
+                            if (absY > maxY) maxY = absY;
+                        }
+                    }
+                }
+
+                if (inkCount < 15 || maxX <= minX || maxY <= minY) return null;
+
+                const pad = Math.round(w * 0.025);
+                const rx = Math.max(0, minX - pad);
+                const ry = Math.max(0, minY - pad);
+                const rw = Math.min(w - rx, (maxX - minX) + pad * 2);
+                const rh = Math.min(h - ry, (maxY - minY) + pad * 2);
+
+                return { x: rx, y: ry, width: rw, height: rh };
+            }
+
+            // Auto-detect and focus the target figure on the rendered PDF page
+            async function autoDetectAndCropFigureOnPage(page, viewport) {
+                const canvas = els.pdfRenderCanvas;
+                const textContent = await page.getTextContent();
+
+                const rawItems = [];
+                for (const item of textContent.items) {
+                    const str = (item.str || '').trim();
+                    if (!str) continue;
+                    const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+                    rawItems.push({ str, x: vx, y: vy });
+                }
+
+                rawItems.sort((a, b) => (Math.abs(a.y - b.y) <= 6 ? a.x - b.x : a.y - b.y));
+                const lines = [];
+                for (const item of rawItems) {
+                    const prev = lines[lines.length - 1];
+                    if (prev && Math.abs(prev.y - item.y) <= 6) {
+                        prev.text += item.str;
+                    } else {
+                        lines.push({ text: item.str, y: item.y });
+                    }
+                }
+
+                let safeTop = Math.round(canvas.height * 0.05);
+                let safeBottom = Math.round(canvas.height * 0.93);
+
+                const variants = buildFigureSearchVariants(appState.repFigLabel);
+                const captions = [];
+
+                for (const line of lines) {
+                    const compact = line.text.replace(/\s+/g, '');
+                    if (/^【(?:發明圖式|新型圖式|圖式)】$/.test(compact) && line.y < canvas.height * 0.28) {
+                        safeTop = Math.max(safeTop, Math.round(line.y + 18));
+                        continue;
+                    }
+                    if (/第\d+頁[，,]共\d+頁/.test(compact) && line.y > canvas.height * 0.82) {
+                        safeBottom = Math.min(safeBottom, Math.round(line.y - 22));
+                        continue;
+                    }
+                    if (lineHasStandaloneFigureCaption(compact)) {
+                        const isTarget = variants.length > 0 && lineHasStandaloneFigureCaption(compact, variants);
+                        captions.push({ text: compact, y: line.y, isTarget });
+                    }
+                }
+
+                captions.sort((a, b) => a.y - b.y);
+                const targetIdx = captions.findIndex(c => c.isTarget);
+
+                if (targetIdx !== -1 && captions.length > 1) {
+                    const targetCap = captions[targetIdx];
+                    const prevCap = targetIdx > 0 ? captions[targetIdx - 1] : null;
+                    const nextCap = targetIdx < captions.length - 1 ? captions[targetIdx + 1] : null;
+
+                    const firstGapTop = captions[0].y - safeTop;
+                    const lastGapBottom = safeBottom - captions[captions.length - 1].y;
+                    const captionBelowDrawing = firstGapTop > lastGapBottom;
+
+                    if (captionBelowDrawing) {
+                        safeTop = prevCap ? Math.round(prevCap.y + 14) : safeTop;
+                        safeBottom = Math.round(targetCap.y + 20);
+                    } else {
+                        safeTop = Math.max(safeTop, Math.round(targetCap.y - 24));
+                        safeBottom = nextCap ? Math.round(nextCap.y - 16) : safeBottom;
+                    }
+                }
+
+                const inkBox = findInkBoundingBox(canvas, safeTop, safeBottom);
+                if (inkBox) {
+                    appState.cropRect = inkBox;
+                } else {
+                    const padX = Math.round(canvas.width * 0.06);
+                    appState.cropRect = {
+                        x: padX,
+                        y: safeTop,
+                        width: canvas.width - padX * 2,
+                        height: Math.max(80, safeBottom - safeTop)
+                    };
+                }
+            }
+
+            // Render a specific PDF page onto the canvas and optionally auto-focus the figure
+            async function renderPdfPage(pageNum, autoCrop = true) {
+                if (!appState.pdfDoc) return;
+                const targetPage = Math.max(1, Math.min(appState.totalPages, pageNum));
+                appState.currentPage = targetPage;
+
+                const page = await appState.pdfDoc.getPage(targetPage);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = els.pdfRenderCanvas;
+                const ctx = canvas.getContext('2d');
+
+                canvas.width = Math.round(viewport.width);
+                canvas.height = Math.round(viewport.height);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+
+                els.canvasEmptyState.classList.add('hidden');
+                els.canvasContainer.classList.remove('hidden');
+
+                els.pageIndicator.textContent = `${targetPage} / ${appState.totalPages}`;
+                els.prevPageBtn.disabled = targetPage <= 1;
+                els.nextPageBtn.disabled = targetPage >= appState.totalPages;
+                els.resetCropBtn.disabled = false;
+                els.downloadRepFigBtn.disabled = false;
+
+                if (autoCrop) {
+                    await autoDetectAndCropFigureOnPage(page, viewport);
+                }
+
+                renderCropBoxOverlay();
+                updateCroppedPreviewImage();
+            }
+
+            // Update visual crop overlay box on canvas using percentage positioning
+            function renderCropBoxOverlay() {
+                const canvas = els.pdfRenderCanvas;
+                if (!canvas.width || !canvas.height) return;
+
+                const x = Math.max(0, Math.min(canvas.width - 1, appState.cropRect.x));
+                const y = Math.max(0, Math.min(canvas.height - 1, appState.cropRect.y));
+                const width = Math.max(1, Math.min(canvas.width - x, appState.cropRect.width));
+                const height = Math.max(1, Math.min(canvas.height - y, appState.cropRect.height));
+
+                appState.cropRect = { x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) };
+
+                const leftPct = (appState.cropRect.x / canvas.width) * 100;
+                const topPct = (appState.cropRect.y / canvas.height) * 100;
+                const widthPct = (appState.cropRect.width / canvas.width) * 100;
+                const heightPct = (appState.cropRect.height / canvas.height) * 100;
+
+                els.cropBox.classList.remove('hidden');
+                els.cropBox.style.left = `${leftPct}%`;
+                els.cropBox.style.top = `${topPct}%`;
+                els.cropBox.style.width = `${widthPct}%`;
+                els.cropBox.style.height = `${heightPct}%`;
+            }
+
+            // Update the small cropped thumbnail preview in the bottom bar
+            function updateCroppedPreviewImage() {
+                const sourceCanvas = els.pdfRenderCanvas;
+                if (!sourceCanvas.width || !sourceCanvas.height) return;
+
+                const x = Math.max(0, Math.min(sourceCanvas.width - 1, Math.round(appState.cropRect.x)));
+                const y = Math.max(0, Math.min(sourceCanvas.height - 1, Math.round(appState.cropRect.y)));
+                const width = Math.max(1, Math.min(sourceCanvas.width - x, Math.round(appState.cropRect.width)));
+                const height = Math.max(1, Math.min(sourceCanvas.height - y, Math.round(appState.cropRect.height)));
+                if (width <= 0 || height <= 0) return;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                tempCtx.fillStyle = '#FFFFFF';
+                tempCtx.fillRect(0, 0, width, height);
+                tempCtx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
+
+                els.croppedPreviewImg.src = tempCanvas.toDataURL('image/jpeg', 0.92);
+                els.croppedPreviewImg.classList.remove('hidden');
+                els.croppedPreviewEmpty.classList.add('hidden');
+            }
+
+            // Initialize mouse and touch crop interactions on the PDF canvas
+            function initCanvasCropInteractions() {
+                const canvas = els.pdfRenderCanvas;
+
+                const getCanvasCoords = (clientX, clientY) => {
+                    const rect = canvas.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return { x: 0, y: 0 };
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+                    return {
+                        x: Math.max(0, Math.min(canvas.width, (clientX - rect.left) * scaleX)),
+                        y: Math.max(0, Math.min(canvas.height, (clientY - rect.top) * scaleY))
+                    };
+                };
+
+                const startDrag = (clientX, clientY) => {
+                    if (!appState.pdfDoc) return;
+                    const pos = getCanvasCoords(clientX, clientY);
+                    appState.isDraggingCrop = true;
+                    appState.dragStartX = pos.x;
+                    appState.dragStartY = pos.y;
+                    appState.cropRect = { x: Math.round(pos.x), y: Math.round(pos.y), width: 1, height: 1 };
+                    renderCropBoxOverlay();
+                };
+
+                const moveDrag = (clientX, clientY) => {
+                    if (!appState.isDraggingCrop) return;
+                    const pos = getCanvasCoords(clientX, clientY);
+                    const x1 = Math.min(appState.dragStartX, pos.x);
+                    const y1 = Math.min(appState.dragStartY, pos.y);
+                    const x2 = Math.max(appState.dragStartX, pos.x);
+                    const y2 = Math.max(appState.dragStartY, pos.y);
+
+                    const clampedX = Math.max(0, Math.min(canvas.width - 20, x1));
+                    const clampedY = Math.max(0, Math.min(canvas.height - 20, y1));
+                    const clampedW = Math.max(20, Math.min(canvas.width - clampedX, x2 - clampedX));
+                    const clampedH = Math.max(20, Math.min(canvas.height - clampedY, y2 - clampedY));
+
+                    appState.cropRect = {
+                        x: Math.round(clampedX),
+                        y: Math.round(clampedY),
+                        width: Math.round(clampedW),
+                        height: Math.round(clampedH)
+                    };
+                    renderCropBoxOverlay();
+                };
+
+                const endDrag = () => {
+                    if (!appState.isDraggingCrop) return;
+                    appState.isDraggingCrop = false;
+                    renderCropBoxOverlay();
+                    updateCroppedPreviewImage();
+                };
+
+                canvas.addEventListener('mousedown', (e) => startDrag(e.clientX, e.clientY));
+                window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+                window.addEventListener('mouseup', endDrag);
+
+                canvas.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        e.preventDefault();
+                        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+                    }
+                }, { passive: false });
+                window.addEventListener('touchmove', (e) => {
+                    if (appState.isDraggingCrop && e.touches.length === 1) {
+                        moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+                    }
+                }, { passive: false });
+                window.addEventListener('touchend', endDrag);
+            }
+
+            // Download the cropped figure as 代表圖.jpg and mark OK in ##格式樣板
+            function downloadRepresentativeJpg() {
+                const sourceCanvas = els.pdfRenderCanvas;
+                if (!sourceCanvas.width || !sourceCanvas.height) {
+                    showToast('請先上傳專利 PDF 檔案。', 'warning');
+                    return;
+                }
+
+                const x = Math.max(0, Math.min(sourceCanvas.width - 1, Math.round(appState.cropRect.x)));
+                const y = Math.max(0, Math.min(sourceCanvas.height - 1, Math.round(appState.cropRect.y)));
+                const width = Math.max(1, Math.min(sourceCanvas.width - x, Math.round(appState.cropRect.width)));
+                const height = Math.max(1, Math.min(sourceCanvas.height - y, Math.round(appState.cropRect.height)));
+
+                const exportCanvas = document.createElement('canvas');
+                exportCanvas.width = width;
+                exportCanvas.height = height;
+                const ctx = exportCanvas.getContext('2d');
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
+
+                const fileName = '代表圖.jpg';
+                const dataUrl = exportCanvas.toDataURL('image/jpeg', 0.95);
+
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                appState.isRepFigDownloaded = true;
+                els.repFigStatusTag.textContent = 'OK';
+                els.repFigStatusTag.className = 'text-[11px] font-bold px-2 py-0.5 rounded bg-[#EAAA00] text-[#13274F]';
+
+                updateTemplateOutput();
+                showToast(`已下載「${fileName}」，並於【代表圖】旁標記 OK！`, 'success');
+            }
+
+            // Generate the mandatory "##格式樣板" output
+            function updateTemplateOutput() {
+                const rawA = (els.inputContentA.value || '').replace(/[\s\u3000]+/g, '');
+                const rawB = (els.inputContentB.value || '').replace(/[\s\u3000]+/g, '');
+
+                const displayA = rawA || '（尚未擷取內容 A：【發明摘要】之【中文】段落）';
+                const normalizedB = rawB.replace(/[。．.]+$/, '');
+                const displayB = normalizedB || '（尚未擷取內容 B：【0001】段落）';
+                const repStatus = appState.isRepFigDownloaded ? 'OK' : '';
+
+                const formattedText =
+`============================
+<【PSC固定格式】>
+【摘要】${displayA}
+【其他】${displayB}。因此根據以上特徵給予下表之關鍵字，並利用局內的國內外專利資料庫全域檢索系統檢索相關之前案。
+【代表圖】${repStatus}`;
+
+                els.finalTemplateOutput.value = formattedText;
+            }
+
+            // Handle user uploaded PDF file
+            async function handlePdfUpload(file) {
+                if (!file || file.type !== 'application/pdf') {
+                    showToast('請選擇有效的 PDF 檔案 (.pdf)', 'error');
+                    return;
+                }
+
+                try {
+                    appState.isRepFigDownloaded = false;
+                    els.repFigStatusTag.textContent = '待下載 JPG';
+                    els.repFigStatusTag.className = 'text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600';
+                    els.fileInfoBadge.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+
+                    els.progressContainer.classList.remove('hidden');
+                    els.progressBar.style.width = '10%';
+                    els.progressStatusText.textContent = '正在讀取 PDF...';
+                    els.progressPercentText.textContent = '10%';
+
+                    const arrayBuffer = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                    const pdfDoc = await loadingTask.promise;
+
+                    appState.pdfDoc = pdfDoc;
+                    appState.totalPages = pdfDoc.numPages;
+                    appState.pageTexts = [''];
+
+                    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                        const percent = Math.round((pageNum / pdfDoc.numPages) * 90) + 10;
+                        els.progressBar.style.width = `${percent}%`;
+                        els.progressStatusText.textContent = `正在解析第 ${pageNum} / ${pdfDoc.numPages} 頁...`;
+                        els.progressPercentText.textContent = `${percent}%`;
+
+                        const page = await pdfDoc.getPage(pageNum);
+                        const textContent = await page.getTextContent();
+                        const viewport = page.getViewport({ scale: 1.0 });
+
+                        const lineItems = [];
+                        for (const item of textContent.items) {
+                            const str = item.str || '';
+                            if (!str.trim()) continue;
+                            const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+                            lineItems.push({ str, x: vx, y: vy });
+                        }
+
+                        lineItems.sort((a, b) => (Math.abs(a.y - b.y) <= 5 ? a.x - b.x : a.y - b.y));
+
+                        const mergedLines = [];
+                        for (const item of lineItems) {
+                            const prev = mergedLines[mergedLines.length - 1];
+                            if (prev && Math.abs(prev.y - item.y) <= 5) {
+                                prev.text += item.str;
+                            } else {
+                                mergedLines.push({ text: item.str, y: item.y });
+                            }
+                        }
+
+                        const pageString = mergedLines.map(l => l.text).join('\n');
+                        appState.pageTexts[pageNum] = pageString;
+                    }
+
+                    appState.fullText = appState.pageTexts.slice(1).join('\n\n');
+                    els.rawPdfTextArea.value = appState.fullText;
+
+                    const { extractedA, extractedB, repFigLabel } = parsePatentTextSections(appState.fullText);
+                    appState.extractedA = extractedA;
+                    appState.extractedB = extractedB;
+                    appState.repFigLabel = repFigLabel;
+
+                    els.inputContentA.value = extractedA;
+                    els.inputContentB.value = extractedB;
+
+                    els.badgeStatusA.innerHTML = extractedA
+                        ? '<span class="text-[#13274F] font-bold">A：已擷取</span>'
+                        : '<span class="text-[#CE1141]">A：未找到</span>';
+                    els.badgeStatusB.innerHTML = extractedB
+                        ? '<span class="text-[#13274F] font-bold">B：已擷取</span>'
+                        : '<span class="text-[#CE1141]">B：未找到</span>';
+
+                    updateTemplateOutput();
+
+                    const targetPage = locateRepresentativeFigurePage(appState.pageTexts, repFigLabel);
+                    appState.repFigPage = targetPage;
+
+                    els.detectedRepFigBadge.textContent = repFigLabel
+                        ? `【指定代表圖】：${repFigLabel} → 第 ${targetPage} 頁`
+                        : `【發明圖式】第 ${targetPage} 頁`;
+
+                    await renderPdfPage(targetPage, true);
+
+                    setTimeout(() => {
+                        els.progressContainer.classList.add('hidden');
+                    }, 500);
+
+                    showToast('已完成 A、B 段落擷取並自動對焦【指定代表圖】範圍！', 'success');
+                } catch (err) {
+                    console.error('Error parsing PDF:', err);
+                    els.progressContainer.classList.add('hidden');
+                    showToast('無法解析此 PDF 檔案，請確認檔案是否損毀或加密。', 'error');
+                }
+            }
+
+            // Copy ##格式樣板 content to clipboard
+            function copyTemplateToClipboard() {
+                const textarea = els.finalTemplateOutput;
+                textarea.select();
+                textarea.setSelectionRange(0, 99999);
+                try {
+                    document.execCommand('copy');
+                    showToast('已複製「##格式樣板」內容至剪貼簿！', 'success');
+                } catch (err) {
+                    showToast('複製失敗，請手動全選複製。', 'error');
+                }
+                window.getSelection().removeAllRanges();
+            }
+
+            // Initialize UI and bind event listeners
+            els.todayDateBadge.textContent = getTodayFormattedDate(true);
+            els.expectedFileName.textContent = '代表圖.jpg';
+
+            updateTemplateOutput();
+            initCanvasCropInteractions();
+
+            els.pdfFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    handlePdfUpload(e.target.files[0]);
+                }
+            });
+
+            els.dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                els.dropZone.classList.add('border-[#CE1141]', 'bg-[#EAAA00]/15');
+            });
+
+            els.dropZone.addEventListener('dragleave', () => {
+                els.dropZone.classList.remove('border-[#CE1141]', 'bg-[#EAAA00]/15');
+            });
+
+            els.dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                els.dropZone.classList.remove('border-[#CE1141]', 'bg-[#EAAA00]/15');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handlePdfUpload(e.dataTransfer.files[0]);
+                }
+            });
+
+            els.inputContentA.addEventListener('input', updateTemplateOutput);
+            els.inputContentB.addEventListener('input', updateTemplateOutput);
+
+            els.prevPageBtn.addEventListener('click', () => renderPdfPage(appState.currentPage - 1, true));
+            els.nextPageBtn.addEventListener('click', () => renderPdfPage(appState.currentPage + 1, true));
+            els.resetCropBtn.addEventListener('click', () => renderPdfPage(appState.currentPage, true));
+            els.downloadRepFigBtn.addEventListener('click', downloadRepresentativeJpg);
+
+            els.copyTemplateBtn.addEventListener('click', copyTemplateToClipboard);
+
+            els.toggleRawTextBtn.addEventListener('click', () => {
+                els.rawTextSection.classList.toggle('hidden');
+            });
         }
     </script>
     <!-- 引入 FontAwesome 作為 Placeholder 圖示 -->
