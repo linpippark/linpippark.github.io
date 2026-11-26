@@ -137,6 +137,7 @@
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab5')">TranMarkdown</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab6')">PDF Remover</button>
         <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab7')">PDF Capturing</button>
+        <button class="tab-btn px-8 py-4 font-bold text-lightBeige hover:bg-primaryBlue transition-all duration-300 transform" onclick="switchTab(event, 'tab8')">SR Generator</button>
     </nav>
 
     <!-- 內容區域 -->
@@ -844,6 +845,178 @@
             </div>
         </div>
 
+        <!-- =================== TAB 8: SR Generator =================== -->
+        <div id="tab8" class="tab-content w-full bg-[#FAF7F2] text-[#2F241F] p-0 rounded-2xl shadow-xl flex-col border-t-8 border-primaryBlue overflow-hidden">
+            <!-- 頂部導覽列 (內部) -->
+            <div class="bg-[#2F241F] border-b border-[#463730] shadow-sm">
+                <div class="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-[#FFC425] text-[#2F241F] flex items-center justify-center shadow-sm shrink-0">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-base sm:text-lg font-bold text-[#FFFDF9] leading-tight">
+                                專利審查意見引證段落擷取與檢索報告生成器
+                            </h1>
+                            <p class="text-xs text-[#D6C7BC] mt-0.5">
+                                自動解析引證清單、擷取全文引用段落（去重與連續區間合併）並判別檢索代碼
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button
+                            id="sr-btn-clear"
+                            type="button"
+                            class="px-3.5 py-2 text-xs sm:text-sm font-medium text-[#F5EDE4] bg-[#3E312B] border border-[#59483F] rounded-xl hover:bg-[#4D3D36] hover:text-white transition-colors cursor-pointer"
+                        >
+                            清空內容
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主內容區 -->
+            <div class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <!-- 左側：審查意見通知函輸入區 -->
+                    <section class="lg:col-span-4 bg-white border border-[#E6DDD2] rounded-2xl shadow-sm flex flex-col overflow-hidden">
+                        <div class="px-4 py-3 border-b border-[#EDE5DA] bg-[#F7F2EA] flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-[#FFC425] ring-2 ring-[#2F241F]/15"></span>
+                                <h2 class="text-sm font-semibold text-[#2F241F]">審查意見通知函原文</h2>
+                            </div>
+                            <span id="sr-char-count" class="text-xs text-[#7D6E65] font-mono">0 字</span>
+                        </div>
+
+                        <div class="p-4 flex flex-col gap-3">
+                            <textarea
+                                id="sr-office-action-input"
+                                rows="20"
+                                placeholder="請將專利審查意見通知函完整內容貼於此處（包含審查意見論述與「引證文件」清單）..."
+                                class="w-full rounded-xl border border-[#E2D8CC] bg-[#FCFBF8] p-3.5 text-sm text-[#2F241F] placeholder-[#9B8D84] leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#FFC425]/50 focus:border-[#2F241F] focus:bg-white transition-all resize-y min-h-[380px]"
+                            ></textarea>
+                        </div>
+                    </section>
+
+                    <!-- 右側：檢索報告與稽核分頁區 -->
+                    <section class="lg:col-span-8 flex flex-col gap-3">
+                        <!-- 統計摘要卡片列 -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div class="bg-white border border-[#E6DDD2] rounded-xl px-3 py-2 shadow-sm flex items-center justify-between gap-2">
+                                <span class="text-[11px] text-[#7A6B63] font-medium whitespace-nowrap">識別引證篇數</span>
+                                <span id="sr-stat-citations" class="text-base font-bold text-[#2F241F] leading-none">0</span>
+                            </div>
+                            <div class="bg-white border border-[#E6DDD2] rounded-xl px-3 py-2 shadow-sm flex items-center justify-between gap-2">
+                                <span class="text-[11px] text-[#7A6B63] font-medium whitespace-nowrap">擷取引用處數</span>
+                                <span id="sr-stat-mentions" class="text-base font-bold text-[#B88200] leading-none">0</span>
+                            </div>
+                            <div class="bg-white border border-[#E6DDD2] rounded-xl px-3 py-2 shadow-sm flex items-center justify-between gap-2">
+                                <span class="text-[11px] text-[#7A6B63] font-medium whitespace-nowrap">檢索代碼分佈</span>
+                                <div id="sr-stat-codes" class="flex flex-wrap items-center justify-end gap-1 text-[11px]">
+                                    <span class="text-[#9B8D84]">尚無資料</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 報告分頁主容器 -->
+                        <div class="bg-white border border-[#E6DDD2] rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                            <!-- 分頁列 -->
+                            <div class="px-4 pt-3 border-b border-[#E6DDD2] bg-[#F7F2EA] flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-1 -mb-px">
+                                    <button
+                                        type="button"
+                                        data-sr-tab="report"
+                                        class="sr-tab-btn px-3.5 py-2 text-xs sm:text-sm font-bold text-[#2F241F] bg-white border-t border-x border-[#E6DDD2] border-b-2 border-b-[#FFC425] rounded-t-xl cursor-pointer transition-colors"
+                                    >
+                                        檢索報告
+                                    </button>
+                                    <button
+                                        type="button"
+                                        data-sr-tab="trace"
+                                        class="sr-tab-btn px-3.5 py-2 text-xs sm:text-sm font-medium text-[#7A6B63] border-b-2 border-transparent hover:text-[#2F241F] rounded-t-xl cursor-pointer transition-colors"
+                                    >
+                                        擷取明細核對
+                                    </button>
+                                    <button
+                                        type="button"
+                                        data-sr-tab="highlight"
+                                        class="sr-tab-btn px-3.5 py-2 text-xs sm:text-sm font-medium text-[#7A6B63] border-b-2 border-transparent hover:text-[#2F241F] rounded-t-xl cursor-pointer transition-colors"
+                                    >
+                                        原文標註預覽
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 分頁 1：檢索報告 -->
+                            <div id="sr-panel-report" class="sr-tab-panel p-4 sm:p-5 min-h-[420px]">
+                                <!-- 空狀態 -->
+                                <div id="sr-empty-state" class="py-20 text-center flex flex-col items-center justify-center gap-2.5">
+                                    <div class="w-12 h-12 rounded-2xl bg-[#FFF6D6] text-[#2F241F] border border-[#FFC425]/60 flex items-center justify-center">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-sm font-medium text-[#2F241F]">請在左側貼上審查意見通知函內容</p>
+                                    <p class="text-xs text-[#8A7B72]">系統將自動彙整各篇引證之引用段落與對應檢索代碼</p>
+                                </div>
+
+                                <!-- 報告表格 -->
+                                <div id="sr-report-content" class="hidden flex flex-col gap-4">
+                                    <div class="overflow-x-auto border border-[#E6DDD2] rounded-xl">
+                                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                            <thead>
+                                                <tr class="bg-[#2F241F] border-b border-[#2F241F] text-[#FFC425]">
+                                                    <th class="py-2.5 px-3 font-semibold whitespace-nowrap w-16 text-center">代碼</th>
+                                                    <th class="py-2.5 px-3 font-semibold whitespace-nowrap">引證編號 / 文獻</th>
+                                                    <th class="py-2.5 px-3 font-semibold">相關段落（已去重與區間合併）</th>
+                                                    <th class="py-2.5 px-3 font-semibold whitespace-nowrap">相關請求項</th>
+                                                    <th class="py-2.5 px-3 font-semibold whitespace-nowrap text-center w-20">複製</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="sr-report-table-body" class="divide-y divide-[#EFE8DE]"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 分頁 2：擷取明細核對 -->
+                            <div id="sr-panel-trace" class="sr-tab-panel hidden p-4">
+                                <div id="sr-trace-content" class="flex flex-col gap-3">
+                                    <p class="text-xs text-[#8A7B72] text-center py-10">
+                                        解析後將在此顯示每一筆引證在全文中擷取到的原始片段與代碼判定依據。
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- 分頁 3：原文標註預覽 -->
+                            <div id="sr-panel-highlight" class="sr-tab-panel hidden p-4">
+                                <div class="flex flex-wrap items-center gap-3 text-xs text-[#594A42] mb-3 pb-2.5 border-b border-[#EFE8DE]">
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <span class="w-3 h-3 rounded bg-[#2F241F] border border-[#2F241F] inline-block"></span>引證編號
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <span class="w-3 h-3 rounded bg-[#FFF0BD] border border-[#FFC425] inline-block"></span>擷取之引用段落
+                                    </span>
+                                </div>
+                                <div
+                                    id="sr-highlight-content"
+                                    class="text-xs sm:text-sm text-[#2F241F] leading-relaxed whitespace-pre-wrap bg-[#FAF7F2] border border-[#E6DDD2] rounded-xl p-4 max-h-[540px] overflow-y-auto"
+                                >解析後將在此顯示原文標註預覽，方便核對是否有任何段落遺漏。</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- 浮動提示訊息（Toast） -->
+            <div
+                id="sr-toast"
+                class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-medium text-[#FFC425] bg-[#2F241F] opacity-0 pointer-events-none translate-y-2 transition-all duration-200"
+            ></div>
+        </div>
+
     </main>
 
     <!-- 最下方顯示 Copyright -->
@@ -919,6 +1092,9 @@
 
             // 綁定 PDF Capturing 的事件
             setupPdfCapturing();
+
+            // 綁定 SR Generator 的事件
+            setupSrGenerator();
         });
 
         // ==========================================
@@ -2814,6 +2990,3103 @@ c.如果有「系統」、「電腦可讀媒介」、「裝置」、「設備」
 
             els.toggleRawTextBtn.addEventListener('click', () => {
                 els.rawTextSection.classList.toggle('hidden');
+            });
+        }
+
+        // ==========================================
+        // TAB 8: SR Generator 邏輯
+        // ==========================================
+        function setupSrGenerator() {
+            const elInput = document.getElementById('sr-office-action-input');
+            const elCharCount = document.getElementById('sr-char-count');
+            const elStatCitations = document.getElementById('sr-stat-citations');
+            const elStatMentions = document.getElementById('sr-stat-mentions');
+            const elStatCodes = document.getElementById('sr-stat-codes');
+            const elEmptyState = document.getElementById('sr-empty-state');
+            const elReportContent = document.getElementById('sr-report-content');
+            const elReportBody = document.getElementById('sr-report-table-body');
+            const elTraceContent = document.getElementById('sr-trace-content');
+            const elHighlightContent = document.getElementById('sr-highlight-content');
+            const elToast = document.getElementById('sr-toast');
+            const elBtnClear = document.getElementById('sr-btn-clear');
+
+            if (!elInput) return;
+
+            let lastResult = null;
+            let toastTimer = null;
+
+            // 公開日期與第一個 IPC 快取：docName -> { status: 'loading' | 'found' | 'not_found' | 'error', date: 'yyyy/MM/dd', ipc: 'G06F' }
+            const pubDateCache = new Map();
+            const inFlightQueries = new Map();
+            let activeEditDocName = null;
+            let activeEditIpcDocName = null;
+
+            function showToast(message, type = 'info') {
+                if (!elToast) return;
+                clearTimeout(toastTimer);
+                elToast.textContent = message;
+                const baseClass =
+                    'fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl shadow-lg text-xs sm:text-sm font-medium transition-all duration-200';
+                if (type === 'error') {
+                    elToast.className = `${baseClass} bg-red-700 text-white opacity-100 translate-y-0`;
+                } else if (type === 'success') {
+                    elToast.className = `${baseClass} bg-[#2F241F] text-[#FFC425] border border-[#FFC425]/40 opacity-100 translate-y-0`;
+                } else {
+                    elToast.className = `${baseClass} bg-[#3E312B] text-[#FFFDF9] opacity-100 translate-y-0`;
+                }
+                toastTimer = setTimeout(() => {
+                    elToast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+                    elToast.classList.remove('opacity-100', 'translate-y-0');
+                }, 2800);
+            }
+
+            function toHalfWidth(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/[\uFF01-\uFF5E]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+                    .replace(/\u3000/g, ' ')
+                    .replace(/[～〜]/g, '~')
+                    .replace(/[–—−]/g, '-');
+            }
+
+            function escapeHtml(str) {
+                return String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function copyToClipboard(text, successMsg = '已複製到剪貼簿') {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.position = 'fixed';
+                    textarea.style.top = '-9999px';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    textarea.setSelectionRange(0, textarea.value.length);
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    if (ok) {
+                        showToast(successMsg, 'success');
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('execCommand copy failed:', err);
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard
+                        .writeText(text)
+                        .then(() => showToast(successMsg, 'success'))
+                        .catch(() => showToast('複製失敗，請手動選取複製', 'error'));
+                } else {
+                    showToast('複製失敗，請手動選取複製', 'error');
+                }
+            }
+
+            async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+                try {
+                    return await fetch(url, { ...options, signal: controller.signal });
+                } finally {
+                    clearTimeout(timer);
+                }
+            }
+
+            function normalizeIpcSubclass(raw) {
+                if (!raw) return '';
+                const half = toHalfWidth(raw).toUpperCase().trim();
+                const m = half.match(/(?:^|[^A-Z0-9])([A-H]\d{2}[A-Z])(?=\s*\d+\/\d+|[^A-Z0-9]|$)/);
+                if (m) return m[1];
+                const compact = half.replace(/\s+/g, '');
+                const m2 = compact.match(/^([A-H]\d{2}[A-Z])/);
+                return m2 ? m2[1] : '';
+            }
+
+            function extractLocalIpc(docName) {
+                if (!docName) return '';
+                const half = toHalfWidth(docName).toUpperCase();
+                const m = half.match(/\b([A-H]\d{2}[A-Z])(?:\s*\d+\/\d+|\b)/);
+                return m ? m[1] : '';
+            }
+
+            function normalizeFlexiblePubDate(raw) {
+                if (!raw) return '';
+                const half = toHalfWidth(raw).trim();
+                if (!half) return '';
+
+                const ymd = half.match(/(?:^|[^\d])((?:19|20)\d{2})\s*[-/.年]\s*(\d{1,2})\s*[-/.月]\s*(\d{1,2})\s*日?(?!\d)/);
+                if (ymd) {
+                    const y = parseInt(ymd[1], 10);
+                    const mo = parseInt(ymd[2], 10);
+                    const d = parseInt(ymd[3], 10);
+                    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) {
+                        return `${y}/${String(mo).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
+                    }
+                }
+
+                const ymd8 = half.match(/(?:^|[^\d])((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?!\d)/);
+                if (ymd8) {
+                    return `${ymd8[1]}/${ymd8[2]}/${ymd8[3]}`;
+                }
+
+                const rocMatch = half.match(/(?:^|[^\d])(民國\s*)?(\d{2,3})\s*[年/.-]\s*(\d{1,2})\s*[月/.-]\s*(\d{1,2})\s*日?(?!\d)/);
+                if (rocMatch) {
+                    const hasRocLabel = Boolean(rocMatch[1]);
+                    const rocYear = parseInt(rocMatch[2], 10);
+                    const mo = parseInt(rocMatch[3], 10);
+                    const d = parseInt(rocMatch[4], 10);
+                    if (
+                        (hasRocLabel ? rocYear >= 1 && rocYear <= 200 : rocYear >= 50 && rocYear <= 150) &&
+                        mo >= 1 &&
+                        mo <= 12 &&
+                        d >= 1 &&
+                        d <= 31
+                    ) {
+                        const y = rocYear + 1911;
+                        return `${y}/${String(mo).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
+                    }
+                }
+
+                const monthMap = {
+                    jan: '01', january: '01',
+                    feb: '02', february: '02',
+                    mar: '03', march: '03',
+                    apr: '04', april: '04',
+                    may: '05',
+                    jun: '06', june: '06',
+                    jul: '07', july: '07',
+                    aug: '08', august: '08',
+                    sep: '09', sept: '09', september: '09',
+                    oct: '10', october: '10',
+                    nov: '11', november: '11',
+                    dec: '12', december: '12',
+                };
+
+                const enMDY = half.match(
+                    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*-\s*\d{1,2})?,?\s+((?:19|20)\d{2})\b/i
+                );
+                if (enMDY) {
+                    const mo = monthMap[enMDY[1].toLowerCase()];
+                    const d = parseInt(enMDY[2], 10);
+                    if (mo && d >= 1 && d <= 31) {
+                        return `${enMDY[3]}/${mo}/${String(d).padStart(2, '0')}`;
+                    }
+                }
+
+                const enDMY = half.match(
+                    /\b(\d{1,2})(?:\s*-\s*\d{1,2})?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?,?\s+((?:19|20)\d{2})\b/i
+                );
+                if (enDMY) {
+                    const mo = monthMap[enDMY[2].toLowerCase()];
+                    const d = parseInt(enDMY[1], 10);
+                    if (mo && d >= 1 && d <= 31) {
+                        return `${enDMY[3]}/${mo}/${String(d).padStart(2, '0')}`;
+                    }
+                }
+
+                const ym = half.match(/(?:^|[^\d])((?:19|20)\d{2})\s*[-/.年]\s*(\d{1,2})\s*月?(?!\d)/);
+                if (ym) {
+                    const mo = parseInt(ym[2], 10);
+                    if (mo >= 1 && mo <= 12) {
+                        return `${ym[1]}/${String(mo).padStart(2, '0')}`;
+                    }
+                }
+
+                const enMY = half.match(
+                    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?,?\s+((?:19|20)\d{2})\b/i
+                );
+                if (enMY) {
+                    const mo = monthMap[enMY[1].toLowerCase()];
+                    if (mo) return `${enMY[2]}/${mo}`;
+                }
+
+                const yOnly = half.match(/^(?:19|20)\d{2}$/);
+                if (yOnly) return yOnly[0];
+
+                return '';
+            }
+
+            function extractLocalPubDate(docName) {
+                if (!docName) return '';
+                let cleaned = toHalfWidth(docName);
+                cleaned = cleaned.replace(
+                    /\b(?:US|WO|JP|TW|CN|EP|KR|DE|GB|FR|CA|AU)\s*[A-Z]?\s*\d[\d,/-]{4,14}\d(?:\s*[A-Z]\d?)?\b/gi,
+                    ' '
+                );
+
+                const fullDate = normalizeFlexiblePubDate(cleaned);
+                if (fullDate) return fullDate;
+
+                if (isNonPatentCitation(docName)) {
+                    const yr = cleaned.match(/(?:[(（,\s])((?:19|20)\d{2})(?=[)）.,;\s]|$)/);
+                    if (yr) return yr[1];
+                }
+                return '';
+            }
+
+            function normalizePatentId(docName) {
+                if (!docName) return '';
+                const half = toHalfWidth(docName).trim();
+                if (!half || half.includes('未於引證文件欄列出文獻編號')) return '';
+
+                if (/(?:https?:\/\/|www\.|doi:|arxiv:|isbn|issn|ieee|acm|springer|elsevier|proceedings|conference|journal|transactions|datasheet|white\s*paper)/i.test(half)) {
+                    return '';
+                }
+
+                const m = half.match(
+                    /(?:^|[^A-Za-z])(US|TW|CN|JP|EP|WO|KR|DE|GB|FR|CA|AU)\s*([A-Z]?\s*\d[\d,/ -]{3,14}\d)\s*([A-Z]\d?)?(?![A-Za-z0-9])/i
+                );
+                if (m) {
+                    const cc = m[1].toUpperCase();
+                    let num = m[2].replace(/[\s,/-]+/g, '');
+                    let kind = (m[3] || '').toUpperCase();
+
+                    if (cc === 'US' && /^\d{10}$/.test(num) && /^(?:19|20)\d{2}/.test(num)) {
+                        num = num.slice(0, 4) + '0' + num.slice(4);
+                    }
+
+                    if (cc === 'TW' && !kind) {
+                        if (/^I\d{5,8}$/i.test(num)) kind = 'B';
+                        else if (/^M\d{5,8}$/i.test(num)) kind = 'U';
+                        else if (/^(?:19|20)\d{7}$/.test(num)) kind = 'A';
+                    }
+
+                    if (num.length >= 5) return `${cc}${num}${kind}`;
+                }
+
+                const cnCountryMap = [
+                    { re: /(?:中華民國|台灣|臺灣|我國)/, cc: 'TW' },
+                    { re: /美國/, cc: 'US' },
+                    { re: /(?:中國大陸|中國|大陸)/, cc: 'CN' },
+                    { re: /日本/, cc: 'JP' },
+                    { re: /歐洲/, cc: 'EP' },
+                    { re: /(?:韓國|南韓)/, cc: 'KR' },
+                    { re: /(?:世界智慧財產|PCT|國際公開)/i, cc: 'WO' },
+                ];
+                for (const item of cnCountryMap) {
+                    if (item.re.test(half)) {
+                        const numMatch = half.match(/(?:第\s*|特開\s*|特表\s*|公開\s*|公告\s*)([IMD]?\d[\d,/-]{4,14}\d)\s*([A-Z]\d?)?/i);
+                        if (numMatch) {
+                            let num = numMatch[1].toUpperCase().replace(/[\s,/-]+/g, '');
+                            let kind = (numMatch[2] || '').toUpperCase();
+                            if (item.cc === 'TW' && !kind) {
+                                kind = num.startsWith('I') ? 'B' : num.startsWith('M') ? 'U' : /^(?:19|20)\d{7}$/.test(num) ? 'A' : '';
+                            }
+                            if (num.length >= 5) return `${item.cc}${num}${kind}`;
+                        }
+                    }
+                }
+
+                return '';
+            }
+
+            function isNonPatentCitation(docName) {
+                if (!docName || docName.includes('未於引證文件欄列出文獻編號')) return false;
+                if (normalizePatentId(docName)) return false;
+                const half = toHalfWidth(docName);
+                if (
+                    /(?:專利|特開|特表|公開號|公告號)/.test(half) &&
+                    !/(?:https?:\/\/|www\.|doi:|arxiv:|ieee|acm|journal|proceedings|conference)/i.test(half)
+                ) {
+                    return false;
+                }
+                return true;
+            }
+
+            function extractPatentMetaFromHtml(html, patentId) {
+                let date = '';
+                let ipc = '';
+                if (!html) return { date, ipc };
+
+                try {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const pidUpper = String(patentId || '').toUpperCase();
+
+                    const dcDateMetas = Array.from(doc.querySelectorAll('meta[name="DC.date"]'));
+                    const issueMeta =
+                        dcDateMetas.find((m) => (m.getAttribute('scheme') || '').toLowerCase() === 'issue') ||
+                        dcDateMetas.find((m) => (m.getAttribute('scheme') || '').toLowerCase() !== 'datesubmitted');
+                    if (issueMeta) {
+                        date = normalizeFlexiblePubDate(issueMeta.getAttribute('content') || '');
+                    }
+
+                    if (!date && pidUpper) {
+                        const rows = Array.from(doc.querySelectorAll('tr'));
+                        for (const tr of rows) {
+                            const txt = (tr.textContent || '').replace(/\s+/g, ' ');
+                            if (new RegExp(`Publication\\s+of\\s+${pidUpper}\\b`, 'i').test(txt)) {
+                                const d = normalizeFlexiblePubDate(txt);
+                                if (d) {
+                                    date = d;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!date) {
+                        const pubEls = Array.from(doc.querySelectorAll('[itemprop="publicationDate"]'));
+                        for (const el of pubEls) {
+                            if (
+                                el.closest(
+                                    'tr[itemprop="backwardReferences"], tr[itemprop="forwardReferences"], tr[itemprop="backwardReferencesOrig"], tr[itemprop="backwardReferencesFamily"], section[itemprop="family"], tr[itemprop="family"]'
+                                )
+                            ) {
+                                continue;
+                            }
+                            const d = normalizeFlexiblePubDate(el.getAttribute('datetime') || el.textContent || '');
+                            if (d) {
+                                date = d;
+                                break;
+                            }
+                        }
+                    }
+
+                    const codeEls = Array.from(
+                        doc.querySelectorAll(
+                            'section[itemprop="classifications"] [itemprop="Code"], ul[itemprop="classifications"] [itemprop="Code"], [itemprop="Code"]'
+                        )
+                    );
+                    for (const el of codeEls) {
+                        if (
+                            el.closest(
+                                'tr[itemprop="backwardReferences"], tr[itemprop="forwardReferences"], section[itemprop="family"]'
+                            )
+                        ) {
+                            continue;
+                        }
+                        const cand = normalizeIpcSubclass(el.textContent || '');
+                        if (cand) {
+                            ipc = cand;
+                            break;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('extractPatentMetaFromHtml error:', err);
+                }
+
+                return { date, ipc };
+            }
+
+            function extractPatentMetaFromMarkdown(md, patentId) {
+                let date = '';
+                let ipc = '';
+                if (!md) return { date, ipc };
+
+                const cutoffRegex = /\n(?:#{1,4}\s*)?(?:Patent Citations|Cited By|Non-Patent Citations|Similar Documents|Also Published As|Worldwide Applications|Family|專利引用|被引用|同族)/i;
+                const mainSection = md.split(cutoffRegex)[0] || md;
+                const pidUpper = String(patentId || '').toUpperCase();
+
+                if (pidUpper) {
+                    const pubMatch = mainSection.match(
+                        new RegExp(`((?:19|20)\\d{2}[-/.]\\d{1,2}[-/.]\\d{1,2})[^\\n]{0,80}(?:Publication\\s+of|公開|公告)\\s*${pidUpper}\\b`, 'i')
+                    );
+                    if (pubMatch) {
+                        date = normalizeFlexiblePubDate(pubMatch[1]);
+                    }
+                }
+
+                if (!date) {
+                    const labelMatch = mainSection.match(
+                        /(?:Publication\s+date|Published|公開日(?:期)?|公告日(?:期)?|公開\/公告日)\s*[:：]?\s*([^\n]{6,30})/i
+                    );
+                    if (labelMatch) {
+                        date = normalizeFlexiblePubDate(labelMatch[1]);
+                    }
+                }
+
+                const ipcMatch = mainSection.match(/(?:^|[^A-Z0-9])([A-H]\d{2}[A-Z])\s*\d+\/\d+/);
+                if (ipcMatch) {
+                    ipc = ipcMatch[1].toUpperCase();
+                }
+
+                return { date, ipc };
+            }
+
+            async function fetchPatentMetaOnline(docName, onPartial) {
+                const patentId = normalizePatentId(docName);
+                if (!patentId) return { date: '', ipc: '' };
+
+                const targetUrl = `https://patents.google.com/patent/${encodeURIComponent(patentId)}/en`;
+                const channels = [
+                    {
+                        type: 'html',
+                        url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
+                    },
+                    {
+                        type: 'html',
+                        url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`,
+                    },
+                    {
+                        type: 'html',
+                        url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+                    },
+                    {
+                        type: 'md',
+                        url: `https://r.jina.ai/https://patents.google.com/patent/${encodeURIComponent(patentId)}/en`,
+                    },
+                ];
+
+                if (/^(?:CN|TW)/i.test(patentId)) {
+                    channels.push({
+                        type: 'md',
+                        url: `https://r.jina.ai/https://patents.google.com/patent/${encodeURIComponent(patentId)}/zh`,
+                    });
+                }
+
+                const best = { date: '', ipc: '' };
+
+                await Promise.allSettled(
+                    channels.map(async (ch) => {
+                        try {
+                            const resp = await fetchWithTimeout(ch.url, { method: 'GET' }, 9500);
+                            if (!resp.ok) return;
+                            const text = await resp.text();
+                            if (!text || text.length < 200) return;
+
+                            const parsed =
+                                ch.type === 'md'
+                                    ? extractPatentMetaFromMarkdown(text, patentId)
+                                    : extractPatentMetaFromHtml(text, patentId);
+
+                            let updated = false;
+                            if (parsed.date && parsed.date.length > best.date.length) {
+                                best.date = parsed.date;
+                                updated = true;
+                            }
+                            if (parsed.ipc && !best.ipc) {
+                                best.ipc = parsed.ipc;
+                                updated = true;
+                            }
+                            if (updated && typeof onPartial === 'function') {
+                                onPartial({ date: best.date, ipc: best.ipc });
+                            }
+                        } catch (err) {
+                            // 單一代理通道失敗時靜默忽略
+                        }
+                    })
+                );
+
+                return best;
+            }
+
+            async function fetchNonPatentDateOnline(docName) {
+                if (!docName) return '';
+                const half = toHalfWidth(docName).trim();
+
+                const extractCrossrefDate = (item) => {
+                    if (!item) return '';
+                    const fields = ['published-print', 'published-online', 'published', 'issued', 'created'];
+                    let best = '';
+                    for (const f of fields) {
+                        const parts = item[f] && item[f]['date-parts'] && item[f]['date-parts'][0];
+                        if (!Array.isArray(parts) || parts.length === 0) continue;
+                        const [y, m, d] = parts;
+                        if (!y || y < 1900 || y > 2100) continue;
+                        let cand = String(y);
+                        if (m >= 1 && m <= 12) {
+                            cand += `/${String(m).padStart(2, '0')}`;
+                            if (d >= 1 && d <= 31) {
+                                cand += `/${String(d).padStart(2, '0')}`;
+                            }
+                        }
+                        if (cand.length > best.length) best = cand;
+                    }
+                    return best;
+                };
+
+                try {
+                    const doiMatch = half.match(/\b(10\.\d{4,9}\/[-._;()/:A-Za-z0-9]+)\b/);
+                    if (doiMatch) {
+                        const doi = doiMatch[1].replace(/[.,;)]+$/, '');
+                        const resp = await fetchWithTimeout(
+                            `https://api.crossref.org/works/${encodeURIComponent(doi)}`,
+                            { method: 'GET' },
+                            7000
+                        );
+                        if (resp.ok) {
+                            const json = await resp.json();
+                            const d = extractCrossrefDate(json && json.message);
+                            if (d) return d;
+                        }
+                    }
+
+                    const query = half.replace(/[【】\[\]]/g, ' ').slice(0, 220).trim();
+                    if (query.length >= 10) {
+                        const resp = await fetchWithTimeout(
+                            `https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(query)}&rows=1`,
+                            { method: 'GET' },
+                            7500
+                        );
+                        if (resp.ok) {
+                            const json = await resp.json();
+                            const firstItem = json && json.message && json.message.items && json.message.items[0];
+                            if (firstItem && (firstItem.score || 0) >= 35) {
+                                const d = extractCrossrefDate(firstItem);
+                                if (d) return d;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    // Crossref 查詢失敗時靜默交由其他通道處理
+                }
+
+                return '';
+            }
+
+            async function fetchMetaViaGeminiSearch(docNames) {
+                const resultMap = new Map();
+                if (!Array.isArray(docNames) || docNames.length === 0) return resultMap;
+
+                const apiKey = '';
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const entries = docNames.map((doc, idx) => ({
+                    index: idx + 1,
+                    doc,
+                    patentId: normalizePatentId(doc),
+                    isNpl: isNonPatentCitation(doc),
+                }));
+
+                const listText = entries
+                    .map((e) =>
+                        e.patentId
+                            ? `${e.index}. ${e.doc}（標準專利號：${e.patentId}）`
+                            : `${e.index}. ${e.doc}（非專利文獻）`
+                    )
+                    .join('\n');
+
+                const systemPrompt =
+                    '你是專業的專利檢索與書目查證專家。請務必使用 Google 搜尋查詢 Google Patents、CNIPA、USPTO、TIPO、EPO 或出版商資料，精準找出每一篇專利之官方公開日／公告日與第一個 IPC 4 碼次類（如 G06F、G10L、H04L），以及非專利文獻之公開／出版日期。僅輸出純 JSON 陣列，不可包含多餘解說。';
+
+                const userPrompt = [
+                    '請查證下列每一筆引證文獻的「公開／公告／出版日期」以及「第一個 IPC 4 碼次類」（非專利文獻 ipc 填 ""）。',
+                    '規則：',
+                    '1. 日期請嚴格輸出為 yyyy/MM/dd（例如 2020/01/31）；若非專利文獻僅有年月則填 yyyy/MM，僅有年份填 yyyy；確實查無填 ""。',
+                    '2. ipc 請只填第一個國際專利分類（IPC）的 4 碼次類（例如 G10L、G06F、H04L），不要包含後方的組號。',
+                    '3. 必須保留對應的 index 與 doc，且只回傳純 JSON 陣列：',
+                    '[{"index": 1, "doc": "原始文獻字串", "date": "yyyy/MM/dd", "ipc": "G06F"}]',
+                    '',
+                    '待查文獻清單：',
+                    listText,
+                ].join('\n');
+
+                const maxRetries = 3;
+                const fenceSeq = String.fromCharCode(96).repeat(3);
+
+                for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                    try {
+                        const resp = await fetchWithTimeout(
+                            endpoint,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    contents: [{ parts: [{ text: userPrompt }] }],
+                                    tools: [{ google_search: {} }],
+                                    systemInstruction: {
+                                        parts: [{ text: systemPrompt }],
+                                    },
+                                }),
+                            },
+                            22000
+                        );
+
+                        if (!resp.ok) {
+                            if (resp.status === 401 || resp.status === 403 || resp.status === 400) {
+                                return resultMap;
+                            }
+                            if (attempt < maxRetries) {
+                                await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                                continue;
+                            }
+                            return resultMap;
+                        }
+
+                        const json = await resp.json();
+                        const rawText =
+                            (json &&
+                                json.candidates &&
+                                json.candidates[0] &&
+                                json.candidates[0].content &&
+                                json.candidates[0].content.parts &&
+                                json.candidates[0].content.parts.map((p) => p.text || '').join('\n')) ||
+                            '';
+
+                        if (!rawText.trim()) return resultMap;
+
+                        const cleanedText = rawText
+                            .split(fenceSeq + 'json')
+                            .join('')
+                            .split(fenceSeq)
+                            .join('')
+                            .trim();
+
+                        let parsedList = null;
+                        const arrMatch = cleanedText.match(/\[[\s\S]*\]/);
+                        if (arrMatch) {
+                            try {
+                                parsedList = JSON.parse(arrMatch[0]);
+                            } catch (e) {
+                                parsedList = null;
+                            }
+                        }
+
+                        if (Array.isArray(parsedList)) {
+                            parsedList.forEach((item, idx) => {
+                                if (!item || typeof item !== 'object') return;
+                                const itemIndex = parseInt(item.index, 10);
+                                const byIdx =
+                                    Number.isFinite(itemIndex) && itemIndex >= 1 && itemIndex <= entries.length
+                                        ? entries[itemIndex - 1]
+                                        : null;
+                                const itemPid = normalizePatentId(item.doc || '');
+                                const matchedEntry =
+                                    byIdx ||
+                                    entries.find((e) => e.doc === item.doc) ||
+                                    (itemPid ? entries.find((e) => e.patentId && e.patentId === itemPid) : null) ||
+                                    entries.find((e) => item.doc && e.doc.includes(String(item.doc).trim())) ||
+                                    entries[idx];
+                                if (!matchedEntry) return;
+
+                                const date = normalizeFlexiblePubDate(item.date || '');
+                                const ipc = matchedEntry.isNpl ? '' : normalizeIpcSubclass(item.ipc || '');
+                                if (date || ipc) {
+                                    resultMap.set(matchedEntry.doc, { date, ipc });
+                                }
+                            });
+                        } else if (entries.length === 1) {
+                            const only = entries[0];
+                            const date = normalizeFlexiblePubDate(cleanedText);
+                            const ipc = only.isNpl ? '' : normalizeIpcSubclass(cleanedText);
+                            if (date || ipc) {
+                                resultMap.set(only.doc, { date, ipc });
+                            }
+                        }
+
+                        return resultMap;
+                    } catch (err) {
+                        if (attempt < maxRetries) {
+                            await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+                        }
+                    }
+                }
+
+                return resultMap;
+            }
+
+            function syncPubDatesIntoRows(res) {
+                if (!res || !Array.isArray(res.reportRows)) return;
+                res.reportRows.forEach((row) => {
+                    const entry = pubDateCache.get(row.docName);
+                    if (entry) {
+                        row.pubDate = entry.date || '';
+                        row.ipc = entry.ipc || '';
+                        row.pubDateStatus = entry.status || 'idle';
+                    }
+                });
+            }
+
+            function updatePubDateCacheAndRender(docName, partial, finalStatus = null) {
+                const prev = pubDateCache.get(docName) || { status: 'loading', date: '', ipc: '' };
+                const nextDate = partial && partial.date && partial.date.length >= (prev.date || '').length
+                    ? partial.date
+                    : prev.date || '';
+                const nextIpc = partial && partial.ipc ? partial.ipc : prev.ipc || '';
+                const status = finalStatus || (nextDate && (isNonPatentCitation(docName) || nextIpc) ? 'found' : prev.status);
+
+                pubDateCache.set(docName, {
+                    status,
+                    date: nextDate,
+                    ipc: nextIpc,
+                });
+
+                if (lastResult) {
+                    syncPubDatesIntoRows(lastResult);
+                    renderResults(lastResult);
+                }
+            }
+
+            function resolvePublicationDates(docNames, force = false) {
+                const uniqueDocs = Array.from(new Set((docNames || []).filter(Boolean)));
+                const docsToQuery = [];
+
+                uniqueDocs.forEach((docName) => {
+                    if (docName.includes('未於引證文件欄列出文獻編號')) return;
+                    const existing = pubDateCache.get(docName);
+                    const isNpl = isNonPatentCitation(docName);
+
+                    if (
+                        !force &&
+                        existing &&
+                        (existing.status === 'loading' || (existing.date && (isNpl || existing.ipc)))
+                    ) {
+                        return;
+                    }
+                    if (!force && inFlightQueries.has(docName)) return;
+
+                    const localDate = extractLocalPubDate(docName);
+                    const localIpc = isNpl ? '' : extractLocalIpc(docName);
+
+                    if (!force && isNpl && /^\d{4}\/\d{2}\/\d{2}$/.test(localDate)) {
+                        pubDateCache.set(docName, { status: 'found', date: localDate, ipc: '' });
+                        return;
+                    }
+
+                    pubDateCache.set(docName, {
+                        status: 'loading',
+                        date: force ? (localDate || '') : (existing && existing.date ? existing.date : localDate),
+                        ipc: force ? (localIpc || '') : (existing && existing.ipc ? existing.ipc : localIpc),
+                    });
+                    docsToQuery.push(docName);
+                });
+
+                if (docsToQuery.length === 0) return;
+
+                const geminiBatchPromise = fetchMetaViaGeminiSearch(docsToQuery)
+                    .then((metaMap) => {
+                        metaMap.forEach((meta, docName) => {
+                            updatePubDateCacheAndRender(docName, meta);
+                        });
+                        return metaMap;
+                    })
+                    .catch(() => new Map());
+
+                docsToQuery.forEach((docName) => {
+                    const isNpl = isNonPatentCitation(docName);
+
+                    const directPromise = (async () => {
+                        if (isNpl) {
+                            const onlineDate = await fetchNonPatentDateOnline(docName);
+                            if (onlineDate) {
+                                updatePubDateCacheAndRender(docName, { date: onlineDate });
+                            }
+                        } else {
+                            await fetchPatentMetaOnline(docName, (partial) => {
+                                updatePubDateCacheAndRender(docName, partial);
+                            });
+                        }
+                    })();
+
+                    const combinedTask = Promise.allSettled([geminiBatchPromise, directPromise])
+                        .then(async () => {
+                            const cur = pubDateCache.get(docName) || { date: '', ipc: '' };
+                            if ((!cur.date || (!isNpl && !cur.ipc)) && docsToQuery.length > 1) {
+                                const singleMap = await fetchMetaViaGeminiSearch([docName]);
+                                const singleMeta = singleMap.get(docName);
+                                if (singleMeta) {
+                                    updatePubDateCacheAndRender(docName, singleMeta);
+                                }
+                            }
+                        })
+                        .finally(() => {
+                            inFlightQueries.delete(docName);
+                            const finalEntry = pubDateCache.get(docName) || { date: '', ipc: '' };
+                            const finalStatus = finalEntry.date || finalEntry.ipc ? 'found' : 'not_found';
+                            updatePubDateCacheAndRender(docName, finalEntry, finalStatus);
+
+                            if (force && docsToQuery.length === 1) {
+                                if (finalEntry.date) {
+                                    showToast(
+                                        `已查得 ${docName} 公開日【${finalEntry.date}】${finalEntry.ipc ? `（IPC: ${finalEntry.ipc}）` : ''}`,
+                                        'success'
+                                    );
+                                } else {
+                                    showToast(`仍查無 ${docName} 公開日期，可點擊「+公開日」手動輸入`, 'info');
+                                }
+                            }
+                        });
+
+                    inFlightQueries.set(docName, combinedTask);
+                });
+            }
+
+            function getPubDateTag(docName) {
+                const entry = pubDateCache.get(docName);
+                return entry && entry.date ? `【${entry.date}】` : '';
+            }
+
+            function getIpcCode(docName) {
+                const entry = pubDateCache.get(docName);
+                return entry && entry.ipc ? entry.ipc : '';
+            }
+
+            function getIpcBadgeHtml(docName) {
+                if (isNonPatentCitation(docName) || !docName || docName.includes('未於引證文件欄列出文獻編號')) {
+                    return '';
+                }
+                const entry = pubDateCache.get(docName) || { status: 'idle', date: '', ipc: '' };
+
+                if (activeEditIpcDocName === docName) {
+                    return `
+                        <span class="inline-flex items-center gap-1">
+                            <input
+                                type="text"
+                                value="${escapeHtml(entry.ipc || '')}"
+                                data-edit-ipc-doc="${escapeHtml(docName)}"
+                                placeholder="如 G06F"
+                                class="ipc-edit-input w-20 px-1.5 py-0.5 text-xs font-mono border border-[#2F241F] rounded bg-white text-[#2F241F] focus:outline-none focus:ring-1 focus:ring-[#FFC425]"
+                            />
+                            <button
+                                type="button"
+                                data-save-ipc-doc="${escapeHtml(docName)}"
+                                class="ipc-save-btn px-1.5 py-0.5 text-[11px] font-bold bg-[#2F241F] text-[#FFC425] rounded cursor-pointer"
+                            >儲存</button>
+                        </span>
+                    `;
+                }
+
+                if (entry.ipc) {
+                    return `<button
+                        type="button"
+                        data-trigger-ipc-edit="${escapeHtml(docName)}"
+                        title="點擊手動修改 IPC 次類"
+                        class="ipc-trigger-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-[#2F241F] text-[#FFC425] hover:bg-[#463730] transition-colors cursor-pointer"
+                    >${escapeHtml(entry.ipc)}</button>`;
+                }
+
+                if (entry.status === 'loading') {
+                    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-[#F3EDE4] text-[#7A6B63]">IPC 查詢中…</span>`;
+                }
+
+                return `<button
+                    type="button"
+                    data-trigger-ipc-edit="${escapeHtml(docName)}"
+                    title="點擊手動輸入第一個 IPC 次類"
+                    class="ipc-trigger-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] border border-dashed border-[#C7B7A5] text-[#7A6B63] hover:border-[#2F241F] hover:text-[#2F241F] cursor-pointer"
+                >+IPC</button>`;
+            }
+
+            function getPubDateBadgeHtml(docName) {
+                if (!docName || docName.includes('未於引證文件欄列出文獻編號')) return '';
+                const entry = pubDateCache.get(docName) || { status: 'idle', date: '', ipc: '' };
+
+                if (activeEditDocName === docName) {
+                    return `
+                        <span class="inline-flex items-center gap-1">
+                            <input
+                                type="text"
+                                value="${escapeHtml(entry.date || '')}"
+                                data-edit-doc="${escapeHtml(docName)}"
+                                placeholder="yyyy/MM/dd"
+                                class="pubdate-edit-input w-24 px-1.5 py-0.5 text-xs font-mono border border-[#2F241F] rounded bg-white text-[#2F241F] focus:outline-none focus:ring-1 focus:ring-[#FFC425]"
+                            />
+                            <button
+                                type="button"
+                                data-save-doc="${escapeHtml(docName)}"
+                                class="pubdate-save-btn px-1.5 py-0.5 text-[11px] font-bold bg-[#2F241F] text-[#FFC425] rounded cursor-pointer"
+                            >儲存</button>
+                        </span>
+                    `;
+                }
+
+                if (entry.date) {
+                    const missingIpc = !isNonPatentCitation(docName) && !entry.ipc && entry.status !== 'loading';
+                    return `
+                        <span class="inline-flex items-center gap-1">
+                            <button
+                                type="button"
+                                data-trigger-edit="${escapeHtml(docName)}"
+                                title="點擊手動修改公開日期"
+                                class="pubdate-trigger-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold bg-[#FFF6D6] text-[#2F241F] border border-[#FFC425] hover:bg-[#FFC425] transition-colors cursor-pointer"
+                            >【${escapeHtml(entry.date)}】</button>
+                            ${
+                                missingIpc
+                                    ? `<button
+                                        type="button"
+                                        data-retry-doc="${escapeHtml(docName)}"
+                                        title="重新查詢 IPC 與公開日期"
+                                        class="pubdate-retry-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-[#F3EDE4] text-[#594A42] hover:bg-[#FFC425] hover:text-[#2F241F] cursor-pointer"
+                                    >重查</button>`
+                                    : ''
+                            }
+                        </span>
+                    `;
+                }
+
+                if (entry.status === 'loading') {
+                    return `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-[#F3EDE4] text-[#7A6B63]">公開日查詢中…</span>`;
+                }
+
+                return `
+                    <span class="inline-flex items-center gap-1">
+                        <button
+                            type="button"
+                            data-trigger-edit="${escapeHtml(docName)}"
+                            title="點擊手動輸入公開日期"
+                            class="pubdate-trigger-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] border border-dashed border-[#C7B7A5] text-[#7A6B63] hover:border-[#2F241F] hover:text-[#2F241F] cursor-pointer"
+                        >+公開日</button>
+                        <button
+                            type="button"
+                            data-retry-doc="${escapeHtml(docName)}"
+                            title="重新查詢公開日期與 IPC"
+                            class="pubdate-retry-btn inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] bg-[#F3EDE4] text-[#594A42] hover:bg-[#FFC425] hover:text-[#2F241F] cursor-pointer"
+                        >重查</button>
+                    </span>
+                `;
+            }
+
+            function expandIntegerList(str) {
+                if (!str) return [];
+                const half = toHalfWidth(str);
+                const result = [];
+                const parts = half.split(/[、,，及與和\s]+/).filter(Boolean);
+                parts.forEach((p) => {
+                    const clean = p.replace(/^(?:引證|請求項|第)/g, '').replace(/[項段圖行頁欄]$/g, '');
+                    const rangeMatch = clean.match(/^(\d+)\s*[項段圖行頁欄]?\s*(?:[~-]|至|到)\s*(?:第|引證|請求項)?(\d+)$/);
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1], 10);
+                        const end = parseInt(rangeMatch[2], 10);
+                        if (!isNaN(start) && !isNaN(end)) {
+                            const lo = Math.min(start, end);
+                            const hi = Math.max(start, end);
+                            if (hi - lo <= 500) {
+                                for (let n = lo; n <= hi; n++) result.push(n);
+                            }
+                        }
+                    } else {
+                        const single = clean.match(/\d+/);
+                        if (single) result.push(parseInt(single[0], 10));
+                    }
+                });
+                return result;
+            }
+
+            function formatNumberRanges(nums, padLen = 0) {
+                const unique = Array.from(new Set((nums || []).filter((n) => Number.isFinite(n)))).sort((a, b) => a - b);
+                if (unique.length === 0) return '';
+                const fmt = (n) => (padLen > 0 ? String(n).padStart(padLen, '0') : String(n));
+                const parts = [];
+                let start = unique[0];
+                let end = unique[0];
+                for (let i = 1; i <= unique.length; i++) {
+                    if (i < unique.length && unique[i] === end + 1) {
+                        end = unique[i];
+                    } else {
+                        if (end - start >= 2) {
+                            parts.push(`${fmt(start)}~${fmt(end)}`);
+                        } else if (end - start === 1) {
+                            parts.push(`${fmt(start)}、${fmt(end)}`);
+                        } else {
+                            parts.push(fmt(start));
+                        }
+                        if (i < unique.length) {
+                            start = unique[i];
+                            end = unique[i];
+                        }
+                    }
+                }
+                return parts.join('、');
+            }
+
+            function trimComponentNumeralsFromFigureMatch(raw) {
+                if (!raw) return '';
+                const half = toHalfWidth(raw).trim();
+                return half.replace(/(?:[、,，]\s*(?!(?:附?圖|第|Figs?\.?|Figures?))\d{2,4}[A-Za-z]?)+$/i, (match) => {
+                    const nums = match.match(/\d+/g) || [];
+                    const allSmall = nums.every((n) => parseInt(n, 10) <= 40);
+                    return allSmall ? match : '';
+                });
+            }
+
+            function expandFigureList(str) {
+                if (!str) return [];
+                const half = toHalfWidth(str)
+                    .replace(/(?:附?圖式?|第|圖|Figs?\.?|Figures?)/gi, ' ')
+                    .trim();
+                if (!half) return [];
+                const tokens = [];
+                const parts = half.split(/[、,，及與和&\s]+|and/i).filter(Boolean);
+                parts.forEach((p) => {
+                    const rangeM = p.match(/^(\d+)([A-Za-z]?)\s*(?:[~-]|至|到)\s*(\d+)([A-Za-z]?)$/);
+                    if (rangeM) {
+                        const n1 = parseInt(rangeM[1], 10);
+                        const s1 = rangeM[2].toUpperCase();
+                        const n2 = parseInt(rangeM[3], 10);
+                        const s2 = rangeM[4].toUpperCase();
+                        if (!s1 && !s2 && n2 >= n1 && n2 - n1 <= 50) {
+                            for (let n = n1; n <= n2; n++) tokens.push(String(n));
+                        } else if (
+                            n1 === n2 &&
+                            s1 &&
+                            s2 &&
+                            s2.charCodeAt(0) >= s1.charCodeAt(0) &&
+                            s2.charCodeAt(0) - s1.charCodeAt(0) <= 26
+                        ) {
+                            for (let c = s1.charCodeAt(0); c <= s2.charCodeAt(0); c++) {
+                                tokens.push(`${n1}${String.fromCharCode(c)}`);
+                            }
+                        } else {
+                            tokens.push(`${n1}${s1}`, `${n2}${s2}`);
+                        }
+                    } else {
+                        const singleM = p.match(/^(\d+)([A-Za-z]?)$/);
+                        if (singleM) {
+                            const num = parseInt(singleM[1], 10);
+                            if (num > 0 && num <= 200) {
+                                tokens.push(`${num}${singleM[2].toUpperCase()}`);
+                            }
+                        }
+                    }
+                });
+                return tokens;
+            }
+
+            function formatFigureList(tokens) {
+                if (!tokens || tokens.length === 0) return '';
+                const unique = Array.from(new Set(tokens.map((t) => String(t).toUpperCase()).filter(Boolean)));
+                const parseFig = (t) => {
+                    const m = t.match(/^(\d+)([A-Z]?)$/);
+                    return m ? { num: parseInt(m[1], 10), suf: m[2] || '', raw: t } : { num: 99999, suf: t, raw: t };
+                };
+                const items = unique.map(parseFig).sort((a, b) => a.num - b.num || a.suf.localeCompare(b.suf));
+
+                const parts = [];
+                let i = 0;
+                while (i < items.length) {
+                    if (!items[i].suf && items[i].num < 99999) {
+                        let j = i;
+                        while (j + 1 < items.length && !items[j + 1].suf && items[j + 1].num === items[j].num + 1) {
+                            j++;
+                        }
+                        if (j - i >= 2) {
+                            parts.push(`${items[i].num}~${items[j].num}`);
+                        } else if (j - i === 1) {
+                            parts.push(`${items[i].num}、${items[j].num}`);
+                        } else {
+                            parts.push(String(items[i].num));
+                        }
+                        i = j + 1;
+                    } else {
+                        parts.push(items[i].raw);
+                        i++;
+                    }
+                }
+                return parts.length > 0 ? `圖${parts.join('、')}` : '';
+            }
+
+            function normalizePageLineText(raw) {
+                if (!raw) return '';
+                let s = toHalfWidth(raw).replace(/\s+/g, '');
+                s = s.replace(/([頁欄])[，,、]+(?=(?:倒數)?第?\d+[欄行])/g, '$1');
+                s = s.replace(/到(?=第\d+[頁欄]|倒數第\d+)/g, '至');
+                s = s.replace(/倒數第(\d+)行?(?:[~-]|至|到)(?:倒數第?)?(\d+)行?(?![頁欄])/g, '倒數第$1~$2行');
+                s = s.replace(/(?<!倒數)第(\d+)行?(?:[~-]|至|到)(?!倒數)第?(\d+)行?(?![頁欄])/g, '第$1~$2行');
+                return s;
+            }
+
+            function expandSamePageLineList(raw) {
+                const cleaned = toHalfWidth(raw).replace(/\s+/g, '');
+                if (/(?:至|到)第\d+[頁欄]/.test(cleaned)) {
+                    return [normalizePageLineText(cleaned)];
+                }
+                const m = cleaned.match(/^((?:說明書)?(?:第\d+頁(?:[，,、]?第\d+欄)?|第\d+欄))[，,、]?(.+)$/);
+                if (!m) return [normalizePageLineText(cleaned)];
+
+                const prefix = m[1].replace(/[，,、]/g, '');
+                const rest = m[2];
+                const parts = rest.split(/[、,，]+/).filter(Boolean);
+                if (parts.length <= 1) return [normalizePageLineText(cleaned)];
+
+                return parts.map((p) => {
+                    const normP = /^(?:倒數)?第/.test(p) ? p : `第${p}`;
+                    const withLine = /[行段]$/.test(normP) ? normP : `${normP}行`;
+                    return normalizePageLineText(`${prefix}${withLine}`);
+                });
+            }
+
+            function getVirtualLine(pos) {
+                return pos.isRev ? 100000 - pos.line : pos.line;
+            }
+
+            function comparePos(a, b) {
+                if (a.page !== b.page) return a.page - b.page;
+                if (a.col !== b.col) return a.col - b.col;
+                return getVirtualLine(a) - getVirtualLine(b);
+            }
+
+            function parsePageLineInterval(raw) {
+                if (!raw) return null;
+                const norm = normalizePageLineText(raw).replace(/^說明書/, '');
+                if (!norm) return null;
+
+                const crossPage = norm.match(
+                    /^第(\d+)頁(?:第(\d+)欄)?(倒數)?第(\d+)行?(?:至|到)第(\d+)頁(?:第(\d+)欄)?(倒數)?第(\d+)行?$/
+                );
+                if (crossPage) {
+                    const hasCol = Boolean(crossPage[2] || crossPage[6]);
+                    const s = {
+                        page: parseInt(crossPage[1], 10),
+                        col: crossPage[2] ? parseInt(crossPage[2], 10) : 0,
+                        isRev: Boolean(crossPage[3]),
+                        line: parseInt(crossPage[4], 10),
+                    };
+                    const e = {
+                        page: parseInt(crossPage[5], 10),
+                        col: crossPage[6] ? parseInt(crossPage[6], 10) : 0,
+                        isRev: Boolean(crossPage[7]),
+                        line: parseInt(crossPage[8], 10),
+                    };
+                    if (comparePos(s, e) > 0) return { isReverse: false, hasPage: true, hasCol, start: e, end: s };
+                    return { isReverse: false, hasPage: true, hasCol, start: s, end: e };
+                }
+
+                const crossCol = norm.match(
+                    /^第(\d+)頁第(\d+)欄(倒數)?第(\d+)行?(?:至|到)第(\d+)欄(倒數)?第(\d+)行?$/
+                );
+                if (crossCol) {
+                    const p = parseInt(crossCol[1], 10);
+                    const s = {
+                        page: p,
+                        col: parseInt(crossCol[2], 10),
+                        isRev: Boolean(crossCol[3]),
+                        line: parseInt(crossCol[4], 10),
+                    };
+                    const e = {
+                        page: p,
+                        col: parseInt(crossCol[5], 10),
+                        isRev: Boolean(crossCol[6]),
+                        line: parseInt(crossCol[7], 10),
+                    };
+                    if (comparePos(s, e) > 0) return { isReverse: false, hasPage: true, hasCol: true, start: e, end: s };
+                    return { isReverse: false, hasPage: true, hasCol: true, start: s, end: e };
+                }
+
+                const colOnlyCross = norm.match(
+                    /^第(\d+)欄(倒數)?第(\d+)行?(?:至|到)第(\d+)欄(倒數)?第(\d+)行?$/
+                );
+                if (colOnlyCross) {
+                    const s = {
+                        page: 0,
+                        col: parseInt(colOnlyCross[1], 10),
+                        isRev: Boolean(colOnlyCross[2]),
+                        line: parseInt(colOnlyCross[3], 10),
+                    };
+                    const e = {
+                        page: 0,
+                        col: parseInt(colOnlyCross[4], 10),
+                        isRev: Boolean(colOnlyCross[5]),
+                        line: parseInt(colOnlyCross[6], 10),
+                    };
+                    if (comparePos(s, e) > 0) return { isReverse: false, hasPage: false, hasCol: true, start: e, end: s };
+                    return { isReverse: false, hasPage: false, hasCol: true, start: s, end: e };
+                }
+
+                const normToRev = norm.match(/^第(\d+)頁(?:第(\d+)欄)?第(\d+)行?(?:至|到)倒數第(\d+)行?$/);
+                if (normToRev) {
+                    const hasCol = Boolean(normToRev[2]);
+                    const p = parseInt(normToRev[1], 10);
+                    const c = normToRev[2] ? parseInt(normToRev[2], 10) : 0;
+                    return {
+                        isReverse: false,
+                        hasPage: true,
+                        hasCol,
+                        start: { page: p, col: c, isRev: false, line: parseInt(normToRev[3], 10) },
+                        end: { page: p, col: c, isRev: true, line: parseInt(normToRev[4], 10) },
+                    };
+                }
+
+                const singleRev = norm.match(/^第(\d+)頁(?:第(\d+)欄)?倒數第(\d+)(?:[~-](?:倒數第?)?(\d+))?行?$/);
+                if (singleRev) {
+                    const hasCol = Boolean(singleRev[2]);
+                    const p = parseInt(singleRev[1], 10);
+                    const c = singleRev[2] ? parseInt(singleRev[2], 10) : 0;
+                    const l1 = parseInt(singleRev[3], 10);
+                    const l2 = singleRev[4] ? parseInt(singleRev[4], 10) : l1;
+                    const hi = Math.max(l1, l2);
+                    const lo = Math.min(l1, l2);
+                    return {
+                        isReverse: false,
+                        hasPage: true,
+                        hasCol,
+                        start: { page: p, col: c, isRev: true, line: hi },
+                        end: { page: p, col: c, isRev: true, line: lo },
+                    };
+                }
+
+                const single = norm.match(/^第(\d+)頁(?:第(\d+)欄)?第(\d+)(?:[~-](\d+))?行?$/);
+                if (single) {
+                    const hasCol = Boolean(single[2]);
+                    const p = parseInt(single[1], 10);
+                    const c = single[2] ? parseInt(single[2], 10) : 0;
+                    const l1 = parseInt(single[3], 10);
+                    const l2 = single[4] ? parseInt(single[4], 10) : l1;
+                    const lo = Math.min(l1, l2);
+                    const hi = Math.max(l1, l2);
+                    return {
+                        isReverse: false,
+                        hasPage: true,
+                        hasCol,
+                        start: { page: p, col: c, isRev: false, line: lo },
+                        end: { page: p, col: c, isRev: false, line: hi },
+                    };
+                }
+
+                const colOnlySingle = norm.match(/^第(\d+)欄(倒數)?第(\d+)(?:[~-](?:倒數第?)?(\d+))?行?$/);
+                if (colOnlySingle) {
+                    const c = parseInt(colOnlySingle[1], 10);
+                    const isRev = Boolean(colOnlySingle[2]);
+                    const l1 = parseInt(colOnlySingle[3], 10);
+                    const l2 = colOnlySingle[4] ? parseInt(colOnlySingle[4], 10) : l1;
+                    const startLine = isRev ? Math.max(l1, l2) : Math.min(l1, l2);
+                    const endLine = isRev ? Math.min(l1, l2) : Math.max(l1, l2);
+                    return {
+                        isReverse: false,
+                        hasPage: false,
+                        hasCol: true,
+                        start: { page: 0, col: c, isRev, line: startLine },
+                        end: { page: 0, col: c, isRev, line: endLine },
+                    };
+                }
+
+                if (/倒數/.test(norm)) {
+                    const pM = norm.match(/第(\d+)頁/);
+                    const cM = norm.match(/第(\d+)欄/);
+                    const lM = norm.match(/倒數第(\d+)/);
+                    return {
+                        isReverse: true,
+                        sortPage: pM ? parseInt(pM[1], 10) : 99999,
+                        sortCol: cM ? parseInt(cM[1], 10) : 0,
+                        sortLine: 80000 - (lM ? parseInt(lM[1], 10) : 0),
+                        raw: norm,
+                    };
+                }
+
+                return null;
+            }
+
+            function isOverlappingOrAdjacent(a, b) {
+                if (Boolean(a.hasPage) !== Boolean(b.hasPage)) return false;
+                if (a.hasCol !== b.hasCol) return false;
+                if (comparePos(b.start, a.end) <= 0) return true;
+                if (
+                    a.end.page === b.start.page &&
+                    a.end.col === b.start.col &&
+                    a.end.isRev === b.start.isRev &&
+                    getVirtualLine(b.start) <= getVirtualLine(a.end) + 1
+                ) {
+                    return true;
+                }
+                return false;
+            }
+
+            function formatLineEndpoint(pos) {
+                return pos.isRev ? `倒數第${pos.line}行` : `第${pos.line}行`;
+            }
+
+            function formatPageLineInterval(iv) {
+                const s = iv.start;
+                const e = iv.end;
+                const sPage = iv.hasPage !== false && s.page > 0 ? `第${s.page}頁` : '';
+                const ePage = iv.hasPage !== false && e.page > 0 ? `第${e.page}頁` : '';
+                const sCol = iv.hasCol && s.col > 0 ? `第${s.col}欄` : '';
+                const eCol = iv.hasCol && e.col > 0 ? `第${e.col}欄` : '';
+
+                if (s.page === e.page && s.col === e.col) {
+                    if (s.isRev === e.isRev) {
+                        if (s.line === e.line) {
+                            return `${sPage}${sCol}${formatLineEndpoint(s)}`;
+                        }
+                        if (s.isRev) {
+                            return `${sPage}${sCol}倒數第${s.line}~${e.line}行`;
+                        }
+                        return `${sPage}${sCol}第${s.line}~${e.line}行`;
+                    }
+                    return `${sPage}${sCol}${formatLineEndpoint(s)}至${formatLineEndpoint(e)}`;
+                }
+                if (s.page === e.page) {
+                    return `${sPage}${sCol}${formatLineEndpoint(s)}至${eCol}${formatLineEndpoint(e)}`;
+                }
+                return `${sPage}${sCol}${formatLineEndpoint(s)}至${ePage}${eCol}${formatLineEndpoint(e)}`;
+            }
+
+            function splitNonPatentPageLinePieces(textPart) {
+                const clean = String(textPart || '').trim();
+                if (!clean) return [];
+                const half = toHalfWidth(clean).replace(/([頁欄])[，,、\s]+(?=(?:倒數\s*)?第?\s*\d+\s*[欄行])/g, '$1');
+
+                if (!/第\s*\d+\s*[頁欄]/.test(half)) {
+                    return [clean];
+                }
+
+                const pieces = half.split(/[、,，]+/).map((s) => s.trim()).filter(Boolean);
+                const out = [];
+                let lastPagePrefix = '';
+                let lastColPrefix = '';
+
+                pieces.forEach((p) => {
+                    const compact = p.replace(/\s+/g, '');
+                    const pageM = compact.match(/^(第\d+頁)(第\d+欄)?/);
+                    if (pageM) {
+                        lastPagePrefix = pageM[1];
+                        lastColPrefix = pageM[2] || '';
+                        const expanded = expandSamePageLineList(compact);
+                        out.push(...expanded);
+                    } else if (/^第\d+欄/.test(compact) && lastPagePrefix) {
+                        const colM = compact.match(/^(第\d+欄)/);
+                        lastColPrefix = colM ? colM[1] : '';
+                        const expanded = expandSamePageLineList(`${lastPagePrefix}${compact}`);
+                        out.push(...expanded);
+                    } else if (/^(?:倒數)?第?\d+(?:[~-]\d+)?行?$/.test(compact) && lastPagePrefix) {
+                        const normLine = /^(?:倒數)?第/.test(compact) ? compact : `第${compact}`;
+                        const withLine = /行$/.test(normLine) ? normLine : `${normLine}行`;
+                        out.push(normalizePageLineText(`${lastPagePrefix}${lastColPrefix}${withLine}`));
+                    } else {
+                        out.push(p);
+                    }
+                });
+
+                return out.filter(Boolean);
+            }
+
+            function collapseRepeatedPagePrefixes(arr) {
+                if (!arr || arr.length <= 1) return arr || [];
+                const result = [];
+                let lastSinglePage = null;
+
+                arr.forEach((item) => {
+                    const s = String(item || '').trim();
+                    if (/至第\d+頁/.test(s)) {
+                        lastSinglePage = null;
+                        result.push(s);
+                        return;
+                    }
+                    const m = s.match(/^第(\d+)頁(第\d+欄.+)$/);
+                    if (m) {
+                        const pageNum = m[1];
+                        const rest = m[2];
+                        if (lastSinglePage === pageNum) {
+                            result.push(rest);
+                        } else {
+                            lastSinglePage = pageNum;
+                            result.push(s);
+                        }
+                    } else {
+                        const pOnly = s.match(/^第(\d+)頁/);
+                        lastSinglePage = pOnly ? pOnly[1] : null;
+                        result.push(s);
+                    }
+                });
+
+                return result;
+            }
+
+            function groupSamePageLineItems(arr) {
+                if (!arr || arr.length <= 1) return arr || [];
+                const result = [];
+                let currentKey = null;
+                let currentPrefix = '';
+                let currentLines = [];
+
+                const flush = () => {
+                    if (currentLines.length > 0) {
+                        result.push(`${currentPrefix}第${currentLines.join('、')}行`);
+                        currentKey = null;
+                        currentPrefix = '';
+                        currentLines = [];
+                    }
+                };
+
+                arr.forEach((item) => {
+                    const s = String(item || '').trim();
+                    const m = s.match(/^((?:第\d+頁(?:第\d+欄)?|第\d+欄))第(\d+(?:~\d+)?)行$/);
+                    if (m) {
+                        const prefix = m[1];
+                        const lineSpec = m[2];
+                        if (currentKey === prefix) {
+                            currentLines.push(lineSpec);
+                        } else {
+                            flush();
+                            currentKey = prefix;
+                            currentPrefix = prefix;
+                            currentLines = [lineSpec];
+                        }
+                    } else {
+                        flush();
+                        result.push(s);
+                    }
+                });
+
+                flush();
+                return result;
+            }
+
+            function mergePageLineRanges(arr) {
+                if (!arr || arr.length === 0) return [];
+                const intervals = [];
+                const reverseItems = [];
+                const others = [];
+                const otherSeen = new Set();
+
+                arr.forEach((raw) => {
+                    const parsed = parsePageLineInterval(raw);
+                    if (!parsed) {
+                        const clean = String(raw || '').trim();
+                        const key = toHalfWidth(clean).replace(/\s+/g, '').toLowerCase();
+                        if (clean && !otherSeen.has(key)) {
+                            otherSeen.add(key);
+                            others.push(clean);
+                        }
+                    } else if (parsed.isReverse) {
+                        const key = toHalfWidth(parsed.raw).replace(/\s+/g, '');
+                        if (!otherSeen.has(key)) {
+                            otherSeen.add(key);
+                            reverseItems.push(parsed);
+                        }
+                    } else {
+                        intervals.push(parsed);
+                    }
+                });
+
+                intervals.sort((a, b) => comparePos(a.start, b.start) || comparePos(a.end, b.end));
+                const merged = [];
+                for (const iv of intervals) {
+                    let placed = false;
+                    for (let i = merged.length - 1; i >= 0; i--) {
+                        if (isOverlappingOrAdjacent(merged[i], iv)) {
+                            if (comparePos(iv.end, merged[i].end) > 0) {
+                                merged[i].end = iv.end;
+                            }
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        merged.push({
+                            isReverse: false,
+                            hasPage: iv.hasPage,
+                            hasCol: iv.hasCol,
+                            start: { ...iv.start },
+                            end: { ...iv.end },
+                        });
+                    }
+                }
+
+                const pagedOthers = [];
+                const nonPageOthers = [];
+                others.forEach((text) => {
+                    const half = toHalfWidth(text).replace(/\s+/g, '');
+                    const pM = half.match(/第(\d+)頁|(?:^|\b)pp?\.?(\d+)/i);
+                    if (pM) {
+                        const cM = half.match(/第(\d+)欄/);
+                        const lM = half.match(/第(\d+)(?:[~-]\d+)?行/);
+                        const dM = half.match(/第(\d+)(?:[~-]\d+)?段/);
+                        pagedOthers.push({
+                            sortPage: parseInt(pM[1] || pM[2], 10),
+                            sortCol: cM ? parseInt(cM[1], 10) : 0,
+                            sortLine: lM ? parseInt(lM[1], 10) : dM ? 50000 + parseInt(dM[1], 10) : 90000,
+                            text,
+                        });
+                    } else {
+                        nonPageOthers.push(text);
+                    }
+                });
+
+                const sortable = [
+                    ...merged.map((m) => ({
+                        sortPage: m.start.page,
+                        sortCol: m.start.col,
+                        sortLine: getVirtualLine(m.start),
+                        text: formatPageLineInterval(m),
+                    })),
+                    ...reverseItems.map((r) => ({
+                        sortPage: r.sortPage,
+                        sortCol: r.sortCol,
+                        sortLine: r.sortLine,
+                        text: r.raw,
+                    })),
+                    ...pagedOthers,
+                ];
+
+                sortable.sort(
+                    (a, b) => a.sortPage - b.sortPage || a.sortCol - b.sortCol || a.sortLine - b.sortLine
+                );
+
+                return groupSamePageLineItems([...sortable.map((s) => s.text), ...nonPageOthers]);
+            }
+
+            function extractCitationIdsFromText(text) {
+                if (!text) return [];
+                const half = toHalfWidth(text);
+                const ids = new Set();
+                const regex = /引證\s*(\d+(?:\s*(?:[~-]|至|到|[、,，及與和])\s*(?:引證\s*)?\d+)*)/g;
+                let m;
+                while ((m = regex.exec(half)) !== null) {
+                    expandIntegerList(m[1]).forEach((n) => {
+                        if (n > 0 && n <= 50) ids.add(n);
+                    });
+                }
+                return Array.from(ids).sort((a, b) => a - b);
+            }
+
+            function parseCitationList(rawText) {
+                const citations = new Map();
+                const lines = rawText.split(/\r?\n/);
+                let headerIdx = -1;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const half = toHalfWidth(lines[i]).trim();
+                    if (/^(?:[（(]?[一二三四五六七八九十\d]+[）)、.\s]*)?引證文件\s*[:：]?$/.test(half)) {
+                        headerIdx = i;
+                        break;
+                    }
+                }
+
+                let bodyText = rawText;
+                if (headerIdx !== -1) {
+                    bodyText = lines.slice(0, headerIdx).join('\n');
+                    const listLines = lines.slice(headerIdx + 1);
+                    let currentId = null;
+
+                    for (const rawLine of listLines) {
+                        const trimmed = rawLine.trim();
+                        if (!trimmed) continue;
+                        const half = toHalfWidth(trimmed);
+
+                        if (/^(?:備註|注意事項|檢送|正本|副本|智慧財產局|審查官)\s*[:：]?/.test(half)) {
+                            break;
+                        }
+
+                        const itemMatch = trimmed.match(
+                            /^(?:引證\s*)?([0-9０-９]+)\s*[、.．:：)）]\s*(.+)$/
+                        );
+                        if (itemMatch) {
+                            const id = parseInt(toHalfWidth(itemMatch[1]), 10);
+                            const doc = itemMatch[2].trim();
+                            if (id > 0 && id <= 50 && doc) {
+                                citations.set(id, doc);
+                                currentId = id;
+                            }
+                        } else if (currentId !== null && !/^[（(]?[一二三四五六七八九十]+[）)、.]/.test(half)) {
+                            citations.set(currentId, `${citations.get(currentId)} ${trimmed}`.trim());
+                        }
+                    }
+                }
+
+                const mentionedIds = extractCitationIdsFromText(bodyText);
+                mentionedIds.forEach((id) => {
+                    if (!citations.has(id)) {
+                        citations.set(id, `（未於引證文件欄列出文獻編號，引證${id}）`);
+                    }
+                });
+
+                return { citations, bodyText };
+            }
+
+            function extractNonPatentBracketsFromSegment(segText, openedBracketBefore = false) {
+                const nplBrackets = [];
+                const rawMatches = [];
+                const highlights = [];
+
+                let searchStart = 0;
+                if (openedBracketBefore) {
+                    const closeIdx = segText.indexOf('】');
+                    const nextOpenIdx = segText.indexOf('【');
+                    if (closeIdx !== -1 && (nextOpenIdx === -1 || closeIdx < nextOpenIdx)) {
+                        const cleanedInner = segText
+                            .slice(0, closeIdx)
+                            .replace(/^[\s，,、:：;；之的]+/, '')
+                            .trim();
+                        if (cleanedInner) {
+                            rawMatches.push(`【${cleanedInner}】`);
+                            highlights.push({ start: 0, end: closeIdx + 1, type: 'passage' });
+                            cleanedInner
+                                .split(/[；;]/)
+                                .map((s) => s.trim())
+                                .filter(Boolean)
+                                .forEach((part) => nplBrackets.push(part));
+                        }
+                        searchStart = closeIdx + 1;
+                    }
+                }
+
+                const bracketRegex = /【([^】]+)】/g;
+                bracketRegex.lastIndex = searchStart;
+                let bm;
+                while ((bm = bracketRegex.exec(segText)) !== null) {
+                    const inner = bm[1].trim();
+                    if (!inner) continue;
+                    rawMatches.push(bm[0]);
+                    highlights.push({ start: bm.index, end: bm.index + bm[0].length, type: 'passage' });
+                    inner
+                        .split(/[；;]/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                        .forEach((part) => nplBrackets.push(part));
+                }
+                return { nplBrackets, rawMatches, highlights };
+            }
+
+            function extractPassagesFromSegment(segText) {
+                const figs = [];
+                const paras = [];
+                const claims = [];
+                const others = [];
+                const abstracts = [];
+                let hasAbstract = false;
+                const rawMatches = [];
+                const highlights = [];
+
+                const recordMatch = (start, end, raw) => {
+                    rawMatches.push(raw);
+                    highlights.push({ start, end, type: 'passage' });
+                };
+
+                const pageLineRegex =
+                    /(?:說明書\s*)?(?:第\s*[0-9０-９]+\s*頁(?:\s*[，,、]?\s*第\s*[0-9０-９]+\s*欄)?(?:\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?![0-9０-９頁欄])))?\s*行?(?:\s*[、,，]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?![0-9０-９頁欄])))?(?![0-9０-９頁欄段項圖])\s*行?)*)(?:\s*(?:至|到)\s*第\s*[0-9０-９]+\s*頁(?:\s*[，,、]?\s*第\s*[0-9０-９]+\s*欄)?(?:\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+\s*行?)?)?|第\s*[0-9０-９]+\s*頁\s*[，,、]?\s*第\s*[0-9０-９]+\s*欄\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+\s*行?\s*(?:至|到)\s*第\s*[0-9０-９]+\s*欄\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+\s*行?|第\s*[0-9０-９]+\s*欄\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+\s*行?\s*(?:至|到)\s*第\s*[0-9０-９]+\s*欄\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+\s*行?|第\s*[0-9０-９]+\s*欄\s*[，,、]?\s*(?:倒數\s*)?第\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?![0-9０-９頁欄])))?\s*行(?:\s*[、,，]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*(?:倒數\s*)?第?\s*[0-9０-９]+(?![0-9０-９頁欄])))?(?![0-9０-９頁欄段項圖])\s*行?)*|(?:說明書\s*)?倒數\s*第\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*第?\s*[0-9０-９]+))?\s*[段行])/g;
+                let plm;
+                const pageLineSpans = [];
+                while ((plm = pageLineRegex.exec(segText)) !== null) {
+                    const raw = plm[0];
+                    const halfRaw = toHalfWidth(raw);
+                    if (!/[行段]/.test(halfRaw) && !/至\s*第\s*\d+\s*頁/.test(halfRaw) && !/第\s*\d+\s*欄\s*第\s*\d+/.test(halfRaw)) {
+                        continue;
+                    }
+                    const expandedItems = expandSamePageLineList(raw).filter(Boolean);
+                    if (expandedItems.length > 0) {
+                        others.push(...expandedItems);
+                        recordMatch(plm.index, plm.index + raw.length, raw);
+                        pageLineSpans.push([plm.index, plm.index + raw.length]);
+                    }
+                }
+
+                const isInsidePageLine = (idx) => pageLineSpans.some(([s, e]) => idx >= s && idx < e);
+
+                const figRegex =
+                    /(?:附?圖式?\s*(?:第\s*)?[0-9０-９]+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*(?:附?圖式?\s*(?:第\s*)?)?[0-9０-９]+[A-Za-z]?))*|第\s*[0-9０-９]+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*第?\s*[0-9０-９]+[A-Za-z]?))*\s*圖|(?:Figs?\.?|Figures?)\s*[0-9０-９]+[A-Za-z]?(?:\s*(?:[~～\-至到、&]|and)\s*(?:Figs?\.?|Figures?)?\s*[0-9０-９]+[A-Za-z]?)*)/gi;
+                let fm;
+                while ((fm = figRegex.exec(segText)) !== null) {
+                    if (isInsidePageLine(fm.index)) continue;
+                    const raw = fm[0];
+                    const trimmed = trimComponentNumeralsFromFigureMatch(raw);
+                    const expanded = expandFigureList(trimmed);
+                    if (expanded.length > 0) {
+                        figs.push(...expanded);
+                        recordMatch(fm.index, fm.index + raw.length, raw);
+                    }
+                }
+
+                const paraRegex =
+                    /(?:(?:說明書\s*)?(?:第\s*)?([0-9０-９]+(?:\s*(?:段?\s*[~～\-至到、,，及與和]\s*(?:第\s*)?[0-9０-９]+))*)\s*段|\[([0-9０-９]{3,5})\](?:\s*(?:[~～\-至到、,，]\s*\[([0-9０-９]{3,5})\]))*)/g;
+                let pm;
+                while ((pm = paraRegex.exec(segText)) !== null) {
+                    if (isInsidePageLine(pm.index)) continue;
+                    const prefixCheck = segText.slice(Math.max(0, pm.index - 4), pm.index);
+                    if (/倒數\s*$/.test(prefixCheck)) continue;
+
+                    const raw = pm[0];
+                    const spec = pm[1] || raw.replace(/[\[\]]/g, '');
+                    const nums = expandIntegerList(spec).filter((n) => n > 0 && n <= 99999);
+                    if (nums.length > 0) {
+                        paras.push(...nums);
+                        recordMatch(pm.index, pm.index + raw.length, raw);
+                    }
+                }
+
+                const claimRegex =
+                    /申請專利範圍\s*第?\s*([0-9０-９]+(?:\s*(?:[~～\-至到、,，及與和]\s*第?\s*[0-9０-９]+))*)\s*項/g;
+                let clm;
+                while ((clm = claimRegex.exec(segText)) !== null) {
+                    const nums = expandIntegerList(clm[1]).filter((n) => n > 0 && n <= 500);
+                    if (nums.length > 0) {
+                        claims.push(...nums);
+                        recordMatch(clm.index, clm.index + clm[0].length, clm[0]);
+                    }
+                }
+
+                const absRegex =
+                    /(?:(?:中文|英文|發明|新型)?摘要(?:\s*(?:倒數\s*)?第\s*[0-9０-９]+(?:\s*(?:[~～\-至到]\s*(?:倒數\s*)?第?\s*[0-9０-９]+))?\s*[行段])?|\bAbstract\b)/gi;
+                let am;
+                while ((am = absRegex.exec(segText)) !== null) {
+                    hasAbstract = true;
+                    const cleanAbs = toHalfWidth(am[0]).replace(/\s+/g, '');
+                    abstracts.push(/^abstract$/i.test(cleanAbs) ? '摘要' : cleanAbs);
+                    recordMatch(am.index, am.index + am[0].length, am[0]);
+                }
+
+                return { figs, paras, claims, others, abstracts, hasAbstract, rawMatches, highlights };
+            }
+
+            function isNonPatentTextPassage(str) {
+                if (!str) return false;
+                const half = toHalfWidth(str).trim();
+                return /(?:頁|欄|行|段|節|章|表|摘要|倒數|說明書|申請專利範圍|實施例|結論|\b(?:pp?\.|pages?|cols?\.|columns?|lines?|paras?\.|paragraphs?|secs?\.|sections?|tables?|abstract|ch\.|chapter)\b)/i.test(
+                    half
+                );
+            }
+
+            function splitNonPatentFigureAndText(part) {
+                const clean = String(part || '').trim();
+                if (!clean) return { figTokens: [], otherFigs: [], textPart: '' };
+
+                const pureFigRegex =
+                    /^(?:附?圖式?\s*(?:第\s*)?\d+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*(?:附?圖式?\s*(?:第\s*)?)?\d+[A-Za-z]?))*|第\s*\d+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*第?\s*\d+[A-Za-z]?))*\s*圖|(?:Figs?\.?|Figures?)\s*\d+[A-Za-z]?(?:\s*(?:[~～\-至到、&]|and)\s*(?:Figs?\.?|Figures?)?\s*\d+[A-Za-z]?)*)$/i;
+
+                const leadingFigRegex =
+                    /^(附?圖式?\s*(?:第\s*)?\d+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*(?:附?圖式?\s*(?:第\s*)?)?\d+[A-Za-z]?))*|第\s*\d+[A-Za-z]?(?:\s*(?:[~～\-至到、及與和]\s*第?\s*\d+[A-Za-z]?))*\s*圖|(?:Figs?\.?|Figures?)\s*\d+[A-Za-z]?(?:\s*(?:[~～\-至到、&]|and)\s*(?:Figs?\.?|Figures?)?\s*\d+[A-Za-z]?)*)(?:\s*[:：、，,(\[（\s]+(.*))?$/i;
+
+                const half = toHalfWidth(clean).trim();
+
+                if (pureFigRegex.test(half)) {
+                    const trimmedFig = trimComponentNumeralsFromFigureMatch(half);
+                    const tokens = expandFigureList(trimmedFig);
+                    if (tokens.length > 0) {
+                        return { figTokens: tokens, otherFigs: [], textPart: '' };
+                    }
+                    return { figTokens: [], otherFigs: [clean], textPart: '' };
+                }
+
+                const commaPieces = clean
+                    .replace(/([頁欄])[，,、\s]+(?=(?:倒數\s*)?第?\s*\d+\s*[欄行])/g, '$1')
+                    .split(/[，,]/)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+
+                const pieces = [];
+                commaPieces.forEach((cp) => {
+                    const cpHalf = toHalfWidth(cp).trim();
+                    if (pureFigRegex.test(cpHalf)) {
+                        pieces.push(cp);
+                    } else if (
+                        /[、]/.test(cp) &&
+                        /(?:附?圖式?\s*(?:第\s*)?\d+|第\s*\d+\s*圖|(?:Figs?\.?|Figures?)\s*\d+)/i.test(cpHalf)
+                    ) {
+                        const sub = cp
+                            .split(/[、]/)
+                            .map((s) => s.trim())
+                            .filter(Boolean);
+                        pieces.push(...sub);
+                    } else {
+                        pieces.push(cp);
+                    }
+                });
+
+                const figTokens = [];
+                const otherFigs = [];
+                const remainingText = [];
+                let foundFig = false;
+
+                pieces.forEach((p) => {
+                    const pHalf = toHalfWidth(p).trim();
+                    if (pureFigRegex.test(pHalf)) {
+                        foundFig = true;
+                        const trimmedFig = trimComponentNumeralsFromFigureMatch(pHalf);
+                        const tokens = expandFigureList(trimmedFig);
+                        if (tokens.length > 0) {
+                            figTokens.push(...tokens);
+                        } else {
+                            otherFigs.push(p);
+                        }
+                        return;
+                    }
+
+                    const leadMatch = pHalf.match(leadingFigRegex);
+                    if (leadMatch) {
+                        foundFig = true;
+                        const trimmedFig = trimComponentNumeralsFromFigureMatch(leadMatch[1]);
+                        const tokens = expandFigureList(trimmedFig);
+                        if (tokens.length > 0) {
+                            figTokens.push(...tokens);
+                        } else {
+                            otherFigs.push(leadMatch[1].trim());
+                        }
+                        const trailing = (leadMatch[2] || '').trim();
+                        if (trailing && isNonPatentTextPassage(trailing)) {
+                            remainingText.push(trailing);
+                        }
+                        return;
+                    }
+
+                    remainingText.push(p);
+                });
+
+                if (foundFig) {
+                    const validTextParts = remainingText.filter((t) => isNonPatentTextPassage(t));
+                    return {
+                        figTokens,
+                        otherFigs,
+                        textPart: validTextParts.join('、'),
+                    };
+                }
+
+                return { figTokens: [], otherFigs: [], textPart: clean };
+            }
+
+            function parseClaimStructure(bodyText) {
+                const half = toHalfWidth(bodyText);
+                const independentClaims = new Set();
+                let totalClaims = 0;
+
+                const totalMatch = half.match(/(?:請求項|申請專利範圍)[^。\n]{0,12}?共\s*(\d+)\s*項/);
+                if (totalMatch) {
+                    totalClaims = parseInt(totalMatch[1], 10);
+                }
+
+                const indRegex = /其中\s*第?\s*(\d+(?:\s*(?:[、,，及與和~]\s*第?\s*\d+))*)\s*項?\s*為獨立項/g;
+                let m;
+                while ((m = indRegex.exec(half)) !== null) {
+                    expandIntegerList(m[1]).forEach((n) => {
+                        if (n > 0 && (totalClaims === 0 || n <= totalClaims)) {
+                            independentClaims.add(n);
+                        }
+                    });
+                }
+
+                if (independentClaims.size === 0) {
+                    independentClaims.add(1);
+                }
+
+                return { independentClaims, totalClaims };
+            }
+
+            function extractClaimNumbersFromHeading(text, totalClaims = 0) {
+                if (!text) return [];
+                const half = toHalfWidth(text).trim();
+                if (!half) return [];
+
+                if (/^(?:依據|由|參酌|結合)\s*引證/.test(half)) return [];
+
+                const cleaned = half
+                    .replace(/專利法(?:施行細則)?第\s*\d+\s*條(?:\s*第\s*\d+\s*項)?(?:\s*第\s*\d+\s*款)?/g, '')
+                    .replace(/第\s*\d+\s*條(?:\s*第\s*\d+\s*項)?/g, '')
+                    .replace(/^[（(][一二三四五六七八九十]+[）)]\s*/, '')
+                    .replace(/^(?:\d+[、.．]|[（(]\d+[）)])\s*/, '')
+                    .replace(/^(?:針對|至於|至|關於|經查|查|另|又|再|本案)\s*/, '');
+
+                const m = cleaned.match(
+                    /^(?:本案)?(?:請求項\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*(?:請求項|第)?\s*\d+))*)\s*項?|第\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*第?\s*\d+))*)\s*項)(?![\d條款])/
+                );
+                if (!m) return [];
+
+                const rawSpec = m[1] || m[2] || '';
+                const isValid = (n) => n > 0 && (totalClaims > 0 ? n <= totalClaims : n <= 200);
+                return Array.from(new Set(expandIntegerList(rawSpec).filter(isValid))).sort((a, b) => a - b);
+            }
+
+            function extractAllCitationPassages(bodyText, citations) {
+                const { totalClaims } = parseClaimStructure(bodyText);
+                const citData = new Map();
+                citations.forEach((docName, id) => {
+                    citData.set(id, {
+                        id,
+                        docName,
+                        isNonPatent: isNonPatentCitation(docName),
+                        figs: [],
+                        paras: [],
+                        claims: [],
+                        others: [],
+                        abstracts: [],
+                        hasAbstract: false,
+                        nplBrackets: [],
+                        byClaim: new Map(),
+                        traces: [],
+                    });
+                });
+
+                const getOrCreateClaimBucket = (target, claimNums) => {
+                    if (!claimNums || claimNums.length === 0) return null;
+                    const claimKey = formatNumberRanges(claimNums, 0);
+                    if (!claimKey) return null;
+                    if (!target.byClaim.has(claimKey)) {
+                        target.byClaim.set(claimKey, {
+                            claimKey,
+                            minClaimNum: claimNums[0],
+                            isNonPatent: target.isNonPatent,
+                            figs: [],
+                            paras: [],
+                            claims: [],
+                            others: [],
+                            abstracts: [],
+                            hasAbstract: false,
+                            nplBrackets: [],
+                        });
+                    }
+                    return target.byClaim.get(claimKey);
+                };
+
+                const globalHighlights = [];
+                let activeCitId = null;
+                let activeClaims = [];
+                let offset = 0;
+                const lineParts = bodyText.match(/[^\r\n]*(?:\r?\n|$)/g) || [];
+
+                for (let i = 0; i < lineParts.length; i++) {
+                    const rawPart = lineParts[i];
+                    if (rawPart === '' && i === lineParts.length - 1) break;
+                    const line = rawPart.replace(/\r?\n$/, '');
+                    const lineStart = offset;
+                    offset += rawPart.length;
+
+                    const halfLine = toHalfWidth(line).trim();
+                    if (!halfLine) continue;
+
+                    const isMajorSection = /^[（(][一二三四五六七八九十]+[）)]/.test(halfLine);
+                    if (isMajorSection) {
+                        activeCitId = null;
+                    }
+
+                    const leadingClaims = extractClaimNumbersFromHeading(halfLine, totalClaims);
+                    if (leadingClaims.length > 0) {
+                        activeClaims = leadingClaims;
+                        activeCitId = null;
+                    } else if (
+                        /^(?:\d+[、.．]|[（(]\d+[）)])\s*(?:本案)?(?:請求項|第\s*\d+\s*項)/.test(halfLine)
+                    ) {
+                        activeCitId = null;
+                    }
+
+                    if (/專利法第26條/.test(halfLine) && !/引證/.test(halfLine)) {
+                        activeCitId = null;
+                        continue;
+                    }
+
+                    const citEvents = [];
+                    const citRegex =
+                        /引證\s*([0-9０-９]+(?:\s*(?:[~～\-至到、及與和]\s*(?:引證\s*)?[0-9０-９]+|[,，]\s*[0-9０-９]+))*)/g;
+                    let cm;
+                    while ((cm = citRegex.exec(line)) !== null) {
+                        const ids = expandIntegerList(cm[1]).filter((n) => n > 0 && n <= 50);
+                        citEvents.push({
+                            start: cm.index,
+                            end: cm.index + cm[0].length,
+                            text: cm[0],
+                            ids,
+                        });
+                        globalHighlights.push({
+                            start: lineStart + cm.index,
+                            end: lineStart + cm.index + cm[0].length,
+                            type: 'citation',
+                        });
+                    }
+
+                    const claimResetMap = new Map();
+                    const inlineClaimRegex =
+                        /(?:[。；;]\s*)(?:(?:針對|至於|至|關於|經查|查|另|又|再)\s*)?(?:本案)?(請求項\s*[0-9０-９]+(?:\s*(?:[~～\-至到、,，及與和]\s*(?:請求項|第)?\s*[0-9０-９]+))*\s*項?|第\s*[0-9０-９]+(?:\s*(?:[~～\-至到、,，及與和]\s*第?\s*[0-9０-９]+))*\s*項)(?![0-9０-９條款])/g;
+                    let icm;
+                    while ((icm = inlineClaimRegex.exec(line)) !== null) {
+                        const pos = icm.index + icm[0].indexOf(icm[1]);
+                        const parsedInlineClaims = extractClaimNumbersFromHeading(icm[1], totalClaims);
+                        claimResetMap.set(pos, parsedInlineClaims);
+                    }
+
+                    const boundaries = [0];
+                    citEvents.forEach((ev) => {
+                        boundaries.push(ev.start);
+                        boundaries.push(ev.end);
+                    });
+                    claimResetMap.forEach((_, pos) => boundaries.push(pos));
+                    boundaries.push(line.length);
+
+                    const uniqueBounds = Array.from(new Set(boundaries)).sort((a, b) => a - b);
+
+                    for (let b = 0; b < uniqueBounds.length - 1; b++) {
+                        const segStart = uniqueBounds[b];
+                        const segEnd = uniqueBounds[b + 1];
+                        if (segStart >= segEnd) continue;
+
+                        if (claimResetMap.has(segStart)) {
+                            activeCitId = null;
+                            const switchedClaims = claimResetMap.get(segStart);
+                            if (switchedClaims && switchedClaims.length > 0) {
+                                activeClaims = switchedClaims;
+                            }
+                        }
+
+                        const matchedEvent = citEvents.find((ev) => ev.start === segStart && ev.end === segEnd);
+                        if (matchedEvent) {
+                            if (matchedEvent.ids.length === 1) {
+                                activeCitId = matchedEvent.ids[0];
+                            } else {
+                                activeCitId = null;
+                            }
+                            continue;
+                        }
+
+                        if (activeCitId === null) continue;
+
+                        const segText = line.slice(segStart, segEnd);
+                        const target = citData.get(activeCitId);
+                        if (!target) continue;
+
+                        const claimBucket = getOrCreateClaimBucket(target, activeClaims);
+                        const claimLabel = claimBucket ? `第 ${claimBucket.claimKey} 項` : '';
+
+                        if (target.isNonPatent) {
+                            const beforeSeg = line.slice(0, segStart);
+                            const openedBracketBefore = beforeSeg.lastIndexOf('【') > beforeSeg.lastIndexOf('】');
+                            const nplExtracted = extractNonPatentBracketsFromSegment(segText, openedBracketBefore);
+                            if (nplExtracted.rawMatches.length > 0) {
+                                target.nplBrackets.push(...nplExtracted.nplBrackets);
+                                if (claimBucket) {
+                                    claimBucket.nplBrackets.push(...nplExtracted.nplBrackets);
+                                }
+                                nplExtracted.rawMatches.forEach((raw) => {
+                                    target.traces.push({
+                                        raw,
+                                        claimLabel,
+                                        context: line.trim().slice(0, 120) + (line.trim().length > 120 ? '…' : ''),
+                                    });
+                                });
+                                nplExtracted.highlights.forEach((h) => {
+                                    globalHighlights.push({
+                                        start: lineStart + segStart + h.start,
+                                        end: lineStart + segStart + h.end,
+                                        type: h.type,
+                                    });
+                                });
+                            } else {
+                                const fallback = extractPassagesFromSegment(segText);
+                                if (fallback.rawMatches.length > 0) {
+                                    const fbParts = [];
+                                    if (fallback.figs.length > 0) fbParts.push(formatFigureList(fallback.figs));
+                                    if (fallback.others.length > 0) fbParts.push(...fallback.others.map((o) => o.replace(/^說明書/, '')));
+                                    if (fallback.paras.length > 0) fbParts.push(`第${formatNumberRanges(fallback.paras, 0)}段`);
+                                    if (fallback.abstracts.length > 0) fbParts.push(...fallback.abstracts);
+
+                                    target.nplBrackets.push(...fbParts);
+                                    if (claimBucket) {
+                                        claimBucket.nplBrackets.push(...fbParts);
+                                    }
+                                    fallback.rawMatches.forEach((raw) => {
+                                        target.traces.push({
+                                            raw,
+                                            claimLabel,
+                                            context: line.trim().slice(0, 120) + (line.trim().length > 120 ? '…' : ''),
+                                        });
+                                    });
+                                    fallback.highlights.forEach((h) => {
+                                        globalHighlights.push({
+                                            start: lineStart + segStart + h.start,
+                                            end: lineStart + segStart + h.end,
+                                            type: h.type,
+                                        });
+                                    });
+                                }
+                            }
+                        } else {
+                            const extracted = extractPassagesFromSegment(segText);
+                            if (extracted.rawMatches.length > 0) {
+                                target.figs.push(...extracted.figs);
+                                target.paras.push(...extracted.paras);
+                                target.claims.push(...extracted.claims);
+                                target.others.push(...extracted.others);
+                                if (extracted.abstracts && extracted.abstracts.length > 0) {
+                                    target.abstracts.push(...extracted.abstracts);
+                                }
+                                if (extracted.hasAbstract) target.hasAbstract = true;
+
+                                if (claimBucket) {
+                                    claimBucket.figs.push(...extracted.figs);
+                                    claimBucket.paras.push(...extracted.paras);
+                                    claimBucket.claims.push(...extracted.claims);
+                                    claimBucket.others.push(...extracted.others);
+                                    if (extracted.abstracts && extracted.abstracts.length > 0) {
+                                        claimBucket.abstracts.push(...extracted.abstracts);
+                                    }
+                                    if (extracted.hasAbstract) claimBucket.hasAbstract = true;
+                                }
+
+                                extracted.rawMatches.forEach((raw) => {
+                                    target.traces.push({
+                                        raw,
+                                        claimLabel,
+                                        context: line.trim().slice(0, 120) + (line.trim().length > 120 ? '…' : ''),
+                                    });
+                                });
+
+                                extracted.highlights.forEach((h) => {
+                                    globalHighlights.push({
+                                        start: lineStart + segStart + h.start,
+                                        end: lineStart + segStart + h.end,
+                                        type: h.type,
+                                    });
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return { citData, globalHighlights };
+            }
+
+            function analyzeRejectionCodes(bodyText, citationIds) {
+                const { independentClaims, totalClaims } = parseClaimStructure(bodyText);
+                const isValidClaimNum = (n) => n > 0 && (totalClaims > 0 ? n <= totalClaims : n <= 200);
+                const stripStatuteRefs = (s) =>
+                    s
+                        .replace(/專利法(?:施行細則)?第\s*\d+\s*條(?:\s*第\s*\d+\s*項)?(?:\s*第\s*\d+\s*款)?/g, '')
+                        .replace(/第\s*\d+\s*條(?:\s*第\s*\d+\s*項)?/g, '');
+
+                const citRoleMap = new Map();
+                citationIds.forEach((id) => {
+                    citRoleMap.set(id, { X: new Set(), Y: new Set(), details: [] });
+                });
+
+                const overviewMap = new Map();
+                const detailBlocks = [];
+                const lines = bodyText.split(/\r?\n/);
+
+                function parseOverviewClause(clauseHalf) {
+                    if (!/依據\s*引證|由\s*引證|參酌\s*引證|結合\s*引證/.test(clauseHalf)) return false;
+                    if (!/不符|不具|違反|專利法第22條|新穎性|進步性/.test(clauseHalf)) return false;
+
+                    const cits = extractCitationIdsFromText(clauseHalf);
+                    if (cits.length === 0) return false;
+
+                    const cleanedClause = stripStatuteRefs(clauseHalf);
+                    const claimMatch = cleanedClause.match(
+                        /(?:本案)?(?:請求項\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*(?:請求項|第)?\s*\d+))*)\s*項?|第\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*第?\s*\d+))*)\s*項)/
+                    );
+                    if (!claimMatch) return false;
+
+                    const rawClaimSpec = claimMatch[1] || claimMatch[2] || '';
+                    const claims = expandIntegerList(rawClaimSpec).filter(isValidClaimNum);
+                    if (claims.length === 0) return false;
+
+                    const isNovelty = /專利法第22條第1項|不具新穎性/.test(clauseHalf) && !/專利法第22條第2項|進步性/.test(clauseHalf);
+
+                    claims.forEach((cl) => {
+                        if (!overviewMap.has(cl)) {
+                            overviewMap.set(cl, { cits: new Set(), isNovelty });
+                        }
+                        const entry = overviewMap.get(cl);
+                        cits.forEach((c) => entry.cits.add(c));
+                        if (!isNovelty) entry.isNovelty = false;
+                    });
+
+                    return true;
+                }
+
+                function extractLeadingClaims(lineHalf) {
+                    const cleaned = stripStatuteRefs(lineHalf)
+                        .replace(/^[（(][一二三四五六七八九十]+[）)]\s*/, '')
+                        .replace(/^(?:\d+[、.．]|[（(]\d+[）)])\s*/, '')
+                        .replace(/^(?:針對|至於|至|關於|經查|查|本案|另|又|再)\s*/, '');
+
+                    const m = cleaned.match(
+                        /^(?:本案)?(?:請求項\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*(?:請求項|第)?\s*\d+))*)\s*項?|第\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*第?\s*\d+))*)\s*項)(?![\d條款])/
+                    );
+                    if (!m) return [];
+                    const rawClaimSpec = m[1] || m[2] || '';
+                    return expandIntegerList(rawClaimSpec).filter(isValidClaimNum);
+                }
+
+                function extractParentClaims(textHalf, ownClaims) {
+                    const parents = new Set();
+                    const cleaned = stripStatuteRefs(textHalf);
+                    const depRegex = /(?:依附(?:於)?|附屬(?:於)?|承|同|與|如|參照)\s*(?:本案)?請求項\s*(\d+(?:\s*(?:[~至到、,，及與和]\s*(?:請求項)?\s*\d+))*)/g;
+                    let dm;
+                    while ((dm = depRegex.exec(cleaned)) !== null) {
+                        expandIntegerList(dm[1])
+                            .filter(isValidClaimNum)
+                            .forEach((p) => {
+                                if (!ownClaims.includes(p)) parents.add(p);
+                            });
+                    }
+                    return Array.from(parents);
+                }
+
+                let currentBlock = null;
+                const flushBlock = () => {
+                    if (currentBlock && currentBlock.claims.length > 0) {
+                        detailBlocks.push(currentBlock);
+                    }
+                    currentBlock = null;
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const rawLine = lines[i].trim();
+                    if (!rawLine) continue;
+                    const half = toHalfWidth(rawLine);
+
+                    const isMajorSection = /^[（(][一二三四五六七八九十]+[）)]/.test(half);
+                    if (isMajorSection) {
+                        flushBlock();
+                    }
+
+                    const clauses = half.split(/[；;。]/).map((s) => s.trim()).filter(Boolean);
+                    let consumedAsOverviewCount = 0;
+                    const remainingClauses = [];
+
+                    clauses.forEach((cl) => {
+                        if (parseOverviewClause(cl)) {
+                            consumedAsOverviewCount++;
+                        } else {
+                            remainingClauses.push(cl);
+                        }
+                    });
+
+                    if (consumedAsOverviewCount > 0 && remainingClauses.length === 0) {
+                        flushBlock();
+                        continue;
+                    }
+
+                    const effectiveHalf = consumedAsOverviewCount > 0 ? remainingClauses.join('。') : half;
+
+                    if (isMajorSection && /專利法第26條/.test(effectiveHalf) && !/引證/.test(effectiveHalf)) {
+                        flushBlock();
+                        continue;
+                    }
+
+                    const leadingClaims = extractLeadingClaims(effectiveHalf);
+                    const isSubItemMarker = /^(?:\d+[、.．]|[（(]\d+[）)])\s*/.test(effectiveHalf);
+
+                    if (
+                        leadingClaims.length > 0 &&
+                        (isSubItemMarker ||
+                            consumedAsOverviewCount > 0 ||
+                            /^(?:本案)?(?:針對|至於|至|關於|經查|查)?\s*(?:請求項|第\s*\d+\s*項)/.test(effectiveHalf))
+                    ) {
+                        flushBlock();
+                        const cits = new Set(extractCitationIdsFromText(effectiveHalf));
+                        const depParents = extractParentClaims(effectiveHalf, leadingClaims);
+                        currentBlock = {
+                            claims: leadingClaims,
+                            cits,
+                            depParents,
+                            text: effectiveHalf,
+                            isNovelty: /不具新穎性|專利法第22條第1項/.test(effectiveHalf) && !/進步性|專利法第22條第2項/.test(effectiveHalf),
+                            isReject: /不具進步性|不具新穎性|不符專利法|顯能輕易完成|結合引證|無進步性/.test(effectiveHalf),
+                        };
+                    } else if (currentBlock && !isMajorSection) {
+                        currentBlock.text += ' ' + effectiveHalf;
+                        extractCitationIdsFromText(effectiveHalf).forEach((c) => currentBlock.cits.add(c));
+                        extractParentClaims(effectiveHalf, currentBlock.claims).forEach((p) => {
+                            if (!currentBlock.depParents.includes(p)) currentBlock.depParents.push(p);
+                        });
+                        if (/不具進步性|不具新穎性|不符專利法|顯能輕易完成|結合引證|無進步性/.test(effectiveHalf)) {
+                            currentBlock.isReject = true;
+                        }
+                        if (/進步性|專利法第22條第2項/.test(effectiveHalf)) {
+                            currentBlock.isNovelty = false;
+                        }
+                    }
+                }
+                flushBlock();
+
+                const claimFinalMap = new Map();
+
+                detailBlocks.forEach((blk) => {
+                    blk.claims.forEach((cl) => {
+                        if (!claimFinalMap.has(cl)) {
+                            claimFinalMap.set(cl, { cits: new Set(), isNovelty: blk.isNovelty, depParents: new Set() });
+                        }
+                        const entry = claimFinalMap.get(cl);
+                        blk.cits.forEach((c) => entry.cits.add(c));
+                        blk.depParents.forEach((p) => entry.depParents.add(p));
+                        if (!blk.isNovelty) entry.isNovelty = false;
+                    });
+                });
+
+                overviewMap.forEach((ov, cl) => {
+                    if (!claimFinalMap.has(cl)) {
+                        claimFinalMap.set(cl, {
+                            cits: new Set(ov.cits),
+                            isNovelty: ov.isNovelty,
+                            depParents: new Set(),
+                        });
+                    }
+                });
+
+                const sortedClaimNums = Array.from(claimFinalMap.keys()).sort((a, b) => a - b);
+
+                function findNearestIndependentClaim(cl) {
+                    const inds = Array.from(independentClaims).filter((n) => n < cl).sort((a, b) => b - a);
+                    return inds.length > 0 ? inds[0] : null;
+                }
+
+                sortedClaimNums.forEach((cl) => {
+                    const entry = claimFinalMap.get(cl);
+                    const ov = overviewMap.get(cl);
+
+                    entry.depParents.forEach((parentCl) => {
+                        const parentEntry = claimFinalMap.get(parentCl);
+                        if (parentEntry) {
+                            parentEntry.cits.forEach((c) => entry.cits.add(c));
+                        }
+                    });
+
+                    if (!independentClaims.has(cl)) {
+                        const parentInd = findNearestIndependentClaim(cl);
+                        if (parentInd !== null && claimFinalMap.has(parentInd)) {
+                            const indEntry = claimFinalMap.get(parentInd);
+                            indEntry.cits.forEach((c) => entry.cits.add(c));
+                        }
+                    }
+
+                    if (ov && ov.cits.size >= 2) {
+                        const isSubset = Array.from(entry.cits).every((c) => ov.cits.has(c));
+                        if (entry.cits.size === 0 || isSubset) {
+                            ov.cits.forEach((c) => entry.cits.add(c));
+                        }
+                    }
+                });
+
+                const hasAnySingleCitationOverview = Array.from(overviewMap.values()).some((ov) => ov.cits.size === 1);
+
+                sortedClaimNums.forEach((cl) => {
+                    const entry = claimFinalMap.get(cl);
+                    const citsArr = Array.from(entry.cits).sort((a, b) => a - b);
+                    if (citsArr.length === 0) return;
+
+                    if (citsArr.length >= 2) {
+                        const comboLabel = `請求項${cl}：結合引證${citsArr.join('、')}`;
+                        citsArr.forEach((cid) => {
+                            if (citRoleMap.has(cid)) {
+                                citRoleMap.get(cid).Y.add(cl);
+                                citRoleMap.get(cid).details.push(comboLabel);
+                            }
+                        });
+                    } else {
+                        const cid = citsArr[0];
+                        const isTrueSingleReject =
+                            entry.isNovelty ||
+                            hasAnySingleCitationOverview ||
+                            (independentClaims.has(cl) && (!overviewMap.has(cl) || overviewMap.get(cl).cits.size === 1));
+
+                        if (citRoleMap.has(cid)) {
+                            if (isTrueSingleReject) {
+                                citRoleMap.get(cid).X.add(cl);
+                                citRoleMap.get(cid).details.push(`請求項${cl}：引證${cid}單獨核駁`);
+                            } else {
+                                citRoleMap.get(cid).Y.add(cl);
+                                citRoleMap.get(cid).details.push(`請求項${cl}：引證${cid}（結合核駁）`);
+                            }
+                        }
+                    }
+                });
+
+                return citRoleMap;
+            }
+
+            function buildPassageString(data, padFour) {
+                if (data.isNonPatent) {
+                    const allFigTokens = [];
+                    const otherFigs = [];
+                    const otherFigSeen = new Set();
+                    const textParts = [];
+                    const textSeen = new Set();
+                    const absParts = [];
+                    const absSeen = new Set();
+
+                    (data.nplBrackets || []).forEach((part) => {
+                        const { figTokens, otherFigs: oFigs, textPart } = splitNonPatentFigureAndText(part);
+
+                        if (figTokens.length > 0) {
+                            allFigTokens.push(...figTokens);
+                        }
+                        oFigs.forEach((f) => {
+                            const key = toHalfWidth(f).replace(/\s+/g, '').toLowerCase();
+                            if (!otherFigSeen.has(key)) {
+                                otherFigSeen.add(key);
+                                otherFigs.push(f);
+                            }
+                        });
+
+                        if (textPart) {
+                            const subTextParts = splitNonPatentPageLinePieces(textPart);
+                            subTextParts.forEach((subPart) => {
+                                const key = toHalfWidth(subPart).replace(/\s+/g, '').toLowerCase();
+                                if (/摘要|abstract/i.test(subPart)) {
+                                    if (!absSeen.has(key)) {
+                                        absSeen.add(key);
+                                        absParts.push(subPart);
+                                    }
+                                } else if (!textSeen.has(key)) {
+                                    textSeen.add(key);
+                                    textParts.push(subPart);
+                                }
+                            });
+                        }
+                    });
+
+                    const sections = [];
+
+                    const figParts = [];
+                    if (allFigTokens.length > 0) {
+                        const formattedFigs = formatFigureList(allFigTokens);
+                        if (formattedFigs) figParts.push(formattedFigs);
+                    }
+                    if (otherFigs.length > 0) {
+                        figParts.push(...otherFigs);
+                    }
+                    if (figParts.length > 0) {
+                        sections.push(figParts.join('、'));
+                    }
+
+                    const mergedTextParts = collapseRepeatedPagePrefixes(mergePageLineRanges(textParts));
+                    if (mergedTextParts.length > 0) {
+                        sections.push(mergedTextParts.join('、'));
+                    }
+
+                    if (absParts.length > 0) {
+                        sections.push(absParts.join('、'));
+                    }
+
+                    return sections.length > 0 ? `${sections.join('；')}。` : '全文（未指定特定段落）。';
+                }
+
+                const sections = [];
+
+                if (data.figs && data.figs.length > 0) {
+                    const figStr = formatFigureList(data.figs);
+                    if (figStr) sections.push(figStr);
+                }
+
+                if (data.paras && data.paras.length > 0) {
+                    const padLen = padFour ? 4 : 0;
+                    const paraStr = formatNumberRanges(data.paras, padLen);
+                    if (paraStr) sections.push(`說明書第${paraStr}段`);
+                }
+
+                if (data.others && data.others.length > 0) {
+                    const hasSpecPrefix = data.others.some((o) => /^說明書/.test(o));
+                    const strippedOthers = data.others.map((o) => o.replace(/^說明書/, ''));
+                    const mergedOthers = mergePageLineRanges(strippedOthers);
+                    if (mergedOthers.length > 0) {
+                        const prefix = hasSpecPrefix ? '說明書' : '';
+                        sections.push(`${prefix}${mergedOthers.join('、')}`);
+                    }
+                }
+
+                if (data.claims && data.claims.length > 0) {
+                    const claimStr = formatNumberRanges(data.claims, 0);
+                    if (claimStr) sections.push(`申請專利範圍第${claimStr}項`);
+                }
+
+                if (data.hasAbstract || (data.abstracts && data.abstracts.length > 0)) {
+                    const absUnique = Array.from(new Set(data.abstracts && data.abstracts.length > 0 ? data.abstracts : ['摘要']));
+                    const detailedAbs = absUnique.filter((a) => a !== '摘要');
+                    const finalAbs = detailedAbs.length > 0 ? detailedAbs : ['摘要'];
+                    sections.push(finalAbs.join('、'));
+                }
+
+                return sections.length > 0 ? `${sections.join('；')}。` : '全文（未指定特定段落）。';
+            }
+
+            function runExtraction() {
+                const rawText = elInput.value || '';
+                elCharCount.textContent = `${rawText.length.toLocaleString()} 字`;
+
+                if (!rawText.trim()) {
+                    resetUI();
+                    return;
+                }
+
+                try {
+                    const padFour = true;
+                    const { citations, bodyText } = parseCitationList(rawText);
+                    const citationIds = Array.from(citations.keys()).sort((a, b) => a - b);
+
+                    if (citationIds.length === 0) {
+                        resetUI();
+                        return;
+                    }
+
+                    const docNames = citationIds.map((id) => citations.get(id));
+                    resolvePublicationDates(docNames, false);
+
+                    const { citData, globalHighlights } = extractAllCitationPassages(bodyText, citations);
+                    const citRoleMap = analyzeRejectionCodes(bodyText, citationIds);
+
+                    let totalMentions = 0;
+                    const reportRows = [];
+
+                    citationIds.forEach((id) => {
+                        const data = citData.get(id);
+                        const role = citRoleMap.get(id);
+                        totalMentions += data.traces.length;
+
+                        const passages = buildPassageString(data, padFour);
+                        const cacheEntry = pubDateCache.get(data.docName) || { status: 'idle', date: '', ipc: '' };
+
+                        const claimPassages = Array.from((data.byClaim || new Map()).values())
+                            .sort((a, b) => a.minClaimNum - b.minClaimNum)
+                            .map((bucket) => ({
+                                claimKey: bucket.claimKey,
+                                claimLabel: `第 ${bucket.claimKey} 項`,
+                                minClaimNum: bucket.minClaimNum,
+                                passages: buildPassageString(bucket, padFour),
+                            }))
+                            .filter((cp) => cp.passages && cp.passages !== '全文（未指定特定段落）。');
+
+                        const xArr = role ? Array.from(role.X).sort((a, b) => a - b) : [];
+                        const yArr = role ? Array.from(role.Y).sort((a, b) => a - b) : [];
+
+                        if (xArr.length > 0 && yArr.length > 0) {
+                            const combined = Array.from(new Set([...xArr, ...yArr])).sort((a, b) => a - b);
+                            reportRows.push({
+                                id,
+                                docName: data.docName,
+                                pubDate: cacheEntry.date || '',
+                                ipc: cacheEntry.ipc || '',
+                                pubDateStatus: cacheEntry.status || 'idle',
+                                code: 'X、Y',
+                                codes: ['X', 'Y'],
+                                xClaims: formatNumberRanges(xArr, 0),
+                                yClaims: formatNumberRanges(yArr, 0),
+                                claims: formatNumberRanges(combined, 0),
+                                passages,
+                                claimPassages,
+                            });
+                        } else if (xArr.length > 0) {
+                            reportRows.push({
+                                id,
+                                docName: data.docName,
+                                pubDate: cacheEntry.date || '',
+                                ipc: cacheEntry.ipc || '',
+                                pubDateStatus: cacheEntry.status || 'idle',
+                                code: 'X',
+                                codes: ['X'],
+                                xClaims: '',
+                                yClaims: '',
+                                claims: formatNumberRanges(xArr, 0),
+                                passages,
+                                claimPassages,
+                            });
+                        } else if (yArr.length > 0) {
+                            reportRows.push({
+                                id,
+                                docName: data.docName,
+                                pubDate: cacheEntry.date || '',
+                                ipc: cacheEntry.ipc || '',
+                                pubDateStatus: cacheEntry.status || 'idle',
+                                code: 'Y',
+                                codes: ['Y'],
+                                xClaims: '',
+                                yClaims: '',
+                                claims: formatNumberRanges(yArr, 0),
+                                passages,
+                                claimPassages,
+                            });
+                        } else {
+                            reportRows.push({
+                                id,
+                                docName: data.docName,
+                                pubDate: cacheEntry.date || '',
+                                ipc: cacheEntry.ipc || '',
+                                pubDateStatus: cacheEntry.status || 'idle',
+                                code: 'A',
+                                codes: ['A'],
+                                xClaims: '',
+                                yClaims: '',
+                                claims: '—',
+                                passages,
+                                claimPassages,
+                            });
+                        }
+                    });
+
+                    const finalRows = [];
+                    const dedupMap = new Map();
+                    reportRows.forEach((row) => {
+                        const key = `${row.docName}||${row.passages}`;
+                        if (
+                            row.docName &&
+                            !row.docName.includes('未於引證文件欄列出文獻編號') &&
+                            dedupMap.has(key)
+                        ) {
+                            const existing = dedupMap.get(key);
+                            const unionCodes = new Set([...(existing.codes || [existing.code]), ...(row.codes || [row.code])]);
+                            if (unionCodes.has('X') && unionCodes.has('Y')) {
+                                const mergedX = Array.from(
+                                    new Set([
+                                        ...expandIntegerList(existing.xClaims || ''),
+                                        ...expandIntegerList(row.xClaims || ''),
+                                    ])
+                                ).sort((a, b) => a - b);
+                                const mergedY = Array.from(
+                                    new Set([
+                                        ...expandIntegerList(existing.yClaims || ''),
+                                        ...expandIntegerList(row.yClaims || ''),
+                                    ])
+                                ).sort((a, b) => a - b);
+                                const combined = Array.from(new Set([...mergedX, ...mergedY])).sort((a, b) => a - b);
+
+                                existing.code = 'X、Y';
+                                existing.codes = ['X', 'Y'];
+                                existing.xClaims = formatNumberRanges(mergedX, 0);
+                                existing.yClaims = formatNumberRanges(mergedY, 0);
+                                existing.claims = combined.length > 0 ? formatNumberRanges(combined, 0) : '—';
+                                return;
+                            }
+                        }
+                        dedupMap.set(key, row);
+                        finalRows.push(row);
+                    });
+
+                    const codeCounts = { X: 0, Y: 0, A: 0 };
+                    finalRows.forEach((r) => {
+                        const codesList = r.codes && r.codes.length > 0 ? r.codes : [r.code];
+                        codesList.forEach((c) => {
+                            if (codeCounts[c] !== undefined) codeCounts[c]++;
+                        });
+                    });
+
+                    lastResult = {
+                        bodyText,
+                        citationIds,
+                        citData,
+                        citRoleMap,
+                        reportRows: finalRows,
+                        totalMentions,
+                        codeCounts,
+                        globalHighlights,
+                    };
+
+                    renderResults(lastResult);
+                } catch (err) {
+                    console.error('解析失敗：', err);
+                    showToast('解析過程發生例外，請確認貼上的文字格式', 'error');
+                }
+            }
+
+            function getCodeBadgeHtml(code, codes) {
+                const styles = {
+                    X: 'bg-[#2F241F] text-[#FFC425] border-[#2F241F]',
+                    Y: 'bg-[#FFC425] text-[#2F241F] border-[#E5AD16]',
+                    A: 'bg-[#F3EDE4] text-[#594A42] border-[#DFD4C7]',
+                };
+                const list = codes && codes.length > 0 ? codes : [code];
+                if (list.length > 1) {
+                    return `<div class="inline-flex items-center justify-center gap-1">${list
+                        .map(
+                            (c) =>
+                                `<span class="inline-flex items-center justify-center w-6 h-6 rounded-md text-xs font-bold border ${
+                                    styles[c] || styles.A
+                                }">${escapeHtml(c)}</span>`
+                        )
+                        .join('')}</div>`;
+                }
+                return `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold border ${
+                    styles[code] || styles.A
+                }">${escapeHtml(code)}</span>`;
+            }
+
+            function renderHighlightedText(text, highlights) {
+                if (!highlights || highlights.length === 0) {
+                    return escapeHtml(text);
+                }
+
+                const sorted = [...highlights].sort((a, b) => a.start - b.start || b.end - a.end);
+                const merged = [];
+                let lastEnd = 0;
+
+                for (const h of sorted) {
+                    if (h.start >= lastEnd && h.end > h.start) {
+                        merged.push(h);
+                        lastEnd = h.end;
+                    }
+                }
+
+                let html = '';
+                let cursor = 0;
+                for (const h of merged) {
+                    if (h.start > cursor) {
+                        html += escapeHtml(text.slice(cursor, h.start));
+                    }
+                    const chunk = escapeHtml(text.slice(h.start, h.end));
+                    if (h.type === 'citation') {
+                        html += `<mark class="bg-[#2F241F] text-[#FFC425] border border-[#2F241F] px-1 rounded font-semibold">${chunk}</mark>`;
+                    } else {
+                        html += `<mark class="bg-[#FFF0BD] text-[#2F241F] border border-[#FFC425] px-0.5 rounded">${chunk}</mark>`;
+                    }
+                    cursor = h.end;
+                }
+                if (cursor < text.length) {
+                    html += escapeHtml(text.slice(cursor));
+                }
+                return html;
+            }
+
+            function renderResults(res) {
+                elStatCitations.textContent = String(res.citationIds.length);
+                elStatMentions.textContent = String(res.totalMentions);
+
+                const codeChips = [];
+                if (res.codeCounts.X > 0) {
+                    codeChips.push(
+                        `<span class="px-2 py-0.5 rounded-md font-bold bg-[#2F241F] text-[#FFC425]">X: ${res.codeCounts.X}</span>`
+                    );
+                }
+                if (res.codeCounts.Y > 0) {
+                    codeChips.push(
+                        `<span class="px-2 py-0.5 rounded-md font-bold bg-[#FFC425] text-[#2F241F]">Y: ${res.codeCounts.Y}</span>`
+                    );
+                }
+                if (res.codeCounts.A > 0) {
+                    codeChips.push(
+                        `<span class="px-2 py-0.5 rounded-md font-semibold bg-[#F3EDE4] text-[#594A42]">A: ${res.codeCounts.A}</span>`
+                    );
+                }
+                elStatCodes.innerHTML = codeChips.length > 0 ? codeChips.join('') : '<span class="text-[#9B8D84]">尚無資料</span>';
+
+                elEmptyState.classList.add('hidden');
+                elReportContent.classList.remove('hidden');
+
+                elReportBody.innerHTML = res.reportRows
+                    .map(
+                        (row, idx) => `
+                        <tr class="hover:bg-[#FAF7F2]/80 transition-colors align-top">
+                            <td class="py-3 px-3 text-center whitespace-nowrap">${getCodeBadgeHtml(row.code, row.codes)}</td>
+                            <td class="py-3 px-3">
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="font-bold text-[#2F241F] whitespace-nowrap">引證${row.id}</span>
+                                    ${
+                                        isNonPatentCitation(row.docName)
+                                            ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#F3EDE4] text-[#594A42] border border-[#DFD4C7]">非專利</span>`
+                                            : ''
+                                    }
+                                    ${getIpcBadgeHtml(row.docName)}
+                                    ${getPubDateBadgeHtml(row.docName)}
+                                </div>
+                                <div class="text-xs text-[#6B5D55] mt-1 break-all leading-snug">${escapeHtml(row.docName)}</div>
+                            </td>
+                            <td class="py-3 px-3 text-[#2F241F] leading-relaxed">
+                                <div>${escapeHtml(row.passages)}</div>
+                                ${
+                                    row.claimPassages && row.claimPassages.length > 0
+                                        ? `<div class="mt-2 pt-2 border-t border-[#EFE8DE] flex flex-col gap-1">
+                                            <div class="text-[11px] font-semibold text-[#7A6B63]">各請求項引用段落：</div>
+                                            ${row.claimPassages
+                                                .map(
+                                                    (cp) => `<div class="text-xs text-[#4A3D36] flex items-baseline gap-1.5">
+                                                        <span class="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF7F2] border border-[#E6DDD2] text-[11px] font-semibold text-[#2F241F]">${escapeHtml(
+                                                            cp.claimLabel
+                                                        )}</span>
+                                                        <span class="leading-relaxed">${escapeHtml(cp.passages)}</span>
+                                                    </div>`
+                                                )
+                                                .join('')}
+                                        </div>`
+                                        : ''
+                                }
+                            </td>
+                            <td class="py-3 px-3 text-[#4A3D36] font-medium whitespace-nowrap">${
+                                row.xClaims && row.yClaims
+                                    ? `<div class="flex flex-col gap-0.5 text-xs">
+                                        <div><span class="font-bold text-[#2F241F]">X：</span>第 ${escapeHtml(row.xClaims)} 項</div>
+                                        <div><span class="font-bold text-[#B88200]">Y：</span>第 ${escapeHtml(row.yClaims)} 項</div>
+                                    </div>`
+                                    : row.claims === '—'
+                                        ? '—'
+                                        : `第 ${escapeHtml(row.claims)} 項`
+                            }</td>
+                            <td class="py-3 px-3 text-center">
+                                <button
+                                    type="button"
+                                    data-copy-row="${idx}"
+                                    title="複製此筆引證檢索內容"
+                                    class="copy-row-btn inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-[#2F241F] bg-[#FFF6D6] border border-[#FFC425] rounded-lg hover:bg-[#FFC425] active:bg-[#E5AD16] transition-colors cursor-pointer whitespace-nowrap"
+                                >
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                    複製
+                                </button>
+                            </td>
+                        </tr>
+                    `
+                    )
+                    .join('');
+
+                elTraceContent.innerHTML = res.citationIds
+                    .map((id) => {
+                        const data = res.citData.get(id);
+                        const role = res.citRoleMap.get(id);
+                        const uniqueDetails = Array.from(new Set(role ? role.details : []));
+                        const pubTag = getPubDateTag(data.docName);
+                        const ipcCode = getIpcCode(data.docName);
+                        const traceItems =
+                            data.traces.length > 0
+                                ? data.traces
+                                    .map(
+                                        (t) => `
+                                    <li class="text-xs bg-[#FAF7F2] border border-[#EFE8DE] rounded-lg px-2.5 py-1.5">
+                                        ${
+                                            t.claimLabel
+                                                ? `<span class="inline-block font-semibold text-[#FFC425] bg-[#2F241F] px-1.5 py-0.5 rounded mr-1.5">${escapeHtml(
+                                                    t.claimLabel
+                                                )}</span>`
+                                                : ''
+                                        }
+                                        <span class="inline-block font-semibold text-[#2F241F] bg-[#FFF0BD] border border-[#FFC425]/70 px-1.5 py-0.5 rounded mr-1.5">${escapeHtml(
+                                            t.raw
+                                        )}</span>
+                                        <span class="text-[#594A42]">${escapeHtml(t.context)}</span>
+                                    </li>
+                                `
+                                    )
+                                    .join('')
+                                : '<li class="text-xs text-[#9B8D84]">未擷取到明確指定之段落標註</li>';
+
+                        const roleSummary =
+                            uniqueDetails.length > 0
+                                ? `<div class="mt-2.5 pt-2 border-t border-[#EFE8DE] flex flex-wrap gap-1.5">
+                                    ${uniqueDetails
+                                        .map(
+                                            (d) =>
+                                                `<span class="text-[11px] bg-[#2F241F] text-[#FFC425] px-2 py-0.5 rounded-md font-medium">${escapeHtml(
+                                                    d
+                                                )}</span>`
+                                        )
+                                        .join('')}
+                                </div>`
+                                : '';
+
+                        return `
+                            <div class="border border-[#E6DDD2] rounded-xl p-3.5 bg-white">
+                                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="text-sm font-bold text-[#2F241F]">引證${id}</span>
+                                        ${
+                                            ipcCode
+                                                ? `<span class="text-xs font-mono font-semibold text-[#FFC425] bg-[#2F241F] border border-[#2F241F] px-1.5 py-0.5 rounded-md">${escapeHtml(
+                                                    ipcCode
+                                                )}</span>`
+                                                : ''
+                                        }
+                                        ${
+                                            pubTag
+                                                ? `<span class="text-xs font-mono font-semibold text-[#2F241F] bg-[#FFF6D6] border border-[#FFC425] px-1.5 py-0.5 rounded-md">${escapeHtml(
+                                                    pubTag
+                                                )}</span>`
+                                                : ''
+                                        }
+                                        <span class="text-xs text-[#7A6B63]">${escapeHtml(data.docName)}</span>
+                                    </div>
+                                    <span class="text-xs font-semibold text-[#2F241F] bg-[#FFF6D6] border border-[#FFC425]/70 px-2 py-0.5 rounded-md">
+                                        共擷取 ${data.traces.length} 處
+                                    </span>
+                                </div>
+                                <ul class="flex flex-col gap-1.5 max-h-56 overflow-y-auto pr-1">${traceItems}</ul>
+                                ${roleSummary}
+                            </div>
+                        `;
+                    })
+                    .join('');
+
+                elHighlightContent.innerHTML = renderHighlightedText(res.bodyText, res.globalHighlights);
+            }
+
+            function resetUI() {
+                lastResult = null;
+                activeEditDocName = null;
+                activeEditIpcDocName = null;
+                elStatCitations.textContent = '0';
+                elStatMentions.textContent = '0';
+                elStatCodes.innerHTML = '<span class="text-[#9B8D84]">尚無資料</span>';
+                elEmptyState.classList.remove('hidden');
+                elReportContent.classList.add('hidden');
+                elReportBody.innerHTML = '';
+                elTraceContent.innerHTML =
+                    '<p class="text-xs text-[#8A7B72] text-center py-10">解析後將在此顯示每一筆引證在全文中擷取到的原始片段與代碼判定依據。</p>';
+                elHighlightContent.textContent = '解析後將在此顯示原文標註預覽，方便核對是否有任何段落遺漏。';
+            }
+
+            function buildSingleRowCopyText(row) {
+                const docBase = (row.docName || '').trim();
+                const ipcPart = row.ipc ? row.ipc.trim() : '';
+                const datePart = row.pubDate ? `【${row.pubDate}】` : '';
+                const idPrefix = row.id !== undefined && row.id !== null ? `${row.id}、` : '';
+                const docLine = `${idPrefix}${docBase}${ipcPart}${datePart}`;
+                if (row.xClaims && row.yClaims) {
+                    return `X：第 ${row.xClaims} 項\nY：第 ${row.yClaims} 項\n${docLine}\n${row.passages}`;
+                }
+                const claimLine = row.claims === '—' ? `${row.code}：—` : `${row.code}：第 ${row.claims} 項`;
+                return `${claimLine}\n${docLine}\n${row.passages}`;
+            }
+
+            function saveManualIpc(docName, rawVal) {
+                const prev = pubDateCache.get(docName) || { status: 'not_found', date: '', ipc: '' };
+                const trimmed = toHalfWidth(rawVal).trim();
+                if (!trimmed) {
+                    pubDateCache.set(docName, {
+                        status: prev.date ? 'found' : 'not_found',
+                        date: prev.date || '',
+                        ipc: '',
+                    });
+                } else {
+                    const normalized = normalizeIpcSubclass(trimmed);
+                    if (!normalized) {
+                        showToast('IPC 格式請輸入 4 碼次類（例如 G06F）', 'error');
+                        return;
+                    }
+                    pubDateCache.set(docName, {
+                        status: 'found',
+                        date: prev.date || '',
+                        ipc: normalized,
+                    });
+                    showToast(`已更新第一個 IPC 編號為 ${normalized}`, 'success');
+                }
+                activeEditIpcDocName = null;
+                if (lastResult) {
+                    syncPubDatesIntoRows(lastResult);
+                    renderResults(lastResult);
+                }
+            }
+
+            function saveManualPubDate(docName, rawVal) {
+                const prev = pubDateCache.get(docName) || { status: 'not_found', date: '', ipc: '' };
+                const trimmed = toHalfWidth(rawVal).trim();
+                if (!trimmed) {
+                    pubDateCache.set(docName, {
+                        status: prev.ipc ? 'found' : 'not_found',
+                        date: '',
+                        ipc: prev.ipc || '',
+                    });
+                } else {
+                    const formatted = normalizeFlexiblePubDate(trimmed);
+                    if (!formatted) {
+                        showToast('日期格式請輸入 yyyy/MM/dd、yyyy/MM 或 yyyy（例如 2020/11/02）', 'error');
+                        return;
+                    }
+                    pubDateCache.set(docName, {
+                        status: 'found',
+                        date: formatted,
+                        ipc: prev.ipc || '',
+                    });
+                    showToast(`已更新公開日期為【${formatted}】`, 'success');
+                }
+                activeEditDocName = null;
+                if (lastResult) {
+                    syncPubDatesIntoRows(lastResult);
+                    renderResults(lastResult);
+                }
+            }
+
+            let debounceTimer = null;
+            elInput.addEventListener('input', () => {
+                elCharCount.textContent = `${(elInput.value || '').length.toLocaleString()} 字`;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    runExtraction();
+                }, 280);
+            });
+
+            elReportBody.addEventListener('click', (e) => {
+                const copyRowBtn = e.target.closest('.copy-row-btn');
+                if (copyRowBtn) {
+                    const idx = parseInt(copyRowBtn.getAttribute('data-copy-row'), 10);
+                    if (lastResult && lastResult.reportRows[idx]) {
+                        const row = lastResult.reportRows[idx];
+                        copyToClipboard(buildSingleRowCopyText(row), `已複製引證${row.id} 檢索內容`);
+                    }
+                    return;
+                }
+
+                const triggerIpcBtn = e.target.closest('.ipc-trigger-btn');
+                if (triggerIpcBtn) {
+                    activeEditDocName = null;
+                    activeEditIpcDocName = triggerIpcBtn.getAttribute('data-trigger-ipc-edit');
+                    if (lastResult) {
+                        renderResults(lastResult);
+                        const inputEl = elReportBody.querySelector('.ipc-edit-input');
+                        if (inputEl) {
+                            inputEl.focus();
+                            inputEl.select();
+                        }
+                    }
+                    return;
+                }
+
+                const saveIpcBtn = e.target.closest('.ipc-save-btn');
+                if (saveIpcBtn) {
+                    const docName = saveIpcBtn.getAttribute('data-save-ipc-doc');
+                    const inputEl = elReportBody.querySelector('.ipc-edit-input');
+                    saveManualIpc(docName, inputEl ? inputEl.value : '');
+                    return;
+                }
+
+                const triggerBtn = e.target.closest('.pubdate-trigger-btn');
+                if (triggerBtn) {
+                    activeEditIpcDocName = null;
+                    activeEditDocName = triggerBtn.getAttribute('data-trigger-edit');
+                    if (lastResult) {
+                        renderResults(lastResult);
+                        const inputEl = elReportBody.querySelector('.pubdate-edit-input');
+                        if (inputEl) {
+                            inputEl.focus();
+                            inputEl.select();
+                        }
+                    }
+                    return;
+                }
+
+                const saveBtn = e.target.closest('.pubdate-save-btn');
+                if (saveBtn) {
+                    const docName = saveBtn.getAttribute('data-save-doc');
+                    const inputEl = elReportBody.querySelector('.pubdate-edit-input');
+                    saveManualPubDate(docName, inputEl ? inputEl.value : '');
+                    return;
+                }
+
+                const retryBtn = e.target.closest('.pubdate-retry-btn');
+                if (retryBtn) {
+                    const docName = retryBtn.getAttribute('data-retry-doc');
+                    if (docName) {
+                        resolvePublicationDates([docName], true);
+                        if (lastResult) {
+                            syncPubDatesIntoRows(lastResult);
+                            renderResults(lastResult);
+                        }
+                        showToast(`正在重新查詢 ${docName} 之公開日期與 IPC…`, 'info');
+                    }
+                }
+            });
+
+            elReportBody.addEventListener('keydown', (e) => {
+                const ipcInputEl = e.target.closest('.ipc-edit-input');
+                if (ipcInputEl) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveManualIpc(ipcInputEl.getAttribute('data-edit-ipc-doc'), ipcInputEl.value);
+                    } else if (e.key === 'Escape') {
+                        activeEditIpcDocName = null;
+                        if (lastResult) renderResults(lastResult);
+                    }
+                    return;
+                }
+
+                const inputEl = e.target.closest('.pubdate-edit-input');
+                if (!inputEl) return;
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveManualPubDate(inputEl.getAttribute('data-edit-doc'), inputEl.value);
+                } else if (e.key === 'Escape') {
+                    activeEditDocName = null;
+                    if (lastResult) renderResults(lastResult);
+                }
+            });
+
+            elBtnClear.addEventListener('click', () => {
+                elInput.value = '';
+                elCharCount.textContent = '0 字';
+                resetUI();
+                showToast('已清空內容', 'info');
+            });
+
+            // SR Generator 內部分頁切換
+            const srTabContainer = document.getElementById('tab8');
+            srTabContainer.querySelectorAll('.sr-tab-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const target = btn.getAttribute('data-sr-tab');
+                    srTabContainer.querySelectorAll('.sr-tab-btn').forEach((b) => {
+                        const isActive = b.getAttribute('data-sr-tab') === target;
+                        b.className = isActive
+                            ? 'sr-tab-btn px-3.5 py-2 text-xs sm:text-sm font-bold text-[#2F241F] bg-white border-t border-x border-[#E6DDD2] border-b-2 border-b-[#FFC425] rounded-t-xl cursor-pointer transition-colors'
+                            : 'sr-tab-btn px-3.5 py-2 text-xs sm:text-sm font-medium text-[#7A6B63] border-b-2 border-transparent hover:text-[#2F241F] rounded-t-xl cursor-pointer transition-colors';
+                    });
+                    srTabContainer.querySelectorAll('.sr-tab-panel').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.id !== `sr-panel-${target}`);
+                    });
+                });
             });
         }
     </script>
